@@ -1,8 +1,57 @@
-<div class="card" style="width: 18rem;">
-  <img src="https://cptstatic.s3.amazonaws.com/imagens/enviadas/materias/materia10349/racas-de-cachorro-golden-retriever-cpt11.jpg" class="card-img-top" alt="...">
+<div class="card h-100 product-card border-0 shadow-sm hover-effect">
+  <!-- Badge de desconto -->
+  <div class="position-relative">
+    <img [src]="product.images[0]" class="card-img-top product-image" [alt]="product.name">
+    <span class="position-absolute top-0 start-0 m-2 badge bg-danger" *ngIf="getDiscountPercentage() > 0">
+      -{{ getDiscountPercentage() }}%
+    </span>
+    <span class="position-absolute top-0 end-0 m-2 badge" [class]="getConditionClass()">
+      {{ getConditionBadge() }}
+    </span>
+    <button class="btn-favorite position-absolute bottom-0 end-0 m-3" 
+            (click)="onFavoriteClick($event)">
+      <i class="bi" [class.bi-heart]="!product.isFavorite" [class.bi-heart-fill]="product.isFavorite"></i>
+    </button>
+  </div>
+  
   <div class="card-body">
-    <h5 class="card-title">{{title}}</h5>
-    <p class="card-text">{{description}}</p>
-    <a href="#" class="btn btn-primary">Go somewhere</a>
+    <!-- Localização -->
+    <div class="small text-muted mb-2">
+      <i class="bi bi-geo-alt-fill me-1"></i>{{ product.location }}
+    </div>
+    
+    <!-- Título -->
+    <h5 class="card-title text-truncate">{{ product.name }}</h5>
+    
+    <!-- Preços -->
+    <div class="mt-2">
+      <span class="text-muted text-decoration-line-through small" *ngIf="product.oldPrice">
+        {{ formatPrice(product.oldPrice) }}
+      </span>
+      <div class="fw-bold text-primary fs-5">
+        {{ formatPrice(product.price) }}
+      </div>
+    </div>
+    
+    <!-- Vendedor -->
+    <div class="d-flex align-items-center mt-2 small">
+      <i class="bi bi-star-fill text-warning me-1"></i>
+      <span class="me-2">{{ product.seller.rating }}</span>
+      <span class="text-muted">({{ product.seller.sales }} vendas)</span>
+    </div>
+    
+    <!-- Frete Grátis (placeholder) -->
+    <div class="mt-2" *ngIf="product.price > 100">
+      <span class="badge bg-light text-success border">
+        <i class="bi bi-truck"></i> Frete Grátis
+      </span>
+    </div>
+  </div>
+  
+  <div class="card-footer bg-white border-0 pb-3">
+    <a [routerLink]="['/produto', product.id]" class="btn btn-outline-primary w-100 rounded-pill">
+      Ver detalhes
+      <i class="bi bi-arrow-right-short"></i>
+    </a>
   </div>
 </div>

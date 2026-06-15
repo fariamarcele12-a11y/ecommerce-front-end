@@ -1,0 +1,78 @@
+<!-- Banner Principal -->
+<div class="bg-light">
+  <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner">
+      <div class="carousel-item active" *ngFor="let banner of banners; let i = index">
+        <img [src]="banner.image" class="d-block w-100" style="height: 300px; object-fit: cover;" 
+             [alt]="banner.title">
+        <div class="carousel-caption d-none d-md-block">
+          <h2 class="fw-bold">{{ banner.title }}</h2>
+          <p>{{ banner.subtitle }}</p>
+        </div>
+      </div>
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#bannerCarousel" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#bannerCarousel" data-bs-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+    </button>
+  </div>
+</div>
+
+<!-- Seção de Destaques -->
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="fw-bold mb-0">Produtos em Destaque</h2>
+        <p class="text-muted">Os produtos mais procurados do momento</p>
+      </div>
+      <a href="#" class="btn btn-outline-primary rounded-pill">Ver todos</a>
+    </div>
+    
+    <!-- Lista de Produtos -->
+    <app-products></app-products>
+  </div>
+</section>
+
+<!-- Categorias em Destaque -->
+<section class="bg-light py-5">
+  <div class="container">
+    <h2 class="text-center fw-bold mb-4">Compre por Categorias</h2>
+    <div class="row g-3 text-center">
+      <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body py-4">
+            <i class="bi bi-phone fs-1"></i>
+            <h5 class="mt-2">Eletrônicos</h5>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body py-4">
+            <i class="bi bi-bag fs-1"></i>
+            <h5 class="mt-2">Moda</h5>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body py-4">
+            <i class="bi bi-house fs-1"></i>
+            <h5 class="mt-2">Casa</h5>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body py-4">
+            <i class="bi bi-bicycle fs-1"></i>
+            <h5 class="mt-2">Esportes</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
