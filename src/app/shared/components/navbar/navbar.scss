@@ -1,0 +1,47 @@
+// Gradiente para texto
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+// Sombra suave no sticky
+.sticky-top {
+  backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+}
+// Hover effects modernos
+.nav-link {
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  &:hover {
+    background-color: rgba(0,0,0,0.03);
+    transform: translateY(-1px);
+  }
+}
+.dropdown-menu {
+  animation: fadeInDown 0.2s ease;
+}
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+// Botão Vender com efeito
+.btn-outline-success {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2);
+  }
+}
+// Input de busca com glow
+.form-control:focus {
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}

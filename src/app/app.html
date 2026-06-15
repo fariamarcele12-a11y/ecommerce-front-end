@@ -1,19 +1,9 @@
-<div class="container mt-5">
-  <div class="card shadow">
-    <div class="card-body">
-      <h1 class="text-primary">
-        Bootstrap funcionando!
-      </h1>
+<div class="d-flex flex-column min-vh-100">
+  <app-navbar></app-navbar>
 
-      <button class="btn btn-primary">
-        Comprar
-      </button>
-    </div>
-  </div>
+  <main class="flex-grow-1">
+    <router-outlet></router-outlet>
+  </main>
+
+  <app-footer></app-footer>
 </div>
-
-<br>
-
-<app-product-card></app-product-card>
-
-<router-outlet />
