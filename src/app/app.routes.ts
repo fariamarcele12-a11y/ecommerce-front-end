@@ -20,30 +20,18 @@ export const routes: Routes = [
   // Checkout
   { path: 'checkout', component: Checkout },
 
-  // Categoria (redireciona para home com filtro - implementar depois)
+  // Categoria
   { path: 'categoria/:id', component: Home },
 
-  // Vender (feature futura)
+  // Features futuras
   { path: 'vender', redirectTo: '/home' },
-
-  // Favoritos (feature futura)
   { path: 'favoritos', redirectTo: '/home' },
-
-  // Perfil (feature futura)
   { path: 'perfil', redirectTo: '/home' },
-
-  // Pedidos (feature futura)
   { path: 'pedidos', redirectTo: '/home' },
-
-  // Produtos (lista geral - opcional)
   { path: 'produtos', redirectTo: '/home' },
-
-  // Sobre (opcional)
   { path: 'sobre', redirectTo: '/home' },
-
-  // Contato (opcional)
   { path: 'contato', redirectTo: '/home' },
 
-  // Qualquer rota não encontrada redireciona para home
+  // Qualquer rota não encontrada
   { path: '**', redirectTo: '/home' }
 ];
