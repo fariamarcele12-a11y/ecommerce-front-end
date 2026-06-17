@@ -1,0 +1,266 @@
+<div class="container py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a routerLink="/home">Home</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Carrinho</li>
+    </ol>
+  </nav>
+
+  <!-- Título -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="fw-bold mb-0">Meu Carrinho</h1>
+      <p class="text-muted">{{ totalItems }} itens no carrinho</p>
+    </div>
+    <button class="btn btn-outline-danger rounded-pill"
+            (click)="clearCart()"
+            *ngIf="cartItems.length > 0">
+      <i class="bi bi-trash me-1"></i>
+      Esvaziar Carrinho
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+  </div>
+
+  <!-- Carrinho Vazio -->
+  <div *ngIf="!isLoading && cartItems.length === 0" class="text-center py-5">
+    <div class="empty-cart">
+      <i class="bi bi-cart-x display-1 text-muted"></i>
+      <h3 class="mt-3">Seu carrinho está vazio</h3>
+      <p class="text-muted">Explore nossos produtos e encontre ofertas incríveis!</p>
+      <button class="btn btn-primary rounded-pill btn-lg mt-3" (click)="continueShopping()">
+        <i class="bi bi-arrow-left me-2"></i>
+        Continuar Comprando
+      </button>
+    </div>
+  </div>
+
+  <!-- Carrinho com Itens -->
+  <div *ngIf="!isLoading && cartItems.length > 0" class="row g-4">
+    <!-- Lista de Produtos -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+          <!-- Cabeçalho da Lista -->
+          <div class="d-none d-md-grid cart-header p-3 bg-light border-bottom">
+            <div class="row g-0 align-items-center">
+              <div class="col-6">Produto</div>
+              <div class="col-2 text-center">Preço</div>
+              <div class="col-2 text-center">Quantidade</div>
+              <div class="col-2 text-end">Subtotal</div>
+            </div>
+          </div>
+
+          <!-- Itens do Carrinho -->
+          <div *ngFor="let item of cartItems; let i = index"
+               class="cart-item p-3 border-bottom hover-effect">
+            <div class="row g-3 align-items-center">
+              <!-- Produto -->
+              <div class="col-12 col-md-6">
+                <div class="d-flex align-items-center gap-3">
+                  <img [src]="item.product.images[0]"
+                       [alt]="item.product.name"
+                       class="product-image rounded-3"
+                       (error)="item.product.images[0] = 'https://via.placeholder.com/100x100/667eea/ffffff?text=Sem+Imagem'">
+                  <div class="flex-grow-1">
+                    <h6 class="product-name mb-1">
+                      <a [routerLink]="['/produto', item.product.id]" class="text-dark text-decoration-none">
+                        {{ item.product.name }}
+                      </a>
+                    </h6>
+                    <div class="small text-muted">
+                      <span class="badge" [class]="item.product.condition === 'new' ? 'bg-success' : 'bg-warning'">
+                        {{ item.product.condition === 'new' ? 'Novo' : 'Usado' }}
+                      </span>
+                      <span class="ms-2">
+                        <i class="bi bi-geo-alt-fill me-1"></i>{{ item.product.location }}
+                      </span>
+                    </div>
+                    <div class="d-md-none mt-2">
+                      <span class="fw-bold text-primary">
+                        {{ formatPrice(item.product.price) }}
+                      </span>
+                      <span class="text-muted text-decoration-line-through ms-2 small"
+                            *ngIf="item.product.oldPrice">
+                        {{ formatPrice(item.product.oldPrice) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Preço Unitário (Desktop) -->
+              <div class="col-md-2 text-center d-none d-md-block">
+                <div class="fw-bold text-primary">{{ formatPrice(item.product.price) }}</div>
+                <div class="text-muted text-decoration-line-through small" *ngIf="item.product.oldPrice">
+                  {{ formatPrice(item.product.oldPrice) }}
+                </div>
+              </div>
+
+              <!-- Quantidade -->
+              <div class="col-6 col-md-2">
+                <div class="d-flex align-items-center justify-content-center">
+                  <div class="quantity-control">
+                    <button class="btn btn-sm btn-outline-secondary"
+                            (click)="updateQuantity(item.product.id, item.quantity - 1)"
+                            [disabled]="item.quantity <= 1">
+                      <i class="bi bi-dash"></i>
+                    </button>
+                    <span class="mx-2 quantity-display">{{ item.quantity }}</span>
+                    <button class="btn btn-sm btn-outline-secondary"
+                            (click)="updateQuantity(item.product.id, item.quantity + 1)"
+                            [disabled]="item.quantity >= item.product.stock">
+                      <i class="bi bi-plus"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="text-center small text-muted mt-1">
+                  Estoque: {{ item.product.stock }}
+                </div>
+              </div>
+
+              <!-- Subtotal -->
+              <div class="col-6 col-md-2 text-end">
+                <div class="fw-bold text-primary">
+                  {{ formatPrice(item.product.price * item.quantity) }}
+                </div>
+                <button class="btn btn-link text-danger p-0 mt-1"
+                        (click)="removeItem(item.product.id)">
+                  <i class="bi bi-trash"></i>
+                  <span class="d-none d-md-inline">Remover</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ações do Carrinho -->
+      <div class="d-flex flex-wrap gap-3 mt-3">
+        <button class="btn btn-outline-secondary rounded-pill" (click)="continueShopping()">
+          <i class="bi bi-arrow-left me-2"></i>
+          Continuar Comprando
+        </button>
+      </div>
+    </div>
+
+    <!-- Resumo do Pedido -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm sticky-top" style="top: 100px;">
+        <div class="card-body">
+          <h5 class="card-title fw-bold mb-4">Resumo do Pedido</h5>
+
+          <!-- Cupom de Desconto -->
+          <div class="coupon-section mb-4">
+            <label class="form-label small fw-bold">Cupom de Desconto</label>
+            <div class="input-group">
+              <input type="text"
+                     class="form-control"
+                     placeholder="Digite seu cupom"
+                     [(ngModel)]="couponCode"
+                     [disabled]="couponApplied">
+              <button class="btn btn-primary"
+                      (click)="applyCoupon()"
+                      [disabled]="couponApplied">
+                Aplicar
+              </button>
+            </div>
+            <div *ngIf="couponMessage" class="mt-2 small">
+              <span [class.text-success]="couponApplied" [class.text-danger]="!couponApplied">
+                {{ couponMessage }}
+              </span>
+            </div>
+            <div *ngIf="couponApplied" class="mt-2">
+              <button class="btn btn-sm btn-outline-danger" (click)="removeCoupon()">
+                <i class="bi bi-x-circle me-1"></i>
+                Remover Cupom
+              </button>
+            </div>
+          </div>
+
+          <!-- Cálculos -->
+          <div class="summary-items">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Subtotal</span>
+              <span>{{ formatPrice(subtotal) }}</span>
+            </div>
+
+            <div class="d-flex justify-content-between mb-2" *ngIf="discount > 0">
+              <span class="text-success">
+                <i class="bi bi-tag me-1"></i>
+                Desconto
+              </span>
+              <span class="text-success">-{{ formatPrice(discount) }}</span>
+            </div>
+
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">
+                <i class="bi bi-truck me-1"></i>
+                Frete
+              </span>
+              <span *ngIf="shipping === 0 && subtotal > 0" class="text-success">
+                <i class="bi bi-star-fill me-1"></i>
+                Grátis
+              </span>
+              <span *ngIf="shipping > 0">{{ formatPrice(shipping) }}</span>
+              <span *ngIf="subtotal === 0">{{ formatPrice(0) }}</span>
+            </div>
+
+            <div class="d-flex justify-content-between mb-2" *ngIf="getTotalSavings() > 0">
+              <span class="text-success">
+                <i class="bi bi-gift me-1"></i>
+                Você economizou
+              </span>
+              <span class="text-success">-{{ formatPrice(getTotalSavings()) }}</span>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="fw-bold fs-5">Total</span>
+              <span class="fw-bold fs-4 text-primary">{{ formatPrice(total) }}</span>
+            </div>
+
+            <div class="small text-muted mb-3">
+              <i class="bi bi-shield-check me-1"></i>
+              Compra 100% segura
+            </div>
+          </div>
+
+          <!-- Botão Finalizar -->
+          <button class="btn btn-success btn-lg w-100 rounded-pill py-3"
+                  (click)="proceedToCheckout()">
+            <i class="bi bi-lock me-2"></i>
+            Finalizar Compra
+          </button>
+
+          <div class="text-center mt-3">
+            <small class="text-muted">
+              <i class="bi bi-credit-card me-1"></i>
+              Pagamento seguro via cartão, boleto ou PIX
+            </small>
+          </div>
+
+          <!-- Formas de Pagamento -->
+          <div class="payment-methods mt-3 pt-3 border-top">
+            <div class="d-flex justify-content-center gap-3">
+              <i class="bi bi-credit-card text-muted fs-4"></i>
+              <i class="bi bi-bank text-muted fs-4"></i>
+              <i class="bi bi-qr-code text-muted fs-4"></i>
+              <i class="bi bi-paypal text-muted fs-4"></i>
+            </div>
+            <div class="text-center small text-muted mt-2">
+              Pague com cartão, boleto ou PIX
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
