@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
 import { Home } from './features/home/home';
-import { Checkout } from './features/checkout/checkout';
-import { Cart } from './features/cart/cart';
 import { ProductDetail } from './features/products/product-detail/product-detail';
+import { Cart } from './features/cart/cart';
+import { Checkout } from './features/checkout/checkout';
 
 export const routes: Routes = [
   // Rota principal
@@ -34,6 +34,15 @@ export const routes: Routes = [
 
   // Pedidos (feature futura)
   { path: 'pedidos', redirectTo: '/home' },
+
+  // Produtos (lista geral - opcional)
+  { path: 'produtos', redirectTo: '/home' },
+
+  // Sobre (opcional)
+  { path: 'sobre', redirectTo: '/home' },
+
+  // Contato (opcional)
+  { path: 'contato', redirectTo: '/home' },
 
   // Qualquer rota não encontrada redireciona para home
   { path: '**', redirectTo: '/home' }
