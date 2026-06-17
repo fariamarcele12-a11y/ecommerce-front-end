@@ -1,11 +1,16 @@
 {
   "version": 2,
   "buildCommand": "npm run build:vercel",
-  "outputDirectory": "dist/ecommerce-angular",
+  "outputDirectory": "dist/ecommerce-front-end/browser",
   "devCommand": "npm run start",
-  "installCommand": "npm install",
+  "installCommand": "npm install --legacy-peer-deps",
   "framework": "angular",
-  "regions": ["gru1"],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "routes": [
     {
       "src": "/assets/(.*)",
@@ -41,15 +46,8 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
         }
       ]
     }
-  ],
-  "env": {
-    "PRODUCTION": "true"
-  }
+  ]
 }

@@ -1,81 +1,40 @@
 import { Routes } from '@angular/router';
+import { Home } from './features/home/home';
+import { Checkout } from './features/checkout/checkout';
+import { Cart } from './features/cart/cart';
+import { ProductDetail } from './features/products/product-detail/product-detail';
 
 export const routes: Routes = [
   // Rota principal
   { path: '', redirectTo: '/home', pathMatch: 'full' },
-  
+
   // Home
-  { 
-    path: 'home', 
-    loadComponent: () => import('./features/home/home').then(m => m.Home)
-  },
-  
+  { path: 'home', component: Home },
+
   // Detalhe do Produto
-  { 
-    path: 'produto/:id', 
-    loadComponent: () => import('./features/products/product-detail/product-detail').then(m => m.ProductDetail)
-  },
-  
+  { path: 'produto/:id', component: ProductDetail },
+
   // Carrinho
-  { 
-    path: 'carrinho', 
-    loadComponent: () => import('./features/cart/cart').then(m => m.Cart)
-  },
-  
+  { path: 'carrinho', component: Cart },
+
   // Checkout
-  { 
-    path: 'checkout', 
-    loadComponent: () => import('./features/checkout/checkout').then(m => m.Checkout)
-  },
-  
+  { path: 'checkout', component: Checkout },
+
   // Categoria (redireciona para home com filtro - implementar depois)
-  { 
-    path: 'categoria/:id', 
-    loadComponent: () => import('./features/home/home').then(m => m.Home)
-  },
-  
+  { path: 'categoria/:id', component: Home },
+
   // Vender (feature futura)
-  { 
-    path: 'vender', 
-    redirectTo: '/home' 
-  },
-  
+  { path: 'vender', redirectTo: '/home' },
+
   // Favoritos (feature futura)
-  { 
-    path: 'favoritos', 
-    redirectTo: '/home' 
-  },
-  
+  { path: 'favoritos', redirectTo: '/home' },
+
   // Perfil (feature futura)
-  { 
-    path: 'perfil', 
-    redirectTo: '/home' 
-  },
-  
+  { path: 'perfil', redirectTo: '/home' },
+
   // Pedidos (feature futura)
-  { 
-    path: 'pedidos', 
-    redirectTo: '/home' 
-  },
-  
-  // Produtos (lista geral - opcional)
-  { 
-    path: 'produtos', 
-    redirectTo: '/home' 
-  },
-  
-  // Sobre (opcional)
-  { 
-    path: 'sobre', 
-    redirectTo: '/home' 
-  },
-  
-  // Contato (opcional)
-  { 
-    path: 'contato', 
-    redirectTo: '/home' 
-  },
-  
+  { path: 'pedidos', redirectTo: '/home' },
+
   // Qualquer rota não encontrada redireciona para home
   { path: '**', redirectTo: '/home' }
 ];
