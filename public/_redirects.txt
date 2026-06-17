@@ -1,0 +1,8 @@
+# Redirecionamento para SPA (Single Page Application)
+/*    /index.html    200
+
+# Redirecionamentos específicos (se necessário)
+/carrinho    /   302
+/vender      /   302
+/perfil      /   302
+/pedidos     /   302
