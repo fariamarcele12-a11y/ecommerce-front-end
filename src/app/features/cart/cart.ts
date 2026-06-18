@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -32,7 +32,6 @@ export class Cart implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Não chame loadCartFromStorage aqui, o serviço já faz isso no construtor
     this.loadCart();
   }
 

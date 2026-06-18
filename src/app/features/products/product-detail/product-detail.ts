@@ -1,21 +1,21 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Product } from '../../../core/models/ProductModel/product.model';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ProductCard } from '../../../shared/components/product-card/product-card';
+import { Subscription } from 'rxjs';
+import { Product } from '../../../core/models/ProductModel/product.model';
 import { ProductService } from '../../../core/services/productService';
 import { CartService } from '../../../core/services/cartService';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ProductCard } from '../../../shared/components/product-card/product-card';
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ProductCard],
   templateUrl: './product-detail.html',
-  styleUrl: './product-detail.scss',
+  styleUrls: ['./product-detail.scss']
 })
 export class ProductDetail implements OnInit, OnDestroy {
-  Math = Math;
   product: Product | null = null;
   relatedProducts: Product[] = [];
   loading = true;
@@ -23,8 +23,9 @@ export class ProductDetail implements OnInit, OnDestroy {
   selectedImage = 0;
   isFavorite = false;
   showFullDescription = false;
+  Math = Math;
 
-  private routeSub: any;
+  private routeSub: Subscription = new Subscription();
 
   constructor(
     private route: ActivatedRoute,
@@ -61,8 +62,7 @@ export class ProductDetail implements OnInit, OnDestroy {
         }
         this.loading = false;
       },
-      error: (error) => {
-        console.error('Erro ao carregar produto:', error);
+      error: () => {
         this.loading = false;
         this.router.navigate(['/home']);
       }
@@ -73,11 +73,63 @@ export class ProductDetail implements OnInit, OnDestroy {
     this.productService.getRelatedProducts(category, productId).subscribe({
       next: (products) => {
         this.relatedProducts = products;
-      },
-      error: (error) => {
-        console.error('Erro ao carregar produtos relacionados:', error);
       }
     });
+  }
+
+  // ===== MÉTODOS ADICIONADOS =====
+
+  getConditionClass(): string {
+    return this.product?.condition === 'new' ? 'bg-success' : 'bg-warning';
+  }
+
+  getConditionText(): string {
+    return this.product?.condition === 'new' ? 'Novo' : 'Usado';
+  }
+
+  getStars(rating: number): number[] {
+    return Array(5).fill(0).map((_, i) => i < Math.floor(rating) ? 1 : 0);
+  }
+
+  getStockClass(): string {
+    if (!this.product) return '';
+    if (this.product.stock > 10) return 'text-success';
+    if (this.product.stock > 0) return 'text-warning';
+    return 'text-danger';
+  }
+
+  getStockStatus(): string {
+    if (!this.product) return '';
+    if (this.product.stock > 10) return 'Em estoque';
+    if (this.product.stock > 0) return 'Últimas unidades';
+    return 'Esgotado';
+  }
+
+  // ===== FIM DOS MÉTODOS ADICIONADOS =====
+
+  addToCart(): void {
+    if (this.product) {
+      this.cartService.addToCart(this.product, this.quantity);
+      alert(`Produto adicionado ao carrinho! (${this.quantity}x)`);
+    }
+  }
+
+  buyNow(): void {
+    if (this.product) {
+      this.cartService.addToCart(this.product, this.quantity);
+      this.router.navigate(['/checkout']);
+    }
+  }
+
+  formatPrice(price: number): string {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(price);
+  }
+
+  toggleFavorite(): void {
+    this.isFavorite = !this.isFavorite;
   }
 
   changeImage(index: number): void {
@@ -96,65 +148,10 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
-  addToCart(): void {
-    if (this.product) {
-      this.cartService.addToCart(this.product, this.quantity);
-      // Feedback visual (você pode adicionar um toast depois)
-      alert(`Produto adicionado ao carrinho! (${this.quantity}x)`);
-    }
-  }
-
-  buyNow(): void {
-    if (this.product) {
-      this.cartService.addToCart(this.product, this.quantity);
-      this.router.navigate(['/checkout']);
-    }
-  }
-
-  toggleFavorite(): void {
-    if (this.product) {
-      this.isFavorite = !this.isFavorite;
-      this.productService.toggleFavorite(this.product.id);
-    }
-  }
-
-  formatPrice(price: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(price);
-  }
-
   getDiscountPercentage(): number {
     if (this.product?.oldPrice && this.product.oldPrice > this.product.price) {
       return Math.round(((this.product.oldPrice - this.product.price) / this.product.oldPrice) * 100);
     }
     return 0;
-  }
-
-  getConditionText(): string {
-    return this.product?.condition === 'new' ? 'Novo' : 'Usado';
-  }
-
-  getConditionClass(): string {
-    return this.product?.condition === 'new' ? 'bg-success' : 'bg-warning';
-  }
-
-  getStockStatus(): string {
-    if (!this.product) return '';
-    if (this.product.stock > 10) return 'Em estoque';
-    if (this.product.stock > 0) return 'Últimas unidades';
-    return 'Esgotado';
-  }
-
-  getStockClass(): string {
-    if (!this.product) return '';
-    if (this.product.stock > 10) return 'text-success';
-    if (this.product.stock > 0) return 'text-warning';
-    return 'text-danger';
-  }
-
-  getStars(rating: number): number[] {
-    return Array(5).fill(0).map((_, i) => i < Math.floor(rating) ? 1 : 0);
   }
 }
