@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
 
 export interface CartItem {
@@ -17,6 +18,15 @@ export class CartService {
   private totalPrice = new BehaviorSubject<number>(0);
   private discount = new BehaviorSubject<number>(0);
   private shipping = new BehaviorSubject<number>(0);
+  private isBrowser: boolean;
+
+  constructor(@Inject(PLATFORM_ID) private platformId: Object) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
+    // Só carrega do localStorage se estiver no navegador
+    if (this.isBrowser) {
+      this.loadCartFromStorage();
+    }
+  }
 
   getCartItems(): Observable<CartItem[]> {
     return this.cartItems.asObservable();
@@ -48,7 +58,9 @@ export class CartService {
         existingItem.quantity = newQuantity;
       } else {
         existingItem.quantity = product.stock;
-        alert(`Desculpe, só temos ${product.stock} unidades disponíveis.`);
+        if (this.isBrowser) {
+          alert(`Desculpe, só temos ${product.stock} unidades disponíveis.`);
+        }
       }
     } else {
       if (quantity <= product.stock) {
@@ -58,19 +70,25 @@ export class CartService {
           subtotal: product.price * quantity
         });
       } else {
-        alert(`Desculpe, só temos ${product.stock} unidades disponíveis.`);
+        if (this.isBrowser) {
+          alert(`Desculpe, só temos ${product.stock} unidades disponíveis.`);
+        }
         return;
       }
     }
 
     this.updateCart(currentItems);
-    this.saveCartToStorage(currentItems);
+    if (this.isBrowser) {
+      this.saveCartToStorage(currentItems);
+    }
   }
 
   removeFromCart(productId: number): void {
     const currentItems = this.cartItems.value.filter(item => item.product.id !== productId);
     this.updateCart(currentItems);
-    this.saveCartToStorage(currentItems);
+    if (this.isBrowser) {
+      this.saveCartToStorage(currentItems);
+    }
   }
 
   updateQuantity(productId: number, quantity: number): void {
@@ -83,20 +101,25 @@ export class CartService {
       } else if (quantity <= item.product.stock) {
         item.quantity = quantity;
         this.updateCart(currentItems);
-        this.saveCartToStorage(currentItems);
+        if (this.isBrowser) {
+          this.saveCartToStorage(currentItems);
+        }
       } else {
-        alert(`Desculpe, só temos ${item.product.stock} unidades disponíveis.`);
+        if (this.isBrowser) {
+          alert(`Desculpe, só temos ${item.product.stock} unidades disponíveis.`);
+        }
       }
     }
   }
 
   clearCart(): void {
     this.updateCart([]);
-    this.saveCartToStorage([]);
+    if (this.isBrowser) {
+      this.saveCartToStorage([]);
+    }
   }
 
   applyDiscount(code: string): boolean {
-    // Simulação de cupom de desconto
     const validCoupons: { [key: string]: number } = {
       'PROMO10': 10,
       'PROMO20': 20,
@@ -120,7 +143,7 @@ export class CartService {
 
     if (total > 0) {
       if (total >= 100) {
-        shippingCost = 0; // Frete grátis
+        shippingCost = 0;
       } else if (total >= 50) {
         shippingCost = 15.90;
       } else {
@@ -151,7 +174,6 @@ export class CartService {
   }
 
   private updateCart(items: CartItem[]): void {
-    // Calcular subtotal de cada item
     items.forEach(item => {
       item.subtotal = item.product.price * item.quantity;
     });
@@ -167,7 +189,6 @@ export class CartService {
     this.calculateShipping();
   }
 
-  // Persistir carrinho no localStorage
   private saveCartToStorage(items: CartItem[]): void {
     try {
       const cartData = items.map(item => ({
@@ -181,12 +202,17 @@ export class CartService {
   }
 
   loadCartFromStorage(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
     try {
       const cartData = localStorage.getItem('cart');
       if (cartData) {
         const parsedData = JSON.parse(cartData);
         // Aqui você precisaria buscar os produtos novamente
-        // Por simplicidade, vamos apenas limpar
+        // Por enquanto, apenas log
+        console.log('Carrinho carregado do localStorage:', parsedData);
       }
     } catch (error) {
       console.error('Erro ao carregar carrinho:', error);

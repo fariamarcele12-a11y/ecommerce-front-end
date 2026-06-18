@@ -1,37 +1,39 @@
 import { Routes } from '@angular/router';
-import { Home } from './features/home/home';
-import { ProductDetail } from './features/products/product-detail/product-detail';
-import { Cart } from './features/cart/cart';
-import { Checkout } from './features/checkout/checkout';
 
 export const routes: Routes = [
   // Rota principal
   { path: '', redirectTo: '/home', pathMatch: 'full' },
 
   // Home
-  { path: 'home', component: Home },
+  {
+    path: 'home',
+    loadComponent: () => import('./features/home/home').then(m => m.Home)
+  },
 
   // Detalhe do Produto
-  { path: 'produto/:id', component: ProductDetail },
+  {
+    path: 'produto/:id',
+    loadComponent: () => import('./features/products/product-detail/product-detail').then(m => m.ProductDetail)
+  },
 
   // Carrinho
-  { path: 'carrinho', component: Cart },
+  {
+    path: 'carrinho',
+    loadComponent: () => import('./features/cart/cart').then(m => m.Cart)
+  },
 
   // Checkout
-  { path: 'checkout', component: Checkout },
+  {
+    path: 'checkout',
+    loadComponent: () => import('./features/checkout/checkout').then(m => m.Checkout)
+  },
 
-  // Categoria
-  { path: 'categoria/:id', component: Home },
+  // Categoria (redireciona para home com filtro - implementar depois)
+  {
+    path: 'categoria/:id',
+    loadComponent: () => import('./features/home/home').then(m => m.Home)
+  },
 
-  // Features futuras
-  { path: 'vender', redirectTo: '/home' },
-  { path: 'favoritos', redirectTo: '/home' },
-  { path: 'perfil', redirectTo: '/home' },
-  { path: 'pedidos', redirectTo: '/home' },
-  { path: 'produtos', redirectTo: '/home' },
-  { path: 'sobre', redirectTo: '/home' },
-  { path: 'contato', redirectTo: '/home' },
-
-  // Qualquer rota não encontrada
+  // Qualquer rota não encontrada redireciona para home
   { path: '**', redirectTo: '/home' }
 ];

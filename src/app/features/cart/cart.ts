@@ -32,8 +32,8 @@ export class Cart implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Não chame loadCartFromStorage aqui, o serviço já faz isso no construtor
     this.loadCart();
-    this.cartService.loadCartFromStorage();
   }
 
   ngOnDestroy(): void {
