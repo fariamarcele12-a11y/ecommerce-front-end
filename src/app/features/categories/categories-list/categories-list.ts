@@ -9,12 +9,13 @@ import { CategoryService } from '../../../core/services/category.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './categories-list.html',
-  styleUrls: ['./categories-list.scss']
+  styleUrls: ['./categories-list.scss'],
 })
 export class CategoriesList implements OnInit {
   @Input() limit?: number;
-  @Input() showSubcategories: boolean = true;
+  @Input() showSubcategories = true;
   @Input() layout: 'grid' | 'list' = 'grid';
+
   @Output() categorySelected = new EventEmitter<Category>();
 
   categories: Category[] = [];
@@ -28,14 +29,19 @@ export class CategoriesList implements OnInit {
 
   loadCategories(): void {
     this.loading = true;
-    this.categoryService.getCategories({ limit: this.limit }).subscribe({
+
+    this.categoryService.getCategories().subscribe({
       next: (categories) => {
-        this.categories = categories;
+        this.categories = this.limit
+          ? categories.slice(0, this.limit)
+          : categories;
+
         this.loading = false;
       },
-      error: () => {
+      error: (err) => {
+        console.error('Erro ao carregar categorias:', err);
         this.loading = false;
-      }
+      },
     });
   }
 
