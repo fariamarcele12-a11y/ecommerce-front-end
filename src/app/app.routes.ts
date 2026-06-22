@@ -10,7 +10,14 @@ export const routes: Routes = [
   { path: 'produto/:id', component: ProductDetail },
   { path: 'carrinho', component: Cart },
   { path: 'checkout', component: Checkout },
-  { path: 'categoria/:id', component: Home },
+  {
+    path: 'categoria/:slug',
+    loadComponent: () => import('./features/categories/category-detail/category-detail').then(m => m.CategoryDetail)
+  },
+  {
+    path: 'categorias',
+    loadComponent: () => import('./features/categories/categories-list/categories-list').then(m => m.CategoriesList)
+  },
   { path: 'vender', redirectTo: '/home' },
   { path: 'favoritos', redirectTo: '/home' },
   { path: 'perfil', redirectTo: '/home' },

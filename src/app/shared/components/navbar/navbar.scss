@@ -1,28 +1,84 @@
-// Gradiente para texto
+// ============================================
+// 1. GRADIENTES E TEXTOS
+// ============================================
+
 .bg-gradient-primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
 }
-// Sombra suave no sticky
+
+// ============================================
+// 2. NAVBAR PRINCIPAL
+// ============================================
+
+.navbar {
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
+
+  &.scrolled {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    background-color: rgba(255, 255, 255, 0.98) !important;
+  }
+}
+
 .sticky-top {
   backdrop-filter: blur(10px);
   background-color: rgba(255, 255, 255, 0.95) !important;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
 }
-// Hover effects modernos
+
+// ============================================
+// 3. NAV LINKS
+// ============================================
+
 .nav-link {
   transition: all 0.2s ease;
   border-radius: 8px;
+  padding: 8px 12px;
+  color: #495057;
+  font-weight: 500;
+
   &:hover {
-    background-color: rgba(0,0,0,0.03);
+    background-color: rgba(0, 0, 0, 0.03);
     transform: translateY(-1px);
+    color: #667eea;
+  }
+
+  &.active {
+    color: #667eea !important;
+    font-weight: 600;
   }
 }
+
+// ============================================
+// 4. DROPDOWN
+// ============================================
+
 .dropdown-menu {
   animation: fadeInDown 0.2s ease;
+  border-radius: 12px;
+  padding: 8px;
+  border: none;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+
+  .dropdown-item {
+    border-radius: 8px;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: rgba(102, 126, 234, 0.08);
+      color: #667eea;
+    }
+
+    &.text-danger:hover {
+      background-color: rgba(220, 53, 69, 0.08);
+      color: #dc3545;
+    }
+  }
 }
+
 @keyframes fadeInDown {
   from {
     opacity: 0;
@@ -33,15 +89,251 @@
     transform: translateY(0);
   }
 }
-// Botão Vender com efeito
+
+// ============================================
+// 5. BOTÕES
+// ============================================
+
 .btn-outline-success {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+
   &:hover {
     transform: scale(1.02);
     box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2);
   }
 }
-// Input de busca com glow
+
+// ============================================
+// 6. INPUT DE BUSCA
+// ============================================
+
 .form-control:focus {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+}
+
+// ============================================
+// 7. CATEGORIAS NAVBAR SECUNDÁRIA
+// ============================================
+
+.nav-underline {
+  .nav-link {
+    color: #495057;
+    font-weight: 500;
+    padding: 12px 4px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      background: transparent;
+      transform: translateY(-1px);
+    }
+
+    &.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    i {
+      font-size: 0.9rem;
+      margin-right: 4px;
+    }
+  }
+}
+
+// ============================================
+// 8. MENU MOBILE DE CATEGORIAS
+// ============================================
+
+.d-lg-none {
+  .btn {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+  }
+
+  .overflow-auto {
+    &::-webkit-scrollbar {
+      height: 2px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 10px;
+    }
+  }
+}
+
+// ============================================
+// 9. BADGES
+// ============================================
+
+.badge {
+  font-size: 0.65rem;
+  padding: 0.25rem 0.5rem;
+  min-width: 18px;
+  font-weight: 600;
+}
+
+// ============================================
+// 10. ÍCONES COM HOVER
+// ============================================
+
+.bi-heart,
+.bi-cart3 {
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+// ============================================
+// 11. RESPONSIVIDADE
+// ============================================
+
+// Tablets e telas médias
+@media (max-width: 991px) {
+  .navbar-brand {
+    .fs-4 {
+      font-size: 1.25rem !important;
+    }
+  }
+
+  .navbar {
+    .container-fluid {
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+    }
+  }
+}
+
+// Mobile
+@media (max-width: 768px) {
+  .navbar {
+    .container-fluid {
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+    }
+  }
+
+  .btn-outline-success {
+    padding: 6px 12px !important;
+    font-size: 0.85rem;
+
+    span {
+      display: none !important;
+    }
+  }
+
+  .dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .nav-link {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+  }
+}
+
+// Mobile pequeno
+@media (max-width: 576px) {
+  .navbar-brand {
+    .fs-4 {
+      font-size: 1.1rem !important;
+    }
+  }
+
+  .input-group {
+    .form-control {
+      font-size: 0.85rem;
+      padding: 0.375rem 0.75rem;
+    }
+
+    .btn {
+      font-size: 0.85rem;
+      padding: 0.375rem 0.75rem;
+    }
+  }
+}
+
+// ============================================
+// 12. UTILITÁRIOS
+// ============================================
+
+// Posição relativa para badges
+.position-relative {
+  .badge {
+    font-size: 0.6rem;
+  }
+}
+
+// Sombra no navbar ao scroll
+.navbar.scrolled {
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+}
+
+// ============================================
+// 13. ANIMAÇÕES DE ENTRADA
+// ============================================
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Aplicar animação em elementos específicos
+.collapse.show {
+  animation: slideInDown 0.3s ease-out;
+}
+
+// ============================================
+// 14. ESTILOS ADICIONAIS PARA CATEGORIAS MOBILE
+// ============================================
+
+// Categorias no mobile com scroll horizontal
+.categories-mobile-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 8px 0;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    height: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+  }
+
+  .category-btn {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
 }

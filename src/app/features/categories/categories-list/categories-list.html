@@ -1,0 +1,91 @@
+<div *ngIf="loading" class="text-center py-4">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Carregando categorias...</span>
+  </div>
+</div>
+
+<div *ngIf="!loading && categories.length === 0" class="text-center py-4">
+  <p class="text-muted">Nenhuma categoria encontrada.</p>
+</div>
+
+<!-- Layout Grid -->
+<div *ngIf="!loading && categories.length > 0 && layout === 'grid'"
+     class="categories-grid">
+  <div class="row g-4">
+    <div *ngFor="let category of categories" class="col-md-4 col-sm-6">
+      <div class="category-card card h-100 border-0 shadow-sm hover-effect"
+           (click)="onCategoryClick(category)"
+           [routerLink]="getCategoryUrl(category.slug)">
+
+        <!-- Imagem da Categoria -->
+        <div class="category-image-wrapper">
+          <img [src]="category.image || 'https://picsum.photos/seed/' + category.id + '/300/200'"
+               [alt]="category.name"
+               class="category-image"
+               loading="lazy">
+          <div class="category-overlay">
+            <i [class]="getIconClass(category.icon)"></i>
+          </div>
+        </div>
+
+        <div class="card-body text-center">
+          <h5 class="card-title mb-1">{{ category.name }}</h5>
+          <p class="card-text small text-muted" *ngIf="category.description">
+            {{ category.description }}
+          </p>
+          <div class="d-flex justify-content-center gap-3 small">
+            <span class="badge bg-light text-dark">
+              <i class="bi bi-box-seam me-1"></i>
+              {{ category.productCount || 0 }} produtos
+            </span>
+            <span class="badge bg-light text-dark" *ngIf="category.subcategories?.length">
+              <i class="bi bi-tags me-1"></i>
+              {{ category.subcategories?.length }} subcategorias
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Layout List -->
+<div *ngIf="!loading && categories.length > 0 && layout === 'list'"
+     class="categories-list">
+  <div *ngFor="let category of categories"
+       class="category-list-item border-bottom py-3"
+       (click)="onCategoryClick(category)"
+       [routerLink]="getCategoryUrl(category.slug)">
+    <div class="d-flex align-items-center gap-3">
+      <div class="category-icon-wrapper">
+        <i [class]="getIconClass(category.icon)"></i>
+      </div>
+      <div class="flex-grow-1">
+        <h6 class="mb-0">{{ category.name }}</h6>
+        <small class="text-muted" *ngIf="category.description">
+          {{ category.description }}
+        </small>
+      </div>
+      <div class="text-end">
+        <span class="badge bg-primary rounded-pill">
+          {{ category.productCount || 0 }}
+        </span>
+        <i class="bi bi-chevron-right ms-2 text-muted"></i>
+      </div>
+    </div>
+
+    <!-- Subcategorias -->
+    <div *ngIf="showSubcategories && category.subcategories?.length"
+         class="subcategories mt-2 ps-5">
+      <div class="d-flex flex-wrap gap-2">
+        <a *ngFor="let sub of category.subcategories"
+           class="subcategory-link"
+           [routerLink]="getCategoryUrl(sub.slug)">
+          <i [class]="getIconClass(sub.icon)"></i>
+          {{ sub.name }}
+          <span class="badge bg-light text-dark ms-1">{{ sub.productCount || 0 }}</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

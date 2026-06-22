@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, HostListener } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CartService } from '../../../core/services/cartService';
 import { Subscription } from 'rxjs';
+import { CartService } from '../../../core/services/cartService';
 
 @Component({
   selector: 'app-navbar',
@@ -12,9 +12,10 @@ import { Subscription } from 'rxjs';
   styleUrl: './navbar.scss',
 })
 export class Navbar implements OnInit, OnDestroy {
-cartCount = 0;
+  cartCount = 0;
   favoritesCount = 0;
   isLoggedIn = false;
+  isScrolled = false;
 
   private cartSubscription: Subscription = new Subscription();
 
@@ -30,5 +31,10 @@ cartCount = 0;
     if (this.cartSubscription) {
       this.cartSubscription.unsubscribe();
     }
+  }
+
+  @HostListener('window:scroll', [])
+  onWindowScroll() {
+    this.isScrolled = window.scrollY > 50;
   }
 }

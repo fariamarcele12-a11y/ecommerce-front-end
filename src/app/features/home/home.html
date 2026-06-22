@@ -3,7 +3,7 @@
   <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
     <div class="carousel-inner">
       <div class="carousel-item active" *ngFor="let banner of banners; let i = index">
-        <img [src]="banner.image" class="d-block w-100" style="height: 300px; object-fit: cover;" 
+        <img [src]="banner.image" class="d-block w-100" style="height: 300px; object-fit: cover;"
              [alt]="banner.title">
         <div class="carousel-caption d-none d-md-block">
           <h2 class="fw-bold">{{ banner.title }}</h2>
@@ -20,57 +20,143 @@
   </div>
 </div>
 
+<!-- Categorias em Destaque -->
+<section class="py-5 bg-white">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="fw-bold mb-0">Categorias</h2>
+        <p class="text-muted">Encontre o que você procura</p>
+      </div>
+      <a routerLink="/categorias" class="btn btn-outline-primary rounded-pill">
+        Ver todas
+        <i class="bi bi-arrow-right-short"></i>
+      </a>
+    </div>
+
+    <!-- Componente de Categorias -->
+    <app-categories-list [limit]="4"></app-categories-list>
+  </div>
+</section>
+
 <!-- Seção de Destaques -->
-<section class="py-5">
+<section class="py-5 bg-light">
   <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
         <h2 class="fw-bold mb-0">Produtos em Destaque</h2>
         <p class="text-muted">Os produtos mais procurados do momento</p>
       </div>
-      <a href="#" class="btn btn-outline-primary rounded-pill">Ver todos</a>
+      <a routerLink="/produtos" class="btn btn-outline-primary rounded-pill">
+        Ver todos
+        <i class="bi bi-arrow-right-short"></i>
+      </a>
     </div>
-    
+
     <!-- Lista de Produtos -->
     <app-products></app-products>
   </div>
 </section>
 
-<!-- Categorias em Destaque -->
-<section class="bg-light py-5">
+<!-- Categorias Populares (Layout Alternativo) -->
+<section class="py-5 bg-white">
   <div class="container">
-    <h2 class="text-center fw-bold mb-4">Compre por Categorias</h2>
-    <div class="row g-3 text-center">
-      <div class="col-md-3 col-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body py-4">
-            <i class="bi bi-phone fs-1"></i>
-            <h5 class="mt-2">Eletrônicos</h5>
+    <div class="row align-items-center mb-4">
+      <div class="col-md-6">
+        <h2 class="fw-bold mb-0">Categorias Populares</h2>
+        <p class="text-muted">As categorias mais buscadas do momento</p>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <a routerLink="/categorias" class="btn btn-outline-primary rounded-pill">
+          Explorar todas
+          <i class="bi bi-arrow-right-short"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <!-- Categoria 1 -->
+      <div class="col-lg-3 col-md-4 col-6">
+        <div class="category-card-mini text-center p-4 border rounded-3 hover-effect"
+             routerLink="/categoria/eletronicos">
+          <div class="category-icon-wrapper bg-primary bg-opacity-10 rounded-circle mx-auto mb-3">
+            <i class="bi bi-phone fs-1 text-primary"></i>
           </div>
+          <h6 class="fw-bold mb-1">Eletrônicos</h6>
+          <small class="text-muted">156 produtos</small>
         </div>
       </div>
-      <div class="col-md-3 col-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body py-4">
-            <i class="bi bi-bag fs-1"></i>
-            <h5 class="mt-2">Moda</h5>
+
+      <!-- Categoria 2 -->
+      <div class="col-lg-3 col-md-4 col-6">
+        <div class="category-card-mini text-center p-4 border rounded-3 hover-effect"
+             routerLink="/categoria/moda">
+          <div class="category-icon-wrapper bg-success bg-opacity-10 rounded-circle mx-auto mb-3">
+            <i class="bi bi-bag fs-1 text-success"></i>
           </div>
+          <h6 class="fw-bold mb-1">Moda</h6>
+          <small class="text-muted">234 produtos</small>
         </div>
       </div>
-      <div class="col-md-3 col-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body py-4">
-            <i class="bi bi-house fs-1"></i>
-            <h5 class="mt-2">Casa</h5>
+
+      <!-- Categoria 3 -->
+      <div class="col-lg-3 col-md-4 col-6">
+        <div class="category-card-mini text-center p-4 border rounded-3 hover-effect"
+             routerLink="/categoria/casa-decoracao">
+          <div class="category-icon-wrapper bg-warning bg-opacity-10 rounded-circle mx-auto mb-3">
+            <i class="bi bi-house fs-1 text-warning"></i>
           </div>
+          <h6 class="fw-bold mb-1">Casa e Decoração</h6>
+          <small class="text-muted">189 produtos</small>
         </div>
       </div>
-      <div class="col-md-3 col-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body py-4">
-            <i class="bi bi-bicycle fs-1"></i>
-            <h5 class="mt-2">Esportes</h5>
+
+      <!-- Categoria 4 -->
+      <div class="col-lg-3 col-md-4 col-6">
+        <div class="category-card-mini text-center p-4 border rounded-3 hover-effect"
+             routerLink="/categoria/esportes">
+          <div class="category-icon-wrapper bg-danger bg-opacity-10 rounded-circle mx-auto mb-3">
+            <i class="bi bi-bicycle fs-1 text-danger"></i>
           </div>
+          <h6 class="fw-bold mb-1">Esportes</h6>
+          <small class="text-muted">98 produtos</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Marcas/Parceiros (Opcional) -->
+<section class="py-4 bg-light border-top">
+  <div class="container">
+    <div class="d-flex justify-content-center align-items-center gap-5 flex-wrap">
+      <span class="text-muted fw-bold">Vendido por:</span>
+      <div class="d-flex align-items-center gap-4">
+        <span class="text-muted">Apple</span>
+        <span class="text-muted">Samsung</span>
+        <span class="text-muted">Nike</span>
+        <span class="text-muted">Adidas</span>
+        <span class="text-muted">Dell</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Newsletter (Opcional) -->
+<section class="py-5 bg-dark text-white">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <h4 class="fw-bold">Fique por dentro das ofertas!</h4>
+        <p class="text-white-50">Receba promoções exclusivas e novidades</p>
+      </div>
+      <div class="col-md-6">
+        <div class="input-group">
+          <input type="email" class="form-control form-control-lg" placeholder="Seu melhor email">
+          <button class="btn btn-primary btn-lg" type="button">
+            <i class="bi bi-envelope me-2"></i>
+            Inscrever
+          </button>
         </div>
       </div>
     </div>

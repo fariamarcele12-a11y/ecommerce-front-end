@@ -1,8 +1,8 @@
-<nav class="navbar navbar-expand-lg sticky-top bg-white border-bottom">
+<nav class="navbar navbar-expand-lg sticky-top bg-white border-bottom"
+     [class.scrolled]="isScrolled">
   <div class="container-fluid px-3 px-lg-5">
-    <!-- Logo com responsividade -->
-    <a class="navbar-brand d-flex align-items-center gap-2" routerLink="/">
-      <!-- <img src="assets/images/logo.svg" alt="Logo" height="40" class="d-none d-sm-block">-->
+    <!-- Logo -->
+    <a class="navbar-brand d-flex align-items-center gap-2" routerLink="/home">
       <span class="fw-bold fs-4 bg-gradient-primary text-transparent">MarketHub</span>
     </a>
 
@@ -21,7 +21,7 @@
 
     <!-- Conteúdo Colapsável -->
     <div class="collapse navbar-collapse" id="navbarMain">
-      <!-- Barra de Pesquisa (posição central em desktop) -->
+      <!-- Barra de Pesquisa -->
       <div class="mx-auto w-100 w-lg-50 px-3 px-lg-4 my-3 my-lg-0">
         <div class="input-group shadow-sm rounded-pill overflow-hidden">
           <input
@@ -38,7 +38,7 @@
 
       <!-- Ícones e Ações -->
       <div class="d-flex align-items-center gap-2 gap-lg-3 ms-auto">
-        <!-- Vender (Botão Destacado) -->
+        <!-- Vender -->
         <a class="btn btn-outline-success rounded-pill px-3 px-lg-4" routerLink="/vender">
           <i class="bi bi-plus-circle me-1"></i>
           <span class="d-none d-md-inline">Vender</span>
@@ -47,25 +47,21 @@
         <!-- Favoritos -->
         <a class="nav-link position-relative" routerLink="/favoritos">
           <i class="bi bi-heart fs-5"></i>
-          <span
-            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-          >
-            0
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+            {{ favoritesCount }}
           </span>
         </a>
 
         <!-- Carrinho -->
         <a class="nav-link position-relative" routerLink="/carrinho">
           <i class="bi bi-cart3 fs-5"></i>
-          <span
-            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary"
-          >
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">
             {{ cartCount }}
             <span class="visually-hidden">itens no carrinho</span>
           </span>
         </a>
 
-        <!-- Avatar/Usuário (placeholder sem login) -->
+        <!-- Avatar/Usuário -->
         <div class="dropdown">
           <button
             class="btn btn-link text-dark text-decoration-none dropdown-toggle d-flex align-items-center gap-2"
@@ -106,26 +102,74 @@
   </div>
 </nav>
 
-<!-- Categorias Navbar Secundária -->
+<!-- Categorias Navbar Secundária (Desktop) -->
 <div class="bg-light border-bottom d-none d-lg-block">
   <div class="container-fluid px-5">
     <ul class="nav nav-underline justify-content-start gap-4 small">
       <li class="nav-item">
-        <a class="nav-link text-dark" routerLink="/categoria/eletronicos">Eletrônicos</a>
-      </li>
-      <li class="nav-item"><a class="nav-link text-dark" routerLink="/categoria/moda">Moda</a></li>
-      <li class="nav-item">
-        <a class="nav-link text-dark" routerLink="/categoria/casa">Casa e Decoração</a>
+        <a class="nav-link text-dark" routerLink="/categoria/eletronicos">
+          <i class="bi bi-phone me-1"></i>Eletrônicos
+        </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link text-dark" routerLink="/categoria/esporte">Esportes</a>
+        <a class="nav-link text-dark" routerLink="/categoria/moda">
+          <i class="bi bi-bag me-1"></i>Moda
+        </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link text-dark" routerLink="/categoria/automoveis">Automóveis</a>
+        <a class="nav-link text-dark" routerLink="/categoria/casa-decoracao">
+          <i class="bi bi-house me-1"></i>Casa e Decoração
+        </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link text-dark" routerLink="/categoria/imoveis">Imóveis</a>
+        <a class="nav-link text-dark" routerLink="/categoria/esportes">
+          <i class="bi bi-bicycle me-1"></i>Esportes
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-dark" routerLink="/categoria/automoveis">
+          <i class="bi bi-car-front me-1"></i>Automóveis
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-dark" routerLink="/categoria/imoveis">
+          <i class="bi bi-building me-1"></i>Imóveis
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-dark fw-bold" routerLink="/categorias">
+          <i class="bi bi-grid-3x3-gap-fill me-1"></i>Todas
+        </a>
       </li>
     </ul>
+  </div>
+</div>
+
+<!-- Menu Mobile de Categorias -->
+<div class="d-lg-none bg-white border-bottom py-2">
+  <div class="container-fluid px-3">
+    <div class="d-flex gap-2 overflow-auto pb-2" style="scrollbar-width: thin;">
+      <a class="btn btn-outline-secondary btn-sm rounded-pill flex-shrink-0" routerLink="/categoria/eletronicos">
+        <i class="bi bi-phone me-1"></i>Eletrônicos
+      </a>
+      <a class="btn btn-outline-secondary btn-sm rounded-pill flex-shrink-0" routerLink="/categoria/moda">
+        <i class="bi bi-bag me-1"></i>Moda
+      </a>
+      <a class="btn btn-outline-secondary btn-sm rounded-pill flex-shrink-0" routerLink="/categoria/casa-decoracao">
+        <i class="bi bi-house me-1"></i>Casa
+      </a>
+      <a class="btn btn-outline-secondary btn-sm rounded-pill flex-shrink-0" routerLink="/categoria/esportes">
+        <i class="bi bi-bicycle me-1"></i>Esportes
+      </a>
+      <a class="btn btn-outline-secondary btn-sm rounded-pill flex-shrink-0" routerLink="/categoria/automoveis">
+        <i class="bi bi-car-front me-1"></i>Autos
+      </a>
+      <a class="btn btn-outline-secondary btn-sm rounded-pill flex-shrink-0" routerLink="/categoria/imoveis">
+        <i class="bi bi-building me-1"></i>Imóveis
+      </a>
+      <a class="btn btn-primary btn-sm rounded-pill flex-shrink-0" routerLink="/categorias">
+        <i class="bi bi-grid-3x3-gap-fill me-1"></i>Todas
+      </a>
+    </div>
   </div>
 </div>

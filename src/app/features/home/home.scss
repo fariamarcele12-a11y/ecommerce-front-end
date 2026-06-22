@@ -1,0 +1,78 @@
+// Cards de Categoria Mini
+.category-card-mini {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border-color: #667eea !important;
+  }
+
+  .category-icon-wrapper {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      font-size: 1.75rem;
+    }
+  }
+}
+
+// Efeito hover geral
+.hover-effect {
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+  }
+}
+
+// Responsividade
+@media (max-width: 768px) {
+  .category-card-mini {
+    padding: 16px !important;
+
+    .category-icon-wrapper {
+      width: 48px;
+      height: 48px;
+
+      i {
+        font-size: 1.25rem;
+      }
+    }
+
+    h6 {
+      font-size: 0.9rem;
+    }
+
+    small {
+      font-size: 0.75rem;
+    }
+  }
+}
+
+// Animação de fade
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.category-card-mini {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.category-card-mini:nth-child(1) { animation-delay: 0.05s; }
+.category-card-mini:nth-child(2) { animation-delay: 0.1s; }
+.category-card-mini:nth-child(3) { animation-delay: 0.15s; }
+.category-card-mini:nth-child(4) { animation-delay: 0.2s; }
