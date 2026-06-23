@@ -3,17 +3,27 @@
   "version": "1.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --host 0.0.0.0",
+    "start": "ng serve --host 0.0.0.0 --open",
     "build": "ng build",
     "build:vercel": "ng build --configuration production",
+    "build:prod": "ng build --configuration production",
+    "build:dev": "ng build --configuration development",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "vercel-build": "npm run build:vercel"
+    "test:ci": "ng test --watch=false --browsers=ChromeHeadless",
+    "vercel-build": "npm run build:vercel",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel",
+    "clean": "rm -rf .angular dist node_modules/.cache",
+    "lint": "ng lint",
+    "format": "prettier --write ."
   },
   "private": true,
   "engines": {
-    "node": "20.x"
+    "node": "20.x",
+    "npm": "10.x"
   },
+  "packageManager": "npm@10.8.1",
   "dependencies": {
     "@angular/common": "^21.2.0",
     "@angular/compiler": "^21.2.0",
@@ -31,7 +41,13 @@
     "@angular/build": "^21.2.13",
     "@angular/cli": "^21.2.13",
     "@angular/compiler-cli": "^21.2.0",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.17.19",
-    "typescript": "~5.9.2"
+    "angular-eslint": "21.4.0",
+    "eslint": "^10.3.0",
+    "prettier": "^3.3.3",
+    "typescript": "~5.9.2",
+    "typescript-eslint": "8.59.2",
+    "vercel": "^37.2.0"
   }
 }

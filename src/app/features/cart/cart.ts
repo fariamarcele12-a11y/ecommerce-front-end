@@ -10,7 +10,7 @@ import { CartItem, CartService } from '../../core/services/cart.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './cart.html',
-  styleUrls: ['./cart.scss']
+  styleUrls: ['./cart.scss'],
 })
 export class Cart implements OnInit, OnDestroy {
   cartItems: CartItem[] = [];
@@ -28,7 +28,7 @@ export class Cart implements OnInit, OnDestroy {
 
   constructor(
     private cartService: CartService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -43,37 +43,37 @@ export class Cart implements OnInit, OnDestroy {
     this.isLoading = true;
 
     this.subscriptions.add(
-      this.cartService.getCartItems().subscribe(items => {
+      this.cartService.getCartItems().subscribe((items) => {
         this.cartItems = items;
         this.isLoading = false;
-      })
+      }),
     );
 
     this.subscriptions.add(
-      this.cartService.getTotalItems().subscribe(total => {
+      this.cartService.getTotalItems().subscribe((total) => {
         this.totalItems = total;
-      })
+      }),
     );
 
     this.subscriptions.add(
-      this.cartService.getTotalPrice().subscribe(total => {
+      this.cartService.getTotalPrice().subscribe((total) => {
         this.subtotal = total;
         this.updateTotals();
-      })
+      }),
     );
 
     this.subscriptions.add(
-      this.cartService.getDiscount().subscribe(discount => {
+      this.cartService.getDiscount().subscribe((discount) => {
         this.discount = discount;
         this.updateTotals();
-      })
+      }),
     );
 
     this.subscriptions.add(
-      this.cartService.getShipping().subscribe(shipping => {
+      this.cartService.getShipping().subscribe((shipping) => {
         this.shipping = shipping;
         this.updateTotals();
-      })
+      }),
     );
   }
 
@@ -149,14 +149,14 @@ export class Cart implements OnInit, OnDestroy {
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(price);
   }
 
   getTotalSavings(): number {
     const totalOriginal = this.cartItems.reduce(
-      (sum, item) => sum + ((item.product.oldPrice || item.product.price) * item.quantity),
-      0
+      (sum, item) => sum + (item.product.oldPrice || item.product.price) * item.quantity,
+      0,
     );
     return totalOriginal - this.subtotal;
   }

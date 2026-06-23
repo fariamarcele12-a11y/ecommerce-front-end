@@ -11,7 +11,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink, Products],
   templateUrl: './category-detail.html',
-  styleUrls: ['./category-detail.scss']
+  styleUrls: ['./category-detail.scss'],
 })
 export class CategoryDetail implements OnInit, OnDestroy {
   category: Category | null = null;
@@ -20,11 +20,11 @@ export class CategoryDetail implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
   ) {}
 
   ngOnInit(): void {
-    this.routeSub = this.route.params.subscribe(params => {
+    this.routeSub = this.route.params.subscribe((params) => {
       const slug = params['slug'];
       if (slug) {
         this.loadCategory(slug);
@@ -45,7 +45,7 @@ export class CategoryDetail implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading = false;
-      }
+      },
     });
   }
 

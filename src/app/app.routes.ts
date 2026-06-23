@@ -12,15 +12,17 @@ export const routes: Routes = [
   { path: 'checkout', component: Checkout },
   {
     path: 'categoria/:slug',
-    loadComponent: () => import('./features/categories/category-detail/category-detail').then(m => m.CategoryDetail)
+    loadComponent: () =>
+      import('./features/categories/category-detail/category-detail').then((m) => m.CategoryDetail),
   },
   {
     path: 'categorias',
-    loadComponent: () => import('./features/categories/categories-list/categories-list').then(m => m.CategoriesList)
+    loadComponent: () =>
+      import('./features/categories/categories-list/categories-list').then((m) => m.CategoriesList),
   },
   { path: 'vender', redirectTo: '/home' },
   { path: 'favoritos', redirectTo: '/home' },
   { path: 'perfil', redirectTo: '/home' },
   { path: 'pedidos', redirectTo: '/home' },
-  { path: '**', redirectTo: '/home' }
+  { path: '**', redirectTo: '/home' },
 ];

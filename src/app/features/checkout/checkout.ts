@@ -11,7 +11,7 @@ import { OrderService } from '../../core/services/order.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './checkout.html',
-  styleUrls: ['./checkout.scss']
+  styleUrls: ['./checkout.scss'],
 })
 export class Checkout implements OnInit, OnDestroy {
   cartItems: CartItem[] = [];
@@ -34,13 +34,13 @@ export class Checkout implements OnInit, OnDestroy {
       neighborhood: '',
       city: '',
       state: '',
-      country: 'Brasil'
+      country: 'Brasil',
     },
     paymentMethod: 'credit',
     installments: 1,
     cpfCnpj: '',
     saveAddress: false,
-    termsAccepted: false
+    termsAccepted: false,
   };
 
   isProcessing = false;
@@ -53,7 +53,7 @@ export class Checkout implements OnInit, OnDestroy {
   constructor(
     private cartService: CartService,
     private orderService: OrderService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -67,33 +67,33 @@ export class Checkout implements OnInit, OnDestroy {
 
   loadCartData(): void {
     this.subscriptions.add(
-      this.cartService.getCartItems().subscribe(items => {
+      this.cartService.getCartItems().subscribe((items) => {
         this.cartItems = items;
         if (items.length === 0) {
           this.router.navigate(['/carrinho']);
         }
-      })
+      }),
     );
 
     this.subscriptions.add(
-      this.cartService.getTotalPrice().subscribe(total => {
+      this.cartService.getTotalPrice().subscribe((total) => {
         this.subtotal = total;
         this.updateTotals();
-      })
+      }),
     );
 
     this.subscriptions.add(
-      this.cartService.getDiscount().subscribe(discount => {
+      this.cartService.getDiscount().subscribe((discount) => {
         this.discount = discount;
         this.updateTotals();
-      })
+      }),
     );
 
     this.subscriptions.add(
-      this.cartService.getShipping().subscribe(shipping => {
+      this.cartService.getShipping().subscribe((shipping) => {
         this.shipping = shipping;
         this.updateTotals();
-      })
+      }),
     );
   }
 
@@ -121,20 +121,20 @@ export class Checkout implements OnInit, OnDestroy {
         street: 'Praça da Sé',
         neighborhood: 'Sé',
         city: 'São Paulo',
-        state: 'SP'
+        state: 'SP',
       },
       '20040030': {
         street: 'Avenida Presidente Vargas',
         neighborhood: 'Centro',
         city: 'Rio de Janeiro',
-        state: 'RJ'
+        state: 'RJ',
       },
       '30130010': {
         street: 'Rua da Bahia',
         neighborhood: 'Centro',
         city: 'Belo Horizonte',
-        state: 'MG'
-      }
+        state: 'MG',
+      },
     };
 
     const address = mockAddresses[cep];
@@ -178,7 +178,7 @@ export class Checkout implements OnInit, OnDestroy {
     this.selectedPaymentMethod = methodId;
     this.form.paymentMethod = methodId;
 
-    const method = this.paymentMethods.find(m => m.id === methodId);
+    const method = this.paymentMethods.find((m) => m.id === methodId);
     if (method?.installments) {
       this.maxInstallments = method.installments;
     } else {
@@ -190,7 +190,7 @@ export class Checkout implements OnInit, OnDestroy {
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(price);
   }
 

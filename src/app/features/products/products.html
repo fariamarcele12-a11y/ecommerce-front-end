@@ -5,19 +5,16 @@
       <span class="visually-hidden">Carregando...</span>
     </div>
   </div>
-  
+
   <!-- Produtos -->
   <div *ngIf="!loading">
     <div class="row g-4">
-      <div class="col-lg-3 col-md-4 col-sm-6 col-12" 
-           *ngFor="let product of products">
-        <app-product-card 
-          [product]="product"
-          (favoriteToggle)="onFavoriteToggle($event)">
+      <div class="col-lg-3 col-md-4 col-sm-6 col-12" *ngFor="let product of products">
+        <app-product-card [product]="product" (favoriteToggle)="onFavoriteToggle($event)">
         </app-product-card>
       </div>
     </div>
-    
+
     <!-- Sem resultados -->
     <div *ngIf="products.length === 0" class="text-center py-5">
       <i class="bi bi-inbox display-1 text-muted"></i>

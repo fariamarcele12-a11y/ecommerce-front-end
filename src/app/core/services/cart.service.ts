@@ -28,7 +28,7 @@ export interface ServerCart {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CartService {
   // URLs da API
@@ -48,7 +48,7 @@ export class CartService {
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
-    private http: HttpClient
+    private http: HttpClient,
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
@@ -91,7 +91,7 @@ export class CartService {
    */
   addToCart(product: Product, quantity: number = 1): void {
     const currentItems = this.cartItems.value;
-    const existingItem = currentItems.find(item => item.product.id === product.id);
+    const existingItem = currentItems.find((item) => item.product.id === product.id);
 
     if (existingItem) {
       const newQuantity = existingItem.quantity + quantity;
@@ -108,7 +108,7 @@ export class CartService {
         currentItems.push({
           product,
           quantity: Math.min(quantity, product.stock),
-          subtotal: product.price * quantity
+          subtotal: product.price * quantity,
         });
       } else {
         if (this.isBrowser) {
@@ -126,7 +126,7 @@ export class CartService {
    * Remove produto do carrinho
    */
   removeFromCart(productId: number): void {
-    const currentItems = this.cartItems.value.filter(item => item.product.id !== productId);
+    const currentItems = this.cartItems.value.filter((item) => item.product.id !== productId);
     this.updateCart(currentItems);
     this.saveToStorageAndServer(currentItems);
   }
@@ -136,7 +136,7 @@ export class CartService {
    */
   updateQuantity(productId: number, quantity: number): void {
     const currentItems = this.cartItems.value;
-    const item = currentItems.find(item => item.product.id === productId);
+    const item = currentItems.find((item) => item.product.id === productId);
 
     if (item) {
       if (quantity <= 0) {
@@ -168,13 +168,13 @@ export class CartService {
    */
   applyDiscount(code: string): boolean {
     const validCoupons: { [key: string]: number } = {
-      'PROMO10': 10,
-      'PROMO20': 20,
-      'PROMO30': 30,
-      'BLACKFRIDAY': 50,
-      'FREEGIFT': 0,
-      'WELCOME10': 10,
-      'VIP20': 20
+      PROMO10: 10,
+      PROMO20: 20,
+      PROMO30: 30,
+      BLACKFRIDAY: 50,
+      FREEGIFT: 0,
+      WELCOME10: 10,
+      VIP20: 20,
     };
 
     const upperCode = code.toUpperCase().trim();
@@ -192,10 +192,13 @@ export class CartService {
 
       // Salvar cupom aplicado
       if (this.isBrowser) {
-        localStorage.setItem('appliedCoupon', JSON.stringify({
-          code: upperCode,
-          discount: discountAmount
-        }));
+        localStorage.setItem(
+          'appliedCoupon',
+          JSON.stringify({
+            code: upperCode,
+            discount: discountAmount,
+          }),
+        );
       }
 
       return true;
@@ -232,9 +235,9 @@ export class CartService {
       if (total >= 100) {
         shippingCost = 0; // Frete grátis
       } else if (total >= 50) {
-        shippingCost = 15.90;
+        shippingCost = 15.9;
       } else {
-        shippingCost = 25.90;
+        shippingCost = 25.9;
       }
     }
 
@@ -253,8 +256,8 @@ export class CartService {
 
     // Calcular economia total (preços originais vs atuais)
     const originalTotal = this.cartItems.value.reduce(
-      (sum, item) => sum + ((item.product.oldPrice || item.product.price) * item.quantity),
-      0
+      (sum, item) => sum + (item.product.oldPrice || item.product.price) * item.quantity,
+      0,
     );
     const savings = originalTotal - subtotal;
 
@@ -264,7 +267,7 @@ export class CartService {
       shipping,
       total: Math.max(total, 0),
       itemCount,
-      savings: Math.max(savings, 0)
+      savings: Math.max(savings, 0),
     };
   }
 
@@ -286,14 +289,14 @@ export class CartService {
    * Verifica se um produto está no carrinho
    */
   isProductInCart(productId: number): boolean {
-    return this.cartItems.value.some(item => item.product.id === productId);
+    return this.cartItems.value.some((item) => item.product.id === productId);
   }
 
   /**
    * Obtém a quantidade de um produto no carrinho
    */
   getProductQuantity(productId: number): number {
-    const item = this.cartItems.value.find(item => item.product.id === productId);
+    const item = this.cartItems.value.find((item) => item.product.id === productId);
     return item ? item.quantity : 0;
   }
 
@@ -301,7 +304,7 @@ export class CartService {
    * Atualiza o estado do carrinho
    */
   private updateCart(items: CartItem[]): void {
-    items.forEach(item => {
+    items.forEach((item) => {
       item.subtotal = item.product.price * item.quantity;
     });
 
@@ -310,7 +313,7 @@ export class CartService {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     this.totalItems.next(totalItems);
 
-    const totalPrice = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+    const totalPrice = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
     this.totalPrice.next(totalPrice);
 
     this.calculateShipping();
@@ -331,9 +334,9 @@ export class CartService {
    */
   private saveCartToStorage(items: CartItem[]): void {
     try {
-      const cartData = items.map(item => ({
+      const cartData = items.map((item) => ({
         productId: item.product.id,
-        quantity: item.quantity
+        quantity: item.quantity,
       }));
       localStorage.setItem('cart', JSON.stringify(cartData));
     } catch (error) {
@@ -347,19 +350,22 @@ export class CartService {
   private saveCartToServer(items: CartItem[]): void {
     if (this.isSyncing) return;
 
-    const cartData = items.map(item => ({
+    const cartData = items.map((item) => ({
       productId: item.product.id,
-      quantity: item.quantity
+      quantity: item.quantity,
     }));
 
     // Como json-server não tem um endpoint de carrinho simples,
     // vamos simular salvando em um recurso "cart"
-    this.http.put(`${this.apiUrl}/1`, { items: cartData }).pipe(
-      catchError((error) => {
-        console.warn('Erro ao sincronizar carrinho com servidor:', error);
-        return of(null);
-      })
-    ).subscribe();
+    this.http
+      .put(`${this.apiUrl}/1`, { items: cartData })
+      .pipe(
+        catchError((error) => {
+          console.warn('Erro ao sincronizar carrinho com servidor:', error);
+          return of(null);
+        }),
+      )
+      .subscribe();
   }
 
   /**
@@ -396,7 +402,7 @@ export class CartService {
    */
   private loadProductsForCart(cartData: { productId: number; quantity: number }[]): void {
     // Buscar produtos individualmente
-    const productIds = cartData.map(item => item.productId);
+    const productIds = cartData.map((item) => item.productId);
     // Nota: Isso seria idealmente feito com um endpoint de busca em lote
     // Por enquanto, vamos apenas limpar o carrinho para evitar dados inconsistentes
     console.log('🛒 Carrinho carregado do localStorage:', cartData);
@@ -410,14 +416,15 @@ export class CartService {
 
     this.isSyncing = true;
 
-    this.http.get<ServerCart>(`${this.apiUrl}/1`)
+    this.http
+      .get<ServerCart>(`${this.apiUrl}/1`)
       .pipe(
         catchError((error) => {
           if (error.status === 404) {
             // Criar recurso de carrinho se não existir
             return this.http.post<ServerCart>(this.apiUrl, {
               id: 1,
-              items: []
+              items: [],
             });
           }
           return throwError(() => error);
@@ -426,7 +433,7 @@ export class CartService {
           console.warn('Erro ao sincronizar carrinho com servidor:', error);
           this.isSyncing = false;
           return of(null);
-        })
+        }),
       )
       .subscribe((serverCart) => {
         this.isSyncing = false;

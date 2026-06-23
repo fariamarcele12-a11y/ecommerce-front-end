@@ -3,18 +3,32 @@
   <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
     <div class="carousel-inner">
       <div class="carousel-item active" *ngFor="let banner of banners; let i = index">
-        <img [src]="banner.image" class="d-block w-100" style="height: 300px; object-fit: cover;"
-             [alt]="banner.title">
+        <img
+          [src]="banner.image"
+          class="d-block w-100"
+          style="height: 300px; object-fit: cover"
+          [alt]="banner.title"
+        />
         <div class="carousel-caption d-none d-md-block">
           <h2 class="fw-bold">{{ banner.title }}</h2>
           <p>{{ banner.subtitle }}</p>
         </div>
       </div>
     </div>
-    <button class="carousel-control-prev" type="button" data-bs-target="#bannerCarousel" data-bs-slide="prev">
+    <button
+      class="carousel-control-prev"
+      type="button"
+      data-bs-target="#bannerCarousel"
+      data-bs-slide="prev"
+    >
       <span class="carousel-control-prev-icon" aria-hidden="true"></span>
     </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#bannerCarousel" data-bs-slide="next">
+    <button
+      class="carousel-control-next"
+      type="button"
+      data-bs-target="#bannerCarousel"
+      data-bs-slide="next"
+    >
       <span class="carousel-control-next-icon" aria-hidden="true"></span>
     </button>
   </div>
@@ -77,8 +91,10 @@
     <div class="row g-4">
       <!-- Categoria 1 -->
       <div class="col-lg-3 col-md-4 col-6">
-        <div class="category-card-mini text-center p-4 border rounded-3 hover-effect"
-             routerLink="/categoria/eletronicos">
+        <div
+          class="category-card-mini text-center p-4 border rounded-3 hover-effect"
+          routerLink="/categoria/eletronicos"
+        >
           <div class="category-icon-wrapper bg-primary bg-opacity-10 rounded-circle mx-auto mb-3">
             <i class="bi bi-phone fs-1 text-primary"></i>
           </div>
@@ -89,8 +105,10 @@
 
       <!-- Categoria 2 -->
       <div class="col-lg-3 col-md-4 col-6">
-        <div class="category-card-mini text-center p-4 border rounded-3 hover-effect"
-             routerLink="/categoria/moda">
+        <div
+          class="category-card-mini text-center p-4 border rounded-3 hover-effect"
+          routerLink="/categoria/moda"
+        >
           <div class="category-icon-wrapper bg-success bg-opacity-10 rounded-circle mx-auto mb-3">
             <i class="bi bi-bag fs-1 text-success"></i>
           </div>
@@ -101,8 +119,10 @@
 
       <!-- Categoria 3 -->
       <div class="col-lg-3 col-md-4 col-6">
-        <div class="category-card-mini text-center p-4 border rounded-3 hover-effect"
-             routerLink="/categoria/casa-decoracao">
+        <div
+          class="category-card-mini text-center p-4 border rounded-3 hover-effect"
+          routerLink="/categoria/casa-decoracao"
+        >
           <div class="category-icon-wrapper bg-warning bg-opacity-10 rounded-circle mx-auto mb-3">
             <i class="bi bi-house fs-1 text-warning"></i>
           </div>
@@ -113,8 +133,10 @@
 
       <!-- Categoria 4 -->
       <div class="col-lg-3 col-md-4 col-6">
-        <div class="category-card-mini text-center p-4 border rounded-3 hover-effect"
-             routerLink="/categoria/esportes">
+        <div
+          class="category-card-mini text-center p-4 border rounded-3 hover-effect"
+          routerLink="/categoria/esportes"
+        >
           <div class="category-icon-wrapper bg-danger bg-opacity-10 rounded-circle mx-auto mb-3">
             <i class="bi bi-bicycle fs-1 text-danger"></i>
           </div>
@@ -152,7 +174,7 @@
       </div>
       <div class="col-md-6">
         <div class="input-group">
-          <input type="email" class="form-control form-control-lg" placeholder="Seu melhor email">
+          <input type="email" class="form-control form-control-lg" placeholder="Seu melhor email" />
           <button class="btn btn-primary btn-lg" type="button">
             <i class="bi bi-envelope me-2"></i>
             Inscrever

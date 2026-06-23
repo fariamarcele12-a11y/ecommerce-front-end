@@ -22,7 +22,7 @@ export class Navbar implements OnInit, OnDestroy {
   constructor(private cartService: CartService) {}
 
   ngOnInit(): void {
-    this.cartSubscription = this.cartService.getTotalItems().subscribe(total => {
+    this.cartSubscription = this.cartService.getTotalItems().subscribe((total) => {
       this.cartCount = total;
     });
   }

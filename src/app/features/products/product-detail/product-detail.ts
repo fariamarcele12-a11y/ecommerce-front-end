@@ -13,7 +13,7 @@ import { CartService } from '../../../core/services/cart.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ProductCard],
   templateUrl: './product-detail.html',
-  styleUrls: ['./product-detail.scss']
+  styleUrls: ['./product-detail.scss'],
 })
 export class ProductDetail implements OnInit, OnDestroy {
   product: Product | null = null;
@@ -31,11 +31,11 @@ export class ProductDetail implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private productService: ProductService,
-    private cartService: CartService
+    private cartService: CartService,
   ) {}
 
   ngOnInit(): void {
-    this.routeSub = this.route.params.subscribe(params => {
+    this.routeSub = this.route.params.subscribe((params) => {
       const id = params['id'];
       if (id) {
         this.loadProduct(+id);
@@ -65,7 +65,7 @@ export class ProductDetail implements OnInit, OnDestroy {
       error: () => {
         this.loading = false;
         this.router.navigate(['/home']);
-      }
+      },
     });
   }
 
@@ -73,7 +73,7 @@ export class ProductDetail implements OnInit, OnDestroy {
     this.productService.getRelatedProducts(category, productId).subscribe({
       next: (products) => {
         this.relatedProducts = products;
-      }
+      },
     });
   }
 
@@ -88,7 +88,9 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   getStars(rating: number): number[] {
-    return Array(5).fill(0).map((_, i) => i < Math.floor(rating) ? 1 : 0);
+    return Array(5)
+      .fill(0)
+      .map((_, i) => (i < Math.floor(rating) ? 1 : 0));
   }
 
   getStockClass(): string {
@@ -124,7 +126,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(price);
   }
 
@@ -150,7 +152,9 @@ export class ProductDetail implements OnInit, OnDestroy {
 
   getDiscountPercentage(): number {
     if (this.product?.oldPrice && this.product.oldPrice > this.product.price) {
-      return Math.round(((this.product.oldPrice - this.product.price) / this.product.oldPrice) * 100);
+      return Math.round(
+        ((this.product.oldPrice - this.product.price) / this.product.oldPrice) * 100,
+      );
     }
     return 0;
   }

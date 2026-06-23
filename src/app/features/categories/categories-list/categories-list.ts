@@ -32,9 +32,7 @@ export class CategoriesList implements OnInit {
 
     this.categoryService.getCategories().subscribe({
       next: (categories) => {
-        this.categories = this.limit
-          ? categories.slice(0, this.limit)
-          : categories;
+        this.categories = this.limit ? categories.slice(0, this.limit) : categories;
 
         this.loading = false;
       },

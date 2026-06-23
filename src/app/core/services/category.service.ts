@@ -23,7 +23,7 @@ export class CategoryService {
    */
   getCategories(useCache: boolean = true): Observable<Category[]> {
     // Se usar cache e tiver cache válido
-    if (useCache && this.categoriesCache$ && (Date.now() - this.lastCacheTime) < this.cacheDuration) {
+    if (useCache && this.categoriesCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
       return this.categoriesCache$;
     }
 
@@ -33,7 +33,7 @@ export class CategoryService {
         this.lastCacheTime = Date.now();
       }),
       shareReplay(1),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
 
     this.categoriesCache$ = request;
@@ -68,101 +68,97 @@ export class CategoryService {
       url += `?${params.join('&')}`;
     }
 
-    return this.http.get<Category[]>(url).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<Category[]>(url).pipe(catchError(this.handleError));
   }
 
   /**
    * Busca categoria por ID
    */
   getCategoryById(id: number): Observable<Category> {
-    return this.http.get<Category>(`${this.apiUrl}/${id}`).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<Category>(`${this.apiUrl}/${id}`).pipe(catchError(this.handleError));
   }
 
   /**
    * Busca categoria por slug
    */
   getCategoryBySlug(slug: string): Observable<Category | null> {
-    return this.http
-      .get<Category[]>(`${this.apiUrl}?slug=${slug}`)
-      .pipe(
-        map((categories) => (categories.length ? categories[0] : null)),
-        catchError(this.handleError)
-      );
+    return this.http.get<Category[]>(`${this.apiUrl}?slug=${slug}`).pipe(
+      map((categories) => (categories.length ? categories[0] : null)),
+      catchError(this.handleError),
+    );
   }
 
   /**
    * Busca subcategorias de uma categoria pai
    */
   getSubcategories(parentId: number): Observable<Category[]> {
-    return this.http.get<Category[]>(`${this.apiUrl}?parentId=${parentId}`).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .get<Category[]>(`${this.apiUrl}?parentId=${parentId}`)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Busca categorias populares (com mais produtos)
    */
   getPopularCategories(limit = 6): Observable<Category[]> {
-    return this.http.get<Category[]>(
-      `${this.apiUrl}?_sort=productCount&_order=desc&_limit=${limit}`
-    ).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .get<Category[]>(`${this.apiUrl}?_sort=productCount&_order=desc&_limit=${limit}`)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Busca categorias com ícones
    */
   getCategoriesWithIcons(): Observable<Category[]> {
-    return this.http.get<Category[]>(`${this.apiUrl}?icon_ne=&icon_nnull=true`).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .get<Category[]>(`${this.apiUrl}?icon_ne=&icon_nnull=true`)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Busca categorias ativas
    */
   getActiveCategories(): Observable<Category[]> {
-    return this.http.get<Category[]>(`${this.apiUrl}?active=true`).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .get<Category[]>(`${this.apiUrl}?active=true`)
+      .pipe(catchError(this.handleError));
   }
 
   /**
    * Cria uma nova categoria
    */
   createCategory(category: Partial<Category>): Observable<Category> {
-    return this.http.post<Category>(this.apiUrl, {
-      ...category,
-      active: true,
-      createdAt: new Date().toISOString()
-    }).pipe(
-      tap(() => {
-        // Invalidar cache
-        this.invalidateCache();
-      }),
-      catchError(this.handleError)
-    );
+    return this.http
+      .post<Category>(this.apiUrl, {
+        ...category,
+        active: true,
+        createdAt: new Date().toISOString(),
+      })
+      .pipe(
+        tap(() => {
+          // Invalidar cache
+          this.invalidateCache();
+        }),
+        catchError(this.handleError),
+      );
   }
 
   /**
    * Atualiza uma categoria
    */
   updateCategory(id: number, category: Partial<Category>): Observable<Category> {
-    return this.http.put<Category>(`${this.apiUrl}/${id}`, {
-      ...category,
-      updatedAt: new Date().toISOString()
-    }).pipe(
-      tap(() => {
-        // Invalidar cache
-        this.invalidateCache();
-      }),
-      catchError(this.handleError)
-    );
+    return this.http
+      .put<Category>(`${this.apiUrl}/${id}`, {
+        ...category,
+        updatedAt: new Date().toISOString(),
+      })
+      .pipe(
+        tap(() => {
+          // Invalidar cache
+          this.invalidateCache();
+        }),
+        catchError(this.handleError),
+      );
   }
 
   /**
@@ -174,7 +170,7 @@ export class CategoryService {
         // Invalidar cache
         this.invalidateCache();
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -182,9 +178,9 @@ export class CategoryService {
    * Busca categorias por nome (busca textual)
    */
   searchCategories(searchTerm: string): Observable<Category[]> {
-    return this.http.get<Category[]>(`${this.apiUrl}?q=${searchTerm}`).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .get<Category[]>(`${this.apiUrl}?q=${searchTerm}`)
+      .pipe(catchError(this.handleError));
   }
 
   /**
@@ -216,7 +212,8 @@ export class CategoryService {
       // Erro do lado do servidor
       switch (error.status) {
         case 0:
-          errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão com a internet.';
+          errorMessage =
+            'Não foi possível conectar ao servidor. Verifique sua conexão com a internet.';
           break;
         case 404:
           errorMessage = 'Recurso não encontrado. Verifique a URL.';
@@ -254,7 +251,7 @@ export class CategoryService {
       catchError((error) => {
         console.error('❌ API não está respondendo:', error);
         return throwError(() => new Error('API indisponível'));
-      })
+      }),
     );
   }
 }

@@ -1,12 +1,21 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Observable, throwError, catchError, tap, map, shareReplay, BehaviorSubject, switchMap } from 'rxjs';
+import {
+  Observable,
+  throwError,
+  catchError,
+  tap,
+  map,
+  shareReplay,
+  BehaviorSubject,
+  switchMap,
+} from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
 import { ProductFilters } from '../models/ProductModel/product-filters.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ProductService {
   // URLs da API
@@ -26,7 +35,7 @@ export class ProductService {
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
-    private http: HttpClient
+    private http: HttpClient,
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
@@ -41,7 +50,7 @@ export class ProductService {
    */
   getProducts(filters?: ProductFilters, useCache: boolean = true): Observable<Product[]> {
     // Se usar cache e tiver cache válido
-    if (useCache && this.productsCache$ && (Date.now() - this.lastCacheTime) < this.cacheDuration) {
+    if (useCache && this.productsCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
       return this.productsCache$;
     }
 
@@ -95,12 +104,12 @@ export class ProductService {
         this.lastCacheTime = Date.now();
         // Adicionar flag de favorito
         const favorites = this.favoritesSubject.value;
-        products.forEach(product => {
+        products.forEach((product) => {
           product.isFavorite = favorites.includes(product.id);
         });
       }),
       shareReplay(1),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
 
     this.productsCache$ = request;
@@ -118,22 +127,24 @@ export class ProductService {
         product.isFavorite = favorites.includes(product.id);
         return product;
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
   /**
    * Busca produtos relacionados
    */
-  getRelatedProducts(category: string, productId: number, limit: number = 4): Observable<Product[]> {
+  getRelatedProducts(
+    category: string,
+    productId: number,
+    limit: number = 4,
+  ): Observable<Product[]> {
     const params = new HttpParams()
       .set('category', category)
       .set('id_ne', productId.toString())
       .set('_limit', limit.toString());
 
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
   /**
@@ -145,9 +156,7 @@ export class ProductService {
       params = params.set('_limit', limit.toString());
     }
 
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
   /**
@@ -159,28 +168,26 @@ export class ProductService {
       .set('_order', 'desc')
       .set('_limit', limit.toString());
 
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
   /**
    * Busca produtos com desconto
    */
   getProductsOnSale(limit: number = 8): Observable<Product[]> {
-    const params = new HttpParams()
-      .set('discount_ne', '0')
-      .set('_limit', limit.toString());
+    const params = new HttpParams().set('discount_ne', '0').set('_limit', limit.toString());
 
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
   /**
    * Busca produtos por faixa de preço
    */
-  getProductsByPriceRange(minPrice: number, maxPrice: number, limit?: number): Observable<Product[]> {
+  getProductsByPriceRange(
+    minPrice: number,
+    maxPrice: number,
+    limit?: number,
+  ): Observable<Product[]> {
     let params = new HttpParams()
       .set('price_gte', minPrice.toString())
       .set('price_lte', maxPrice.toString());
@@ -189,9 +196,7 @@ export class ProductService {
       params = params.set('_limit', limit.toString());
     }
 
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
   /**
@@ -203,9 +208,7 @@ export class ProductService {
       params = params.set('_limit', limit.toString());
     }
 
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
   /**
@@ -220,8 +223,8 @@ export class ProductService {
         id: 1,
         name: 'Vendedor',
         rating: 0,
-        sales: 0
-      }
+        sales: 0,
+      },
     };
 
     return this.http.post<Product>(this.apiUrl, newProduct).pipe(
@@ -229,7 +232,7 @@ export class ProductService {
         // Invalidar cache
         this.invalidateCache();
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -237,16 +240,18 @@ export class ProductService {
    * Atualiza um produto
    */
   updateProduct(id: number, product: Partial<Product>): Observable<Product> {
-    return this.http.patch<Product>(`${this.apiUrl}/${id}`, {
-      ...product,
-      updatedAt: new Date().toISOString()
-    }).pipe(
-      tap(() => {
-        // Invalidar cache
-        this.invalidateCache();
-      }),
-      catchError(this.handleError)
-    );
+    return this.http
+      .patch<Product>(`${this.apiUrl}/${id}`, {
+        ...product,
+        updatedAt: new Date().toISOString(),
+      })
+      .pipe(
+        tap(() => {
+          // Invalidar cache
+          this.invalidateCache();
+        }),
+        catchError(this.handleError),
+      );
   }
 
   /**
@@ -258,7 +263,7 @@ export class ProductService {
         // Invalidar cache
         this.invalidateCache();
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -273,18 +278,20 @@ export class ProductService {
         const newFavoriteStatus = !product.isFavorite;
 
         // Atualizar o produto
-        return this.http.patch<Product>(`${this.apiUrl}/${productId}`, {
-          isFavorite: newFavoriteStatus
-        }).pipe(
-          tap((updatedProduct) => {
-            // Atualizar lista de favoritos
-            this.updateFavorites(productId, newFavoriteStatus);
-            // Invalidar cache
-            this.invalidateCache();
+        return this.http
+          .patch<Product>(`${this.apiUrl}/${productId}`, {
+            isFavorite: newFavoriteStatus,
           })
-        );
+          .pipe(
+            tap((updatedProduct) => {
+              // Atualizar lista de favoritos
+              this.updateFavorites(productId, newFavoriteStatus);
+              // Invalidar cache
+              this.invalidateCache();
+            }),
+          );
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -294,7 +301,7 @@ export class ProductService {
   getFavoriteProducts(): Observable<Product[]> {
     const favoriteIds = this.favoritesSubject.value;
     if (favoriteIds.length === 0) {
-      return new Observable(observer => {
+      return new Observable((observer) => {
         observer.next([]);
         observer.complete();
       });
@@ -302,13 +309,11 @@ export class ProductService {
 
     // Buscar produtos que estão na lista de favoritos
     let params = new HttpParams();
-    favoriteIds.forEach(id => {
+    favoriteIds.forEach((id) => {
       params = params.append('id', id.toString());
     });
 
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      catchError(this.handleError)
-    );
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
   /**
@@ -325,7 +330,7 @@ export class ProductService {
         newFavorites = currentFavorites;
       }
     } else {
-      newFavorites = currentFavorites.filter(id => id !== productId);
+      newFavorites = currentFavorites.filter((id) => id !== productId);
     }
 
     this.favoritesSubject.next(newFavorites);
@@ -424,7 +429,7 @@ export class ProductService {
       catchError((error) => {
         console.error('❌ API não está respondendo:', error);
         return throwError(() => new Error('API indisponível'));
-      })
+      }),
     );
   }
 }

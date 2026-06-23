@@ -5,7 +5,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Order, OrderItem, Address, PaymentMethod, OrderFilter } from '../models/checkout.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class OrderService {
   // URLs da API
@@ -19,7 +19,7 @@ export class OrderService {
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
-    private http: HttpClient
+    private http: HttpClient,
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
@@ -68,7 +68,7 @@ export class OrderService {
           this.saveOrdersToStorage(orders);
         }
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -76,15 +76,17 @@ export class OrderService {
    * Busca pedidos do usuário atual
    */
   getMyOrders(userId: string): Observable<Order[]> {
-    return this.http.get<Order[]>(`${this.apiUrl}?userId=${userId}&_sort=createdAt&_order=desc`).pipe(
-      tap((orders) => {
-        this.orders.next(orders);
-        if (this.isBrowser) {
-          this.saveOrdersToStorage(orders);
-        }
-      }),
-      catchError(this.handleError)
-    );
+    return this.http
+      .get<Order[]>(`${this.apiUrl}?userId=${userId}&_sort=createdAt&_order=desc`)
+      .pipe(
+        tap((orders) => {
+          this.orders.next(orders);
+          if (this.isBrowser) {
+            this.saveOrdersToStorage(orders);
+          }
+        }),
+        catchError(this.handleError),
+      );
   }
 
   /**
@@ -92,7 +94,7 @@ export class OrderService {
    */
   getOrderById(orderId: string): Observable<Order | undefined> {
     // Primeiro tenta do cache local
-    const cachedOrder = this.orders.value.find(o => o.id === orderId);
+    const cachedOrder = this.orders.value.find((o) => o.id === orderId);
     if (cachedOrder) {
       return of(cachedOrder);
     }
@@ -101,7 +103,7 @@ export class OrderService {
     return this.http.get<Order>(`${this.apiUrl}/${orderId}`).pipe(
       tap((order) => {
         const currentOrders = this.orders.value;
-        const index = currentOrders.findIndex(o => o.id === orderId);
+        const index = currentOrders.findIndex((o) => o.id === orderId);
         if (index !== -1) {
           currentOrders[index] = order;
         } else {
@@ -112,7 +114,7 @@ export class OrderService {
           this.saveOrdersToStorage(currentOrders);
         }
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -132,7 +134,7 @@ export class OrderService {
       status: 'pending',
       createdAt: new Date(),
       userId: orderData.userId || '1',
-      ...orderData
+      ...orderData,
     };
 
     return this.http.post<Order>(this.apiUrl, newOrder).pipe(
@@ -145,7 +147,7 @@ export class OrderService {
           this.saveOrdersToStorage([createdOrder, ...currentOrders]);
         }
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -155,13 +157,13 @@ export class OrderService {
   updateOrderStatus(orderId: string, status: Order['status']): Observable<Order> {
     const updates = {
       status,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     return this.http.patch<Order>(`${this.apiUrl}/${orderId}`, updates).pipe(
       tap((updatedOrder) => {
         const currentOrders = this.orders.value;
-        const index = currentOrders.findIndex(o => o.id === orderId);
+        const index = currentOrders.findIndex((o) => o.id === orderId);
         if (index !== -1) {
           currentOrders[index] = updatedOrder;
           this.orders.next(currentOrders);
@@ -170,7 +172,7 @@ export class OrderService {
           }
         }
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -178,12 +180,12 @@ export class OrderService {
    * Adiciona número de rastreio ao pedido
    */
   addTrackingCode(orderId: string, trackingCode: string): Observable<Order> {
-    return this.http.patch<Order>(`${this.apiUrl}/${orderId}`, {
-      trackingCode,
-      updatedAt: new Date()
-    }).pipe(
-      catchError(this.handleError)
-    );
+    return this.http
+      .patch<Order>(`${this.apiUrl}/${orderId}`, {
+        trackingCode,
+        updatedAt: new Date(),
+      })
+      .pipe(catchError(this.handleError));
   }
 
   /**
@@ -213,13 +215,13 @@ export class OrderService {
   deleteOrder(orderId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${orderId}`).pipe(
       tap(() => {
-        const currentOrders = this.orders.value.filter(o => o.id !== orderId);
+        const currentOrders = this.orders.value.filter((o) => o.id !== orderId);
         this.orders.next(currentOrders);
         if (this.isBrowser) {
           this.saveOrdersToStorage(currentOrders);
         }
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 
@@ -233,41 +235,43 @@ export class OrderService {
         name: 'Cartão de Crédito',
         icon: 'bi-credit-card',
         type: 'credit_card',
-        installments: 12
+        installments: 12,
       },
       {
         id: 'debit',
         name: 'Cartão de Débito',
         icon: 'bi-bank',
-        type: 'debit_card'
+        type: 'debit_card',
       },
       {
         id: 'pix',
         name: 'PIX',
         icon: 'bi-qr-code',
-        type: 'pix'
+        type: 'pix',
       },
       {
         id: 'boleto',
         name: 'Boleto Bancário',
         icon: 'bi-receipt',
-        type: 'boleto'
-      }
+        type: 'boleto',
+      },
     ];
   }
 
   /**
    * Processa o pagamento (simulação)
    */
-  processPayment(order: Order): Observable<{ success: boolean; message: string; transactionId?: string }> {
-    return new Observable(observer => {
+  processPayment(
+    order: Order,
+  ): Observable<{ success: boolean; message: string; transactionId?: string }> {
+    return new Observable((observer) => {
       setTimeout(() => {
         const success = Math.random() > 0.1; // 90% de chance de sucesso
         if (success) {
           observer.next({
             success: true,
             message: 'Pagamento aprovado com sucesso!',
-            transactionId: `TXN-${Date.now()}`
+            transactionId: `TXN-${Date.now()}`,
           });
 
           // Atualizar status do pedido
@@ -275,7 +279,7 @@ export class OrderService {
         } else {
           observer.next({
             success: false,
-            message: 'Falha no processamento do pagamento. Tente novamente.'
+            message: 'Falha no processamento do pagamento. Tente novamente.',
           });
         }
         observer.complete();
@@ -286,26 +290,29 @@ export class OrderService {
   /**
    * Simula pagamento com cartão
    */
-  processCardPayment(order: Order, cardData: any): Observable<{ success: boolean; message: string; transactionId?: string }> {
+  processCardPayment(
+    order: Order,
+    cardData: any,
+  ): Observable<{ success: boolean; message: string; transactionId?: string }> {
     // Validação simples
     if (!cardData.cardNumber || cardData.cardNumber.length < 16) {
       return of({
         success: false,
-        message: 'Número do cartão inválido.'
+        message: 'Número do cartão inválido.',
       });
     }
 
     if (!cardData.expiryDate) {
       return of({
         success: false,
-        message: 'Data de expiração inválida.'
+        message: 'Data de expiração inválida.',
       });
     }
 
     if (!cardData.cvv || cardData.cvv.length < 3) {
       return of({
         success: false,
-        message: 'CVV inválido.'
+        message: 'CVV inválido.',
       });
     }
 
@@ -315,12 +322,15 @@ export class OrderService {
   /**
    * Simula pagamento com PIX
    */
-  processPixPayment(order: Order): Observable<{ success: boolean; message: string; qrCode?: string; transactionId?: string }> {
+  processPixPayment(
+    order: Order,
+  ): Observable<{ success: boolean; message: string; qrCode?: string; transactionId?: string }> {
     const result = {
       success: true,
       message: 'Pagamento PIX gerado com sucesso!',
-      qrCode: '00020126410014br.gov.bcb.pix0123email@empresa.com520400005303986540510.005802BR5913EmpresaTeste6009SAOPAULO62070503***6304F9A3',
-      transactionId: `PIX-${Date.now()}`
+      qrCode:
+        '00020126410014br.gov.bcb.pix0123email@empresa.com520400005303986540510.005802BR5913EmpresaTeste6009SAOPAULO62070503***6304F9A3',
+      transactionId: `PIX-${Date.now()}`,
     };
 
     // Atualizar status do pedido
@@ -332,12 +342,14 @@ export class OrderService {
   /**
    * Simula pagamento com Boleto
    */
-  processBoletoPayment(order: Order): Observable<{ success: boolean; message: string; boletoUrl?: string; transactionId?: string }> {
+  processBoletoPayment(
+    order: Order,
+  ): Observable<{ success: boolean; message: string; boletoUrl?: string; transactionId?: string }> {
     const result = {
       success: true,
       message: 'Boleto gerado com sucesso!',
       boletoUrl: 'https://exemplo.com/boleto/123456789',
-      transactionId: `BOL-${Date.now()}`
+      transactionId: `BOL-${Date.now()}`,
     };
 
     // Atualizar status do pedido
@@ -421,20 +433,30 @@ export class OrderService {
   /**
    * Obtém estatísticas dos pedidos
    */
-  getOrderStats(userId?: string): Observable<{ total: number; pending: number; delivered: number; cancelled: number; totalSpent: number }> {
+  getOrderStats(
+    userId?: string,
+  ): Observable<{
+    total: number;
+    pending: number;
+    delivered: number;
+    cancelled: number;
+    totalSpent: number;
+  }> {
     const url = userId ? `${this.apiUrl}?userId=${userId}` : this.apiUrl;
 
     return this.http.get<Order[]>(url).pipe(
       map((orders) => {
         const total = orders.length;
-        const pending = orders.filter(o => o.status === 'pending' || o.status === 'processing').length;
-        const delivered = orders.filter(o => o.status === 'delivered').length;
-        const cancelled = orders.filter(o => o.status === 'cancelled').length;
+        const pending = orders.filter(
+          (o) => o.status === 'pending' || o.status === 'processing',
+        ).length;
+        const delivered = orders.filter((o) => o.status === 'delivered').length;
+        const cancelled = orders.filter((o) => o.status === 'cancelled').length;
         const totalSpent = orders.reduce((sum, o) => sum + o.total, 0);
 
         return { total, pending, delivered, cancelled, totalSpent };
       }),
-      catchError(this.handleError)
+      catchError(this.handleError),
     );
   }
 }

@@ -72,7 +72,15 @@
   animation: fadeInUp 0.5s ease-out;
 }
 
-.category-card-mini:nth-child(1) { animation-delay: 0.05s; }
-.category-card-mini:nth-child(2) { animation-delay: 0.1s; }
-.category-card-mini:nth-child(3) { animation-delay: 0.15s; }
-.category-card-mini:nth-child(4) { animation-delay: 0.2s; }
+.category-card-mini:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.category-card-mini:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.category-card-mini:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.category-card-mini:nth-child(4) {
+  animation-delay: 0.2s;
+}

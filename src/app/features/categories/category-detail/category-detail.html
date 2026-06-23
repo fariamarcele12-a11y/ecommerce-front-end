@@ -39,9 +39,11 @@
   <div *ngIf="category.subcategories?.length" class="mb-4">
     <h5 class="fw-bold mb-3">Subcategorias</h5>
     <div class="d-flex flex-wrap gap-2">
-      <a *ngFor="let sub of category.subcategories"
-         class="subcategory-badge"
-         [routerLink]="['/categoria', sub.slug]">
+      <a
+        *ngFor="let sub of category.subcategories"
+        class="subcategory-badge"
+        [routerLink]="['/categoria', sub.slug]"
+      >
         <i [class]="getIconClass(sub.icon)"></i>
         {{ sub.name }}
         <span class="badge bg-light text-dark ms-1">{{ sub.productCount || 0 }}</span>
