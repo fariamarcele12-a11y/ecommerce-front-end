@@ -1,4 +1,4 @@
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import {
   Observable,
@@ -25,19 +25,18 @@ export class ProductService {
   // Cache
   private productsCache$: Observable<Product[]> | null = null;
   private lastCacheTime = 0;
-  private cacheDuration = 5 * 60 * 1000; // 5 minutos
+  private readonly cacheDuration = 5 * 60 * 1000; // 5 minutos
 
   // Favoritos
   private favoritesSubject = new BehaviorSubject<number[]>([]);
   public favorites$ = this.favoritesSubject.asObservable();
 
-  private isBrowser: boolean;
+  private readonly isBrowser: boolean;
+  private readonly http = inject(HttpClient);
 
-  constructor(
-    @Inject(PLATFORM_ID) private platformId: Object,
-    private http: HttpClient,
-  ) {
-    this.isBrowser = isPlatformBrowser(this.platformId);
+  constructor() {
+    const platformId = inject(PLATFORM_ID);
+    this.isBrowser = isPlatformBrowser(platformId);
 
     // Carregar favoritos do localStorage
     if (this.isBrowser) {
@@ -48,7 +47,7 @@ export class ProductService {
   /**
    * Busca produtos com filtros
    */
-  getProducts(filters?: ProductFilters, useCache: boolean = true): Observable<Product[]> {
+  getProducts(filters?: ProductFilters, useCache = true): Observable<Product[]> {
     // Se usar cache e tiver cache válido
     if (useCache && this.productsCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
       return this.productsCache$;
@@ -137,7 +136,7 @@ export class ProductService {
   getRelatedProducts(
     category: string,
     productId: number,
-    limit: number = 4,
+    limit = 4,
   ): Observable<Product[]> {
     const params = new HttpParams()
       .set('category', category)
@@ -162,7 +161,7 @@ export class ProductService {
   /**
    * Busca produtos em destaque (mais vendidos)
    */
-  getFeaturedProducts(limit: number = 8): Observable<Product[]> {
+  getFeaturedProducts(limit = 8): Observable<Product[]> {
     const params = new HttpParams()
       .set('_sort', 'seller.sales')
       .set('_order', 'desc')
@@ -174,7 +173,7 @@ export class ProductService {
   /**
    * Busca produtos com desconto
    */
-  getProductsOnSale(limit: number = 8): Observable<Product[]> {
+  getProductsOnSale(limit = 8): Observable<Product[]> {
     const params = new HttpParams().set('discount_ne', '0').set('_limit', limit.toString());
 
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
@@ -283,7 +282,7 @@ export class ProductService {
             isFavorite: newFavoriteStatus,
           })
           .pipe(
-            tap((updatedProduct) => {
+            tap(() => {
               // Atualizar lista de favoritos
               this.updateFavorites(productId, newFavoriteStatus);
               // Invalidar cache

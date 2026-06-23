@@ -1,8 +1,8 @@
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError, catchError, tap, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
-import { Order, OrderItem, Address, PaymentMethod, OrderFilter } from '../models/checkout.model';
+import { Order, OrderFilter, PaymentMethod, CardData } from '../models/checkout.model';
 
 @Injectable({
   providedIn: 'root',
@@ -15,13 +15,12 @@ export class OrderService {
   // Estado local
   private orders = new BehaviorSubject<Order[]>([]);
   private currentOrder = new BehaviorSubject<Order | null>(null);
-  private isBrowser: boolean;
+  private readonly isBrowser: boolean;
+  private readonly http = inject(HttpClient);
 
-  constructor(
-    @Inject(PLATFORM_ID) private platformId: Object,
-    private http: HttpClient,
-  ) {
-    this.isBrowser = isPlatformBrowser(this.platformId);
+  constructor() {
+    const platformId = inject(PLATFORM_ID);
+    this.isBrowser = isPlatformBrowser(platformId);
 
     // Carregar pedidos do localStorage apenas no navegador
     if (this.isBrowser) {
@@ -292,7 +291,7 @@ export class OrderService {
    */
   processCardPayment(
     order: Order,
-    cardData: any,
+    cardData: CardData,
   ): Observable<{ success: boolean; message: string; transactionId?: string }> {
     // Validação simples
     if (!cardData.cardNumber || cardData.cardNumber.length < 16) {

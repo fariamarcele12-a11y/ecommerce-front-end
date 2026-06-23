@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { map, Observable, throwError, catchError, shareReplay, tap } from 'rxjs';
+import { Observable, throwError, catchError, shareReplay, tap, map } from 'rxjs';
 import { Category, CategoryFilter } from '../models/category.model';
 
 @Injectable({
@@ -16,12 +16,12 @@ export class CategoryService {
   private cacheDuration = 5 * 60 * 1000; // 5 minutos
   private lastCacheTime = 0;
 
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
   /**
    * Busca todas as categorias com opção de usar cache
    */
-  getCategories(useCache: boolean = true): Observable<Category[]> {
+  getCategories(useCache = true): Observable<Category[]> {
     // Se usar cache e tiver cache válido
     if (useCache && this.categoriesCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
       return this.categoriesCache$;

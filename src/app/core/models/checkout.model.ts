@@ -12,6 +12,13 @@ export interface Address {
   userId?: string;
 }
 
+export interface CardData {
+  cardNumber: string;
+  expiryDate: string;
+  cvv: string;
+  cardholderName: string;
+}
+
 export interface PaymentMethod {
   id: string;
   name: string;

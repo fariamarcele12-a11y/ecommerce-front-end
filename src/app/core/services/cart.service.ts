@@ -1,8 +1,8 @@
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError, catchError, tap, map, switchMap, of } from 'rxjs';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { BehaviorSubject, Observable, throwError, catchError, of } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
+import { HttpClient } from '@angular/common/http';
 
 export interface CartItem {
   product: Product;
@@ -27,6 +27,8 @@ export interface ServerCart {
   }[];
 }
 
+type Coupon = Record<string, number>;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -46,10 +48,10 @@ export class CartService {
   private isBrowser: boolean;
   private isSyncing = false;
 
-  constructor(
-    @Inject(PLATFORM_ID) private platformId: Object,
-    private http: HttpClient,
-  ) {
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly http = inject(HttpClient);
+
+  constructor() {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
     // Carregar carrinho do localStorage e sincronizar com servidor
@@ -89,7 +91,7 @@ export class CartService {
   /**
    * Adiciona produto ao carrinho
    */
-  addToCart(product: Product, quantity: number = 1): void {
+  addToCart(product: Product, quantity = 1): void {
     const currentItems = this.cartItems.value;
     const existingItem = currentItems.find((item) => item.product.id === product.id);
 
@@ -167,7 +169,7 @@ export class CartService {
    * Aplica cupom de desconto
    */
   applyDiscount(code: string): boolean {
-    const validCoupons: { [key: string]: number } = {
+    const validCoupons: Coupon = {
       PROMO10: 10,
       PROMO20: 20,
       PROMO30: 30,
@@ -179,7 +181,7 @@ export class CartService {
 
     const upperCode = code.toUpperCase().trim();
 
-    if (validCoupons.hasOwnProperty(upperCode)) {
+    if (upperCode in validCoupons) {
       const discountValue = validCoupons[upperCode];
       const currentTotal = this.totalPrice.value;
 
@@ -256,7 +258,7 @@ export class CartService {
 
     // Calcular economia total (preços originais vs atuais)
     const originalTotal = this.cartItems.value.reduce(
-      (sum, item) => sum + (item.product.oldPrice || item.product.price) * item.quantity,
+      (sum, item) => sum + ((item.product.oldPrice || item.product.price) * item.quantity),
       0,
     );
     const savings = originalTotal - subtotal;
@@ -313,7 +315,7 @@ export class CartService {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     this.totalItems.next(totalItems);
 
-    const totalPrice = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    const totalPrice = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
     this.totalPrice.next(totalPrice);
 
     this.calculateShipping();
@@ -405,7 +407,7 @@ export class CartService {
     const productIds = cartData.map((item) => item.productId);
     // Nota: Isso seria idealmente feito com um endpoint de busca em lote
     // Por enquanto, vamos apenas limpar o carrinho para evitar dados inconsistentes
-    console.log('🛒 Carrinho carregado do localStorage:', cartData);
+    console.log('🛒 Carrinho carregado do localStorage:', { productIds });
   }
 
   /**
