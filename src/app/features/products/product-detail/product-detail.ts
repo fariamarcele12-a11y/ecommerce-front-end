@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { Product } from '../../../core/models/ProductModel/product.model';
 import { ProductService } from '../../../core/services/product.service';
 import { CartService } from '../../../core/services/cart.service';
+import { AlertService } from '../../../core/services/alert.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -32,6 +33,7 @@ export class ProductDetail implements OnInit, OnDestroy {
     private router: Router,
     private productService: ProductService,
     private cartService: CartService,
+    private alertService: AlertService,
   ) {}
 
   ngOnInit(): void {
@@ -77,7 +79,7 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
-  // ===== MÉTODOS ADICIONADOS =====
+  // ===== MÉTODOS DE EXIBIÇÃO =====
 
   getConditionClass(): string {
     return this.product?.condition === 'new' ? 'bg-success' : 'bg-warning';
@@ -107,31 +109,72 @@ export class ProductDetail implements OnInit, OnDestroy {
     return 'Esgotado';
   }
 
-  // ===== FIM DOS MÉTODOS ADICIONADOS =====
+  getDiscountPercentage(): number {
+    if (this.product?.oldPrice && this.product.oldPrice > this.product.price) {
+      return Math.round(
+        ((this.product.oldPrice - this.product.price) / this.product.oldPrice) * 100,
+      );
+    }
+    return 0;
+  }
+
+  // ===== MÉTODOS DE AÇÃO =====
 
   addToCart(): void {
     if (this.product) {
-      this.cartService.addToCart(this.product, this.quantity);
-      alert(`Produto adicionado ao carrinho! (${this.quantity}x)`);
+      const maxQuantity = Math.min(this.quantity, this.product.stock);
+
+      this.cartService.addToCart(this.product, maxQuantity);
+
+      this.alertService.success(
+        'Produto adicionado!',
+        `${this.product.name} (${maxQuantity}x) foi adicionado ao carrinho.`,
+        3000
+      );
     }
   }
 
   buyNow(): void {
     if (this.product) {
-      this.cartService.addToCart(this.product, this.quantity);
-      this.router.navigate(['/checkout']);
+      const maxQuantity = Math.min(this.quantity, this.product.stock);
+
+      this.alertService.confirm(
+        'Comprar agora?',
+        `Deseja comprar ${this.product.name} (${maxQuantity}x) imediatamente?`,
+        'Sim, comprar',
+        'Cancelar'
+      ).then((result) => {
+        if (result.isConfirmed) {
+          this.cartService.addToCart(this.product!, maxQuantity);
+          this.router.navigate(['/checkout']);
+        }
+      });
     }
   }
 
-  formatPrice(price: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(price);
-  }
-
   toggleFavorite(): void {
-    this.isFavorite = !this.isFavorite;
+    if (this.product) {
+      this.isFavorite = !this.isFavorite;
+
+      // Chamar serviço para salvar favorito
+      this.productService.toggleFavorite(this.product.id).subscribe({
+        next: () => {
+          if (this.isFavorite) {
+            this.alertService.toast('Adicionado aos favoritos! ❤️', 'success', 2000);
+          } else {
+            this.alertService.toast('Removido dos favoritos! 💔', 'info', 2000);
+          }
+        },
+        error: () => {
+          // Reverter estado em caso de erro
+          this.isFavorite = !this.isFavorite;
+          this.alertService.error(
+            'Erro',
+            'Não foi possível atualizar os favoritos. Tente novamente.'
+          );
+        }
+      });
+    }
   }
 
   changeImage(index: number): void {
@@ -141,6 +184,11 @@ export class ProductDetail implements OnInit, OnDestroy {
   increaseQuantity(): void {
     if (this.product && this.quantity < this.product.stock) {
       this.quantity++;
+    } else if (this.product) {
+      this.alertService.warning(
+        'Estoque limitado',
+        `Só temos ${this.product.stock} unidades disponíveis.`
+      );
     }
   }
 
@@ -150,12 +198,59 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
-  getDiscountPercentage(): number {
-    if (this.product?.oldPrice && this.product.oldPrice > this.product.price) {
-      return Math.round(
-        ((this.product.oldPrice - this.product.price) / this.product.oldPrice) * 100,
-      );
+  // ===== MÉTODOS UTILITÁRIOS =====
+
+  formatPrice(price: number): string {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(price);
+  }
+
+  /**
+   * Calcula o valor total com base na quantidade
+   */
+  getTotalPrice(): number {
+    if (this.product) {
+      return this.product.price * this.quantity;
     }
     return 0;
+  }
+
+  /**
+   * Calcula o valor com desconto por unidade
+   */
+  getDiscountPrice(): number {
+    if (this.product?.oldPrice) {
+      return this.product.price;
+    }
+    return 0;
+  }
+
+  /**
+   * Verifica se o produto está em promoção
+   */
+  isOnSale(): boolean {
+    return !!(this.product?.oldPrice && this.product.oldPrice > this.product.price);
+  }
+
+  /**
+   * Obtém a URL da imagem principal
+   */
+  getMainImage(): string {
+    if (this.product?.images && this.product.images.length > 0) {
+      return this.product.images[this.selectedImage] || this.product.images[0];
+    }
+    return 'https://via.placeholder.com/600x400/667eea/ffffff?text=Sem+Imagem';
+  }
+
+  /**
+   * Obtém as miniaturas das imagens
+   */
+  getThumbnails(): string[] {
+    if (this.product?.images) {
+      return this.product.images;
+    }
+    return ['https://via.placeholder.com/100x100/667eea/ffffff?text=Sem+Imagem'];
   }
 }

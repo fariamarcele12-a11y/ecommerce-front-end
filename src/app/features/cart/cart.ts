@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CartItem, CartService } from '../../core/services/cart.service';
+import { AlertService } from '../../core/services/alert.service';
 
 @Component({
   selector: 'app-cart',
@@ -29,6 +30,7 @@ export class Cart implements OnInit, OnDestroy {
   constructor(
     private cartService: CartService,
     private router: Router,
+    private alertService: AlertService,
   ) {}
 
   ngOnInit(): void {
@@ -92,21 +94,51 @@ export class Cart implements OnInit, OnDestroy {
   }
 
   removeItem(productId: number): void {
-    if (confirm('Tem certeza que deseja remover este item do carrinho?')) {
-      this.cartService.removeFromCart(productId);
-    }
+    const product = this.cartItems.find(item => item.product.id === productId);
+    const productName = product?.product.name || 'Produto';
+
+    this.alertService.confirm(
+      `Remover "${productName}"?`,
+      'Tem certeza que deseja remover este item do carrinho?',
+      'Sim, remover',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.cartService.removeFromCart(productId);
+        this.alertService.toast('Item removido do carrinho!', 'success');
+      }
+    });
   }
 
   clearCart(): void {
-    if (confirm('Tem certeza que deseja esvaziar o carrinho?')) {
-      this.cartService.clearCart();
+    if (this.cartItems.length === 0) {
+      this.alertService.warning('Carrinho vazio', 'Não há itens para remover.');
+      return;
     }
+
+    this.alertService.confirm(
+      'Esvaziar Carrinho?',
+      'Tem certeza que deseja remover todos os itens do carrinho? Esta ação não pode ser desfeita.',
+      'Sim, esvaziar',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.cartService.clearCart();
+        this.couponApplied = false;
+        this.couponCode = '';
+        this.alertService.success(
+          'Carrinho esvaziado!',
+          'Todos os itens foram removidos do seu carrinho.'
+        );
+      }
+    });
   }
 
   applyCoupon(): void {
     if (!this.couponCode.trim()) {
       this.couponMessage = 'Digite um cupom válido.';
       this.couponApplied = false;
+      this.alertService.warning('Cupom inválido', 'Por favor, digite um código de cupom.');
       return;
     }
 
@@ -114,10 +146,18 @@ export class Cart implements OnInit, OnDestroy {
     if (success) {
       this.couponMessage = `Cupom ${this.couponCode} aplicado com sucesso!`;
       this.couponApplied = true;
+      this.alertService.success(
+        'Cupom aplicado!',
+        `O cupom ${this.couponCode} foi aplicado com sucesso.`
+      );
       this.couponCode = '';
     } else {
       this.couponMessage = 'Cupom inválido. Tente novamente.';
       this.couponApplied = false;
+      this.alertService.error(
+        'Cupom inválido',
+        'O código informado não é válido. Verifique e tente novamente.'
+      );
     }
 
     setTimeout(() => {
@@ -126,9 +166,10 @@ export class Cart implements OnInit, OnDestroy {
   }
 
   removeCoupon(): void {
-    this.cartService.applyDiscount('');
+    this.cartService.removeDiscount();
     this.couponApplied = false;
     this.couponMessage = 'Cupom removido.';
+    this.alertService.info('Cupom removido', 'O cupom de desconto foi removido.');
     setTimeout(() => {
       this.couponMessage = '';
     }, 3000);
@@ -136,7 +177,10 @@ export class Cart implements OnInit, OnDestroy {
 
   proceedToCheckout(): void {
     if (this.cartItems.length === 0) {
-      alert('Seu carrinho está vazio!');
+      this.alertService.warning(
+        'Carrinho vazio',
+        'Adicione itens ao carrinho antes de finalizar a compra.'
+      );
       return;
     }
     this.router.navigate(['/checkout']);

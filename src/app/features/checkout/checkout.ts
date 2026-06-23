@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CartItem, CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
+import { AlertService } from '../../core/services/alert.service';
 
 @Component({
   selector: 'app-checkout',
@@ -54,11 +55,13 @@ export class Checkout implements OnInit, OnDestroy {
     private cartService: CartService,
     private orderService: OrderService,
     private router: Router,
+    private alertService: AlertService,
   ) {}
 
   ngOnInit(): void {
     this.loadCartData();
     this.paymentMethods = this.orderService.getPaymentMethods();
+    this.loadSavedAddress();
   }
 
   ngOnDestroy(): void {
@@ -70,6 +73,10 @@ export class Checkout implements OnInit, OnDestroy {
       this.cartService.getCartItems().subscribe((items) => {
         this.cartItems = items;
         if (items.length === 0) {
+          this.alertService.warning(
+            'Carrinho vazio',
+            'Adicione itens ao carrinho antes de finalizar a compra.'
+          );
           this.router.navigate(['/carrinho']);
         }
       }),
@@ -105,7 +112,7 @@ export class Checkout implements OnInit, OnDestroy {
     this.total = summary.total;
   }
 
-  // ===== MÉTODOS ADICIONADOS =====
+  // ===== MÉTODOS DE ENDEREÇO =====
 
   onCepBlur(): void {
     const cep = this.form.address.cep.replace(/\D/g, '');
@@ -143,6 +150,12 @@ export class Checkout implements OnInit, OnDestroy {
       this.form.address.neighborhood = address.neighborhood;
       this.form.address.city = address.city;
       this.form.address.state = address.state;
+      this.alertService.toast('CEP encontrado! 📍', 'success', 2000);
+    } else {
+      this.alertService.warning(
+        'CEP não encontrado',
+        'Preencha os dados manualmente.'
+      );
     }
   }
 
@@ -172,7 +185,20 @@ export class Checkout implements OnInit, OnDestroy {
     }
   }
 
-  // ===== FIM DOS MÉTODOS ADICIONADOS =====
+  loadSavedAddress(): void {
+    const savedAddress = localStorage.getItem('savedAddress');
+    if (savedAddress) {
+      try {
+        const address = JSON.parse(savedAddress);
+        this.form.address = { ...this.form.address, ...address };
+        this.form.saveAddress = true;
+      } catch (error) {
+        console.error('Erro ao carregar endereço salvo:', error);
+      }
+    }
+  }
+
+  // ===== MÉTODOS DE PAGAMENTO =====
 
   onPaymentMethodChange(methodId: string): void {
     this.selectedPaymentMethod = methodId;
@@ -187,6 +213,8 @@ export class Checkout implements OnInit, OnDestroy {
     this.installments = 1;
   }
 
+  // ===== MÉTODOS UTILITÁRIOS =====
+
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -194,29 +222,50 @@ export class Checkout implements OnInit, OnDestroy {
     }).format(price);
   }
 
+  // ===== VALIDAÇÃO =====
+
   validateForm(): boolean {
-    if (!this.form.address.cep || this.form.address.cep.length < 8) {
-      alert('Por favor, informe um CEP válido.');
+    const address = this.form.address;
+    const cepClean = address.cep.replace(/\D/g, '');
+
+    if (!address.cep || cepClean.length < 8) {
+      this.alertService.warning('CEP inválido', 'Por favor, informe um CEP válido com 8 dígitos.');
       return false;
     }
-    if (!this.form.address.street) {
-      alert('Por favor, informe a rua.');
+    if (!address.street || address.street.trim() === '') {
+      this.alertService.warning('Rua inválida', 'Por favor, informe a rua.');
       return false;
     }
-    if (!this.form.address.number) {
-      alert('Por favor, informe o número.');
+    if (!address.number || address.number.trim() === '') {
+      this.alertService.warning('Número inválido', 'Por favor, informe o número.');
       return false;
     }
-    if (!this.form.cpfCnpj || this.form.cpfCnpj.length < 11) {
-      alert('Por favor, informe seu CPF/CNPJ.');
+    if (!address.neighborhood || address.neighborhood.trim() === '') {
+      this.alertService.warning('Bairro inválido', 'Por favor, informe o bairro.');
+      return false;
+    }
+    if (!address.city || address.city.trim() === '') {
+      this.alertService.warning('Cidade inválida', 'Por favor, informe a cidade.');
+      return false;
+    }
+    if (!address.state || address.state.trim() === '') {
+      this.alertService.warning('Estado inválido', 'Por favor, selecione o estado.');
+      return false;
+    }
+
+    const cpfClean = this.form.cpfCnpj.replace(/\D/g, '');
+    if (!this.form.cpfCnpj || cpfClean.length < 11) {
+      this.alertService.warning('CPF/CNPJ inválido', 'Por favor, informe um CPF/CNPJ válido.');
       return false;
     }
     if (!this.form.termsAccepted) {
-      alert('Você precisa aceitar os termos para continuar.');
+      this.alertService.warning('Aceite os termos', 'Você precisa aceitar os termos para continuar.');
       return false;
     }
     return true;
   }
+
+  // ===== FINALIZAR COMPRA =====
 
   onSubmit(): void {
     if (!this.validateForm()) {
@@ -225,14 +274,30 @@ export class Checkout implements OnInit, OnDestroy {
 
     this.isProcessing = true;
     this.paymentError = '';
+    this.alertService.loading('Processando pagamento...', 'Aguarde enquanto processamos sua compra.');
 
+    // Simular processamento
     setTimeout(() => {
+      this.alertService.close();
       this.isProcessing = false;
       this.orderConfirmed = true;
       this.orderId = 'ORD-' + Date.now();
       this.cartService.clearCart();
+
+      // Salvar endereço se solicitado
+      if (this.form.saveAddress) {
+        localStorage.setItem('savedAddress', JSON.stringify(this.form.address));
+      }
+
+      this.alertService.success(
+        '🎉 Pedido confirmado!',
+        `Seu pedido ${this.orderId} foi realizado com sucesso.`,
+        5000
+      );
     }, 2000);
   }
+
+  // ===== NAVEGAÇÃO =====
 
   continueShopping(): void {
     this.router.navigate(['/home']);
@@ -240,5 +305,20 @@ export class Checkout implements OnInit, OnDestroy {
 
   viewOrder(): void {
     this.router.navigate(['/pedidos', this.orderId]);
+  }
+
+  // ===== MÉTODO PARA CANCELAR =====
+
+  cancelCheckout(): void {
+    this.alertService.confirm(
+      'Cancelar compra?',
+      'Tem certeza que deseja cancelar a compra? Os itens permanecerão no carrinho.',
+      'Sim, cancelar',
+      'Continuar comprando'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.router.navigate(['/carrinho']);
+      }
+    });
   }
 }
