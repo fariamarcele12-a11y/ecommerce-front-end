@@ -5,7 +5,7 @@
     "ng": "ng",
     "start": "ng serve --host 0.0.0.0",
     "build": "ng build",
-    "build:vercel": "ng build --configuration production",
+    "build:vercel": "NODE_OPTIONS='--max-old-space-size=4096' ng build --configuration production",
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
@@ -14,7 +14,8 @@
   "private": true,
   "packageManager": "npm@11.6.2",
   "engines": {
-    "node": "20.x"
+    "node": "20.x",
+    "npm": "10.x"
   },
   "dependencies": {
     "@angular/common": "^21.2.0",
