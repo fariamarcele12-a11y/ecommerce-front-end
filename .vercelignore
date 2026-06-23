@@ -1,26 +1,36 @@
-# Dependências de desenvolvimento
+# Dependências
 node_modules
 .angular
+dist
+
+# Git
 .git
+.gitignore
 .github
 
-# Arquivos de configuração
+# Documentação
 *.md
-.gitignore
+README.md
+LICENSE
+
+# Configurações
+*.config.js
+*.config.ts
 .editorconfig
 .prettierrc
 .eslintrc
 
-# Ambiente de desenvolvimento
+# Ambiente
 .env
 .env.local
-.env.development
-.env.test
+.env.*.local
 
 # Testes
 coverage
 *.test.ts
 *.spec.ts
+**/*.test.ts
+**/*.spec.ts
 
 # Logs
 *.log
@@ -33,7 +43,14 @@ yarn-error.log*
 .idea
 *.swp
 *.swo
+*~
 
 # Sistema
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Build
+*.map
+*.min.js
+*.min.css

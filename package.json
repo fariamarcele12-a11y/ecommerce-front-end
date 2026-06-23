@@ -5,24 +5,16 @@
     "ng": "ng",
     "start": "ng serve --host 0.0.0.0",
     "build": "ng build",
-    "build:vercel": "ng build --configuration production --output-path dist/ecommerce-front-end --base-href /",
+    "build:vercel": "ng build --configuration production",
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "test:ci": "vitest run",
-    "serve:ssr": "node dist/ecommerce-front-end/server/server.mjs",
-    "vercel-build": "npm run build:vercel",
-    "deploy": "vercel --prod",
-    "deploy:preview": "vercel",
-    "lint": "ng lint",
-    "format": "prettier --write .",
-    "clean": "rm -rf .angular dist node_modules/.cache"
+    "vercel-build": "npm run build:vercel"
   },
   "private": true,
   "packageManager": "npm@11.6.2",
   "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "node": "20.x"
   },
   "dependencies": {
     "@angular/common": "^21.2.0",
@@ -30,7 +22,6 @@
     "@angular/core": "^21.2.0",
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
-    "@angular/platform-server": "^21.2.0",
     "@angular/router": "^21.2.0",
     "@angular/ssr": "^21.2.13",
     "bootstrap": "^5.3.8",
@@ -38,7 +29,7 @@
     "express": "^5.1.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
-    "zone.js": "^0.14.10"
+    "zone.js": "~0.14.0"
   },
   "devDependencies": {
     "@angular/build": "^21.2.13",
