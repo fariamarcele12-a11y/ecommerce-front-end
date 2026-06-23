@@ -3,7 +3,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { CartItem, CartService } from '../../core/services/cartService';
+import { CartItem, CartService } from '../../core/services/cart.service';
 
 @Component({
   selector: 'app-cart',

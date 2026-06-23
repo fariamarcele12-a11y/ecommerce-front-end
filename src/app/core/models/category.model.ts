@@ -9,8 +9,8 @@ export interface Category {
   subcategories?: Category[];
   productCount?: number;
   active: boolean;
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CategoryFilter {
@@ -18,4 +18,6 @@ export interface CategoryFilter {
   sortBy?: 'name' | 'productCount' | 'newest';
   order?: 'asc' | 'desc';
   limit?: number;
+  active?: boolean;
+  search?: string;
 }

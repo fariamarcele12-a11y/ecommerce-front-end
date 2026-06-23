@@ -5,8 +5,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProductCard } from '../../../shared/components/product-card/product-card';
 import { Subscription } from 'rxjs';
 import { Product } from '../../../core/models/ProductModel/product.model';
-import { ProductService } from '../../../core/services/productService';
-import { CartService } from '../../../core/services/cartService';
+import { ProductService } from '../../../core/services/product.service';
+import { CartService } from '../../../core/services/cart.service';
 
 @Component({
   selector: 'app-product-detail',

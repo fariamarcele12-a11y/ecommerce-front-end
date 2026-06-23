@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ProductCard } from '../../shared/components/product-card/product-card';
 import { ProductFilters } from '../../core/models/ProductModel/product-filters.model';
-import { ProductService } from '../../core/services/productService';
+import { ProductService } from '../../core/services/product.service';
 import { Product } from '../../core/models/ProductModel/product.model';
 
 @Component({

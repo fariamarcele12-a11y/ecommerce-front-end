@@ -3,20 +3,18 @@
   "compilerOptions": {
     "outDir": "./out-tsc/app",
     "types": [],
-    "rootDir": "./src"
+    "rootDir": "."
   },
   "files": [
     "src/main.ts",
-    "src/main.server.ts",
-    "src/server.ts"
+    "src/polyfills.ts"
   ],
   "include": [
-    "src/**/*.d.ts"
+    "src/**/*.d.ts",
+    "src/**/*.ts"
   ],
   "exclude": [
     "src/**/*.spec.ts",
-    "src/**/*.test.ts",
-    "src/test.ts",
-    "src/testing/**/*"
+    "src/**/*.test.ts"
   ]
 }

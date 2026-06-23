@@ -9,6 +9,7 @@ export interface Address {
   state: string;
   country: string;
   isDefault?: boolean;
+  userId?: string;
 }
 
 export interface PaymentMethod {
@@ -20,7 +21,8 @@ export interface PaymentMethod {
 }
 
 export interface Order {
-  id?: string;
+  id: string;
+  userId?: string;
   items: OrderItem[];
   address: Address;
   paymentMethod: PaymentMethod;
@@ -50,4 +52,11 @@ export interface CheckoutForm {
   cpfCnpj: string;
   saveAddress: boolean;
   termsAccepted: boolean;
+}
+
+export interface OrderFilter {
+  userId?: string;
+  status?: Order['status'];
+  limit?: number;
+  sortBy?: 'newest' | 'oldest' | 'total';
 }
