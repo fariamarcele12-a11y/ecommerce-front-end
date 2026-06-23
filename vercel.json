@@ -1,7 +1,7 @@
 {
   "version": 2,
   "buildCommand": "npm run build:vercel",
-  "outputDirectory": "dist/ecommerce-front-end/browser",
+  "outputDirectory": "dist/ecommerce-front-end",
   "devCommand": "npm run start",
   "installCommand": "npm install --legacy-peer-deps --no-audit --no-fund",
   "framework": "angular",
