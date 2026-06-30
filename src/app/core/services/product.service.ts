@@ -74,6 +74,15 @@ export class ProductService {
       if (filters.location) {
         params = params.set('location', filters.location);
       }
+      if (filters.hasDiscount) {
+        params = params.set('discount_ne', '0');
+      }
+      if (filters.freeShipping) {
+        params = params.set('freeShipping', 'true');
+      }
+      if (filters.inStock) {
+        params = params.set('stock_gt', '0');
+      }
       if (filters.sortBy === 'price_asc') {
         params = params.set('_sort', 'price');
         params = params.set('_order', 'asc');
@@ -174,7 +183,9 @@ export class ProductService {
    * Busca produtos com desconto
    */
   getProductsOnSale(limit = 8): Observable<Product[]> {
-    const params = new HttpParams().set('discount_ne', '0').set('_limit', limit.toString());
+    const params = new HttpParams()
+      .set('discount_ne', '0')
+      .set('_limit', limit.toString());
 
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }

@@ -1,0 +1,74 @@
+.search-filters {
+  .filter-group {
+    border-bottom: 1px solid #f1f1f1;
+    padding-bottom: 12px;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .price-slider {
+    position: relative;
+    height: 30px;
+
+    input[type="range"] {
+      position: absolute;
+      width: 100%;
+      background: transparent;
+      pointer-events: none;
+
+      &::-webkit-slider-thumb {
+        pointer-events: all;
+        background: #667eea;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        margin-top: -8px;
+      }
+
+      &::-moz-range-thumb {
+        pointer-events: all;
+        background: #667eea;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+      }
+
+      &::-webkit-slider-runnable-track {
+        height: 4px;
+        background: #dee2e6;
+        border-radius: 4px;
+      }
+
+      &::-moz-range-track {
+        height: 4px;
+        background: #dee2e6;
+        border-radius: 4px;
+      }
+    }
+  }
+
+  .btn-group {
+    .btn {
+      &.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+      }
+    }
+  }
+
+  .form-check {
+    margin-bottom: 4px;
+
+    .form-check-input:checked {
+      background-color: #667eea;
+      border-color: #667eea;
+    }
+  }
+}

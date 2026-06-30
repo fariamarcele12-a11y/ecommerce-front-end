@@ -25,17 +25,7 @@
     <div class="collapse navbar-collapse" id="navbarMain">
       <!-- Barra de Pesquisa -->
       <div class="mx-auto w-100 w-lg-50 px-3 px-lg-4 my-3 my-lg-0">
-        <div class="input-group shadow-sm rounded-pill overflow-hidden">
-          <input
-            type="text"
-            class="form-control border-0 bg-light"
-            placeholder="Buscar produtos, marcas e vendedores..."
-            aria-label="Buscar"
-          />
-          <button class="btn btn-primary rounded-pill px-4" type="button">
-            <i class="bi bi-search"></i>
-          </button>
-        </div>
+        <app-search-bar (search)="onSearch($event)"></app-search-bar>
       </div>
 
       <!-- Ícones e Ações -->

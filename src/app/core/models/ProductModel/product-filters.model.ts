@@ -8,4 +8,11 @@ export interface ProductFilters {
   sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'popular';
   limit?: number;
   page?: number;
+  sellerId?: number;
+  minRating?: number;
+  hasDiscount?: boolean;
+  freeShipping?: boolean;
+  inStock?: boolean;
+  brands?: string[];
+  subcategory?: string;
 }

@@ -11,7 +11,7 @@ export class AlertService {
   /**
    * Alerta de sucesso
    */
-  success(title: string, message?: string, timer: number = 3000): Promise<unknown> {
+  success(title: string, message?: string, timer = 3000): Promise<unknown> {
     return Swal.fire({
       icon: 'success',
       title,
@@ -27,7 +27,7 @@ export class AlertService {
   /**
    * Alerta de erro
    */
-  error(title: string, message?: string, timer: number = 5000): Promise<any> {
+  error(title: string, message?: string, timer = 5000): Promise<unknown> {
     return Swal.fire({
       icon: 'error',
       title,

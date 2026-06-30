@@ -1,0 +1,31 @@
+<div class="search-bar">
+  <div class="input-group shadow-sm rounded-pill overflow-hidden"
+       [class.focused]="isFocused">
+    <input
+      type="text"
+      class="form-control border-0 bg-light"
+      [placeholder]="placeholder"
+      aria-label="Buscar"
+      [(ngModel)]="searchTerm"
+      (keyup.enter)="onSearch()"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+      autocomplete="off"
+    />
+    <button class="btn btn-primary rounded-pill px-4" type="button"
+            (click)="onSearch()">
+      <i class="bi bi-search"></i>
+    </button>
+  </div>
+
+  <!-- Sugestões -->
+  <div *ngIf="showSuggestions && suggestions.length > 0"
+       class="suggestions-list shadow-sm">
+    <div *ngFor="let suggestion of suggestions"
+         class="suggestion-item"
+         (mousedown)="selectSuggestion(suggestion)">
+      <i class="bi bi-search me-2 text-muted"></i>
+      {{ suggestion }}
+    </div>
+  </div>
+</div>

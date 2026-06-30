@@ -1,0 +1,124 @@
+<div class="search-filters">
+  <!-- Cabeçalho -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-bold mb-0">
+      <i class="bi bi-funnel me-2"></i>
+      Filtros
+      <span class="badge bg-primary ms-2" *ngIf="getActiveFiltersCount() > 0">
+        {{ getActiveFiltersCount() }}
+      </span>
+    </h5>
+    <button class="btn btn-link text-danger text-decoration-none p-0"
+            (click)="clearAllFilters()"
+            *ngIf="getActiveFiltersCount() > 0">
+      <i class="bi bi-x-circle me-1"></i>
+      Limpar
+    </button>
+  </div>
+
+  <!-- Categoria -->
+  <div class="filter-group mb-3">
+    <label class="fw-bold small text-muted mb-1">Categoria</label>
+    <select class="form-select form-select-sm"
+            [(ngModel)]="filters.category"
+            (ngModelChange)="onCategoryChange($event)">
+      <option value="">Todas as categorias</option>
+      <option *ngFor="let category of categories" [value]="category.slug">
+        {{ category.name }}
+      </option>
+    </select>
+  </div>
+
+  <!-- Faixa de Preço -->
+  <div class="filter-group mb-3">
+    <label class="fw-bold small text-muted mb-1">Faixa de Preço</label>
+    <div class="d-flex gap-2 mb-2">
+      <div class="flex-grow-1">
+        <input type="number" class="form-control form-control-sm"
+               [(ngModel)]="priceRange[0]"
+               (ngModelChange)="onFilterChange()"
+               placeholder="R$ 0">
+      </div>
+      <div class="flex-grow-1">
+        <input type="number" class="form-control form-control-sm"
+               [(ngModel)]="priceRange[1]"
+               (ngModelChange)="onFilterChange()"
+               placeholder="R$ 10000">
+      </div>
+    </div>
+    <div class="price-slider">
+      <input type="range" class="form-range"
+             min="0" max="10000" step="100"
+             [(ngModel)]="priceRange[0]"
+             (ngModelChange)="onFilterChange()">
+      <input type="range" class="form-range"
+             min="0" max="10000" step="100"
+             [(ngModel)]="priceRange[1]"
+             (ngModelChange)="onFilterChange()">
+    </div>
+    <div class="d-flex justify-content-between small text-muted">
+      <span>{{ formatPrice(priceRange[0]) }}</span>
+      <span>{{ formatPrice(priceRange[1]) }}</span>
+    </div>
+  </div>
+
+  <!-- Condição -->
+  <div class="filter-group mb-3">
+    <label class="fw-bold small text-muted mb-1">Condição</label>
+    <div class="btn-group w-100" role="group">
+      <button *ngFor="let option of conditionOptions"
+              class="btn btn-outline-secondary btn-sm"
+              [class.active]="(filters.condition || 'all') === option.value"
+              (click)="onConditionChange(option.value)">
+        {{ option.label }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Ordenação -->
+  <div class="filter-group mb-3">
+    <label class="fw-bold small text-muted mb-1">Ordenar por</label>
+    <select class="form-select form-select-sm"
+            [(ngModel)]="filters.sortBy"
+            (ngModelChange)="onSortChange($event)">
+      <option *ngFor="let option of sortOptions" [value]="option.value">
+        {{ option.label }}
+      </option>
+    </select>
+  </div>
+
+  <!-- Opções adicionais -->
+  <div class="filter-group mb-3">
+    <label class="fw-bold small text-muted mb-1">Opções</label>
+    <div class="form-check">
+      <input type="checkbox" class="form-check-input"
+             id="hasDiscount"
+             [(ngModel)]="filters.hasDiscount"
+             (ngModelChange)="onHasDiscountChange($event)">
+      <label class="form-check-label small" for="hasDiscount">
+        <i class="bi bi-tag text-danger me-1"></i>
+        Em promoção
+      </label>
+    </div>
+    <div class="form-check">
+      <input type="checkbox" class="form-check-input"
+             id="freeShipping"
+             [(ngModel)]="filters.freeShipping"
+             (ngModelChange)="onFreeShippingChange($event)">
+      <label class="form-check-label small" for="freeShipping">
+        <i class="bi bi-truck text-success me-1"></i>
+        Frete grátis
+      </label>
+    </div>
+    <div class="form-check">
+      <input type="checkbox" class="form-check-input"
+             id="inStock"
+             [(ngModel)]="filters.inStock"
+             (ngModelChange)="onInStockChange($event)">
+      <label class="form-check-label small" for="inStock">
+        <i class="bi bi-check-circle text-primary me-1"></i>
+        Em estoque
+      </label>
+    </div>
+  </div>
+</div>
