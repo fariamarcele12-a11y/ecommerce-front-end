@@ -46,9 +46,10 @@ export class SearchFilters implements OnInit {
     this.categoryService.getCategories().subscribe({
       next: (categories) => {
         this.categories = categories;
+        console.log('📂 Categorias carregadas:', categories.length); // Debug
       },
       error: (error) => {
-        console.error('Erro ao carregar categorias:', error);
+        console.error('❌ Erro ao carregar categorias:', error);
       }
     });
   }
@@ -62,6 +63,7 @@ export class SearchFilters implements OnInit {
       ...this.filters
     };
     this.priceRange = [this.filters.minPrice || 0, this.filters.maxPrice || 10000];
+    console.log('🔧 Filtros inicializados:', this.filters); // Debug
   }
 
   onFilterChange(): void {
@@ -70,16 +72,19 @@ export class SearchFilters implements OnInit {
       minPrice: this.priceRange[0],
       maxPrice: this.priceRange[1]
     };
+    console.log('💰 Filtro de preço alterado:', this.filters); // Debug
     this.filtersChange.emit(this.filters);
   }
 
   onCategoryChange(categoryId: string): void {
     this.filters.category = categoryId || undefined;
+    console.log('📂 Categoria alterada:', categoryId); // Debug
     this.filtersChange.emit(this.filters);
   }
 
   onSortChange(sortBy: string): void {
     this.filters.sortBy = sortBy as ProductFilters['sortBy'];
+    console.log('📊 Ordenação alterada:', sortBy); // Debug
     this.filtersChange.emit(this.filters);
   }
 
@@ -89,21 +94,26 @@ export class SearchFilters implements OnInit {
     } else {
       this.filters.condition = condition as 'new' | 'used';
     }
+    console.log('🏷️ Condição alterada para:', this.filters.condition); // Debug
+    // Emitir a mudança imediatamente
     this.filtersChange.emit(this.filters);
   }
 
   onHasDiscountChange(hasDiscount: boolean): void {
     this.filters.hasDiscount = hasDiscount;
+    console.log('🏷️ Promoção alterada:', hasDiscount); // Debug
     this.filtersChange.emit(this.filters);
   }
 
   onFreeShippingChange(freeShipping: boolean): void {
     this.filters.freeShipping = freeShipping;
+    console.log('🚚 Frete grátis alterado:', freeShipping); // Debug
     this.filtersChange.emit(this.filters);
   }
 
   onInStockChange(inStock: boolean): void {
     this.filters.inStock = inStock;
+    console.log('📦 Estoque alterado:', inStock); // Debug
     this.filtersChange.emit(this.filters);
   }
 
@@ -115,6 +125,7 @@ export class SearchFilters implements OnInit {
       freeShipping: false,
       inStock: false
     };
+    console.log('🧹 Filtros limpos'); // Debug
     this.clearFilters.emit();
     this.filtersChange.emit(this.filters);
   }

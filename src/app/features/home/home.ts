@@ -2,11 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { Products } from '../products/products';
 import { CategoriesList } from '../categories/categories-list/categories-list';
+import { ProductFilters } from '../../core/models/ProductModel/product-filters.model';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, Products, CategoriesList],
+  imports: [CommonModule, Products, CategoriesList, RouterLink],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
@@ -23,4 +25,10 @@ export class Home {
       subtitle: 'Frete Grátis',
     },
   ];
+
+  featuredFilters: ProductFilters = {
+    sortBy: 'popular',
+    limit: 8
+  };
+
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnChanges, Input, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProductService } from '../../core/services/product.service';
 import { Product } from '../../core/models/ProductModel/product.model';
@@ -12,10 +12,12 @@ import { ProductFilters } from '../../core/models/ProductModel/product-filters.m
   templateUrl: './products.html',
   styleUrls: ['./products.scss']
 })
-export class Products implements OnInit {
+export class Products implements OnInit, OnChanges {
+  @Input() filters: ProductFilters = {};
+  @Input() limit?: number;
+
   products: Product[] = [];
   loading = true;
-  filters: ProductFilters = {};
 
   constructor(private productService: ProductService) {}
 
@@ -23,15 +25,36 @@ export class Products implements OnInit {
     this.loadProducts();
   }
 
-  loadProducts(): void {
+  ngOnChanges(changes: SimpleChanges): void {
+    // Quando os filtros mudarem, recarregar produtos
+    if (changes['filters']) {
+      console.log('🔄 Filtros do Products mudaram:', this.filters);
+      // Forçar recarga sem cache
+      this.loadProducts(true);
+    }
+  }
+
+  loadProducts(forceRefresh: boolean = false): void {
     this.loading = true;
-    this.productService.getProducts(this.filters).subscribe({
+
+    // Aplicar limite se definido
+    const filters = { ...this.filters };
+    if (this.limit) {
+      filters.limit = this.limit;
+    }
+
+    console.log('🚀 Products carregando com filtros:', filters);
+
+    // Forçar recarga sem cache se necessário
+    this.productService.getProducts(filters, !forceRefresh).subscribe({
       next: (products) => {
         this.products = products;
         this.loading = false;
+        console.log(`✅ ${products.length} produtos carregados no Products`);
       },
       error: () => {
         this.loading = false;
+        this.products = [];
       }
     });
   }
@@ -46,6 +69,6 @@ export class Products implements OnInit {
 
   applyFilters(newFilters: ProductFilters): void {
     this.filters = { ...this.filters, ...newFilters };
-    this.loadProducts();
+    this.loadProducts(true);
   }
 }

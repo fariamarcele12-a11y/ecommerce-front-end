@@ -1,10 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CategoryService } from '../../../core/services/category.service';
 import { Category } from '../../../core/models/category.model';
 import { Products } from '../../products/products';
 import { Subscription } from 'rxjs';
+import { ProductFilters } from '../../../core/models/ProductModel/product-filters.model';
 
 @Component({
   selector: 'app-category-detail',
@@ -16,10 +17,12 @@ import { Subscription } from 'rxjs';
 export class CategoryDetail implements OnInit, OnDestroy {
   category: Category | null = null;
   loading = true;
+  filters: ProductFilters = {};
   private routeSub: Subscription = new Subscription();
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private categoryService: CategoryService,
   ) {}
 
@@ -40,11 +43,20 @@ export class CategoryDetail implements OnInit, OnDestroy {
     this.loading = true;
     this.categoryService.getCategoryBySlug(slug).subscribe({
       next: (category) => {
-        this.category = category || null;
+        if(category){
+          this.category = category;
+          this.filters = {
+          category: category?.slug,
+          sortBy: 'newest'
+         };
+        }else{
+          this.router.navigate(['/home']);
+        }
         this.loading = false;
       },
       error: () => {
         this.loading = false;
+        this.router.navigate(['/home']);
       },
     });
   }

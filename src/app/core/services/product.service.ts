@@ -47,6 +47,9 @@ export class ProductService {
   /**
    * Busca produtos com filtros
    */
+  /**
+   * Busca produtos com filtros
+   */
   getProducts(filters?: ProductFilters, useCache = true): Observable<Product[]> {
     // Se usar cache e tiver cache válido
     if (useCache && this.productsCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
@@ -56,33 +59,53 @@ export class ProductService {
     let params = new HttpParams();
 
     if (filters) {
+      // Categoria - IMPORTANTE: verificar se está sendo aplicado
       if (filters.category) {
         params = params.set('category', filters.category);
+        console.log(`🔍 Filtrando por categoria: ${filters.category}`);
       }
-      if (filters.minPrice) {
+
+      // Preço mínimo
+      if (filters.minPrice && filters.minPrice > 0) {
         params = params.set('price_gte', filters.minPrice.toString());
       }
-      if (filters.maxPrice) {
+
+      // Preço máximo
+      if (filters.maxPrice && filters.maxPrice < 10000) {
         params = params.set('price_lte', filters.maxPrice.toString());
       }
+
+      // Busca por texto
       if (filters.search) {
         params = params.set('q', filters.search);
       }
+
+      // Condição
       if (filters.condition) {
         params = params.set('condition', filters.condition);
       }
+
+      // Localização
       if (filters.location) {
         params = params.set('location', filters.location);
       }
+
+      // Em promoção (tem desconto)
       if (filters.hasDiscount) {
         params = params.set('discount_ne', '0');
       }
+
+      // Frete grátis
       if (filters.freeShipping) {
         params = params.set('freeShipping', 'true');
       }
+
+      // Em estoque
       if (filters.inStock) {
         params = params.set('stock_gt', '0');
       }
+
+      // Ordenação
       if (filters.sortBy === 'price_asc') {
         params = params.set('_sort', 'price');
         params = params.set('_order', 'asc');
@@ -96,9 +119,13 @@ export class ProductService {
         params = params.set('_sort', 'seller.sales');
         params = params.set('_order', 'desc');
       }
+
+      // Limite de resultados
       if (filters.limit) {
         params = params.set('_limit', filters.limit.toString());
       }
+
+      // Paginação
       if (filters.page) {
         params = params.set('_page', filters.page.toString());
         if (filters.limit) {
@@ -107,14 +134,16 @@ export class ProductService {
       }
     }
 
+    console.log('🔍 URL completa:', `${this.apiUrl}?${params.toString()}`);
+
     const request = this.http.get<Product[]>(this.apiUrl, { params }).pipe(
       tap((products) => {
         this.lastCacheTime = Date.now();
-        // Adicionar flag de favorito
         const favorites = this.favoritesSubject.value;
         products.forEach((product) => {
           product.isFavorite = favorites.includes(product.id);
         });
+        console.log(`📦 ${products.length} produtos encontrados`);
       }),
       shareReplay(1),
       catchError(this.handleError),
@@ -142,11 +171,7 @@ export class ProductService {
   /**
    * Busca produtos relacionados
    */
-  getRelatedProducts(
-    category: string,
-    productId: number,
-    limit = 4,
-  ): Observable<Product[]> {
+  getRelatedProducts(category: string, productId: number, limit = 4): Observable<Product[]> {
     const params = new HttpParams()
       .set('category', category)
       .set('id_ne', productId.toString())
@@ -183,9 +208,7 @@ export class ProductService {
    * Busca produtos com desconto
    */
   getProductsOnSale(limit = 8): Observable<Product[]> {
-    const params = new HttpParams()
-      .set('discount_ne', '0')
-      .set('_limit', limit.toString());
+    const params = new HttpParams().set('discount_ne', '0').set('_limit', limit.toString());
 
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
@@ -377,6 +400,7 @@ export class ProductService {
   invalidateCache(): void {
     this.productsCache$ = null;
     this.lastCacheTime = 0;
+    console.log('🗑️ Cache de produtos invalidado');
   }
 
   /**
