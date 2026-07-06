@@ -30,9 +30,9 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/search/search-results/search-results').then((m) => m.SearchResults),
   },
+  { path: 'vender', loadComponent: () => import('./features/vender/vender').then((m) => m.Vender)},
 
   // Rotas futuras (redirecionam para home)
-  { path: 'vender', redirectTo: '/home' },
   { path: 'favoritos', redirectTo: '/home' },
   { path: 'perfil', redirectTo: '/home' },
   { path: 'pedidos', redirectTo: '/home' },

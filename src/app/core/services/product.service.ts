@@ -248,24 +248,43 @@ export class ProductService {
    * Cria um novo produto
    */
   createProduct(product: Partial<Product>): Observable<Product> {
-    const newProduct = {
-      ...product,
-      createdAt: new Date().toISOString(),
-      isFavorite: false,
-      seller: product.seller || {
-        id: 1,
-        name: 'Vendedor',
-        rating: 0,
-        sales: 0,
-      },
+    // Garantir que images seja um array
+    const images =
+      product.images && Array.isArray(product.images) && product.images.length > 0
+        ? product.images
+        : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'];
+
+    const newProduct: any = {
+      name: product.name || '',
+      description: product.description || '',
+      price: Number(product.price) || 0,
+      category: product.category || '',
+      condition: product.condition || 'new',
+      location: product.location || '',
+      stock: Number(product.stock) || 1,
+      images: images, // Garantir que é um array
     };
 
+    // Adicionar oldPrice se existir
+    if (product.oldPrice && product.oldPrice > 0) {
+      newProduct.oldPrice = Number(product.oldPrice);
+    }
+
+    console.log('📦 Enviando para API:', JSON.stringify(newProduct, null, 2));
+
     return this.http.post<Product>(this.apiUrl, newProduct).pipe(
-      tap(() => {
-        // Invalidar cache
+      tap((response) => {
+        console.log('✅ Produto criado:', response);
         this.invalidateCache();
       }),
-      catchError(this.handleError),
+      catchError((error) => {
+        console.error('❌ Erro detalhado:', error);
+        // Log do corpo da resposta se disponível
+        if (error.error) {
+          console.error('❌ Resposta do servidor:', error.error);
+        }
+        return this.handleError(error);
+      }),
     );
   }
 

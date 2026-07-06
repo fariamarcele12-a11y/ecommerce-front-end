@@ -1,0 +1,178 @@
+.card {
+  border-radius: 16px;
+  
+  .card-header {
+    border-radius: 16px 16px 0 0;
+  }
+}
+
+.form-control, .form-select {
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+  
+  &:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+}
+
+.form-control-lg {
+  font-size: 1.1rem;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 120px;
+}
+
+// ===== IMAGEM UPLOAD =====
+
+.image-upload-item {
+  background: #f8f9fa;
+  border-color: #dee2e6 !important;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: #667eea !important;
+    background: white;
+  }
+}
+
+.image-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: white;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .remove-image-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.image-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f1f1f1;
+  border-radius: 8px;
+  
+  i {
+    font-size: 2.5rem;
+    opacity: 0.3;
+  }
+}
+
+// ===== BOTÕES =====
+
+.btn-success {
+  background: linear-gradient(135deg, #00b894 0%, #00a86b 100%);
+  border: none;
+  
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #00a86b 0%, #00995d 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 184, 148, 0.3);
+  }
+  
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.btn-outline-secondary {
+  &:hover {
+    background: #f8f9fa;
+  }
+}
+
+// ===== INPUT GROUP =====
+
+.input-group-text {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px 0 0 8px;
+}
+
+.input-group {
+  .form-control {
+    border-radius: 0 8px 8px 0;
+  }
+  
+  .btn-outline-danger {
+    border-radius: 0 8px 8px 0;
+  }
+}
+
+// ===== RADIO BUTTONS =====
+
+.form-check-input:checked {
+  background-color: #667eea;
+  border-color: #667eea;
+}
+
+// ===== FILE INPUT =====
+
+input[type="file"] {
+  &::file-selector-button {
+    padding: 6px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: #5a67d8;
+    }
+  }
+}
+
+// ===== RESPONSIVIDADE =====
+
+@media (max-width: 768px) {
+  .card-body {
+    padding: 16px !important;
+  }
+  
+  .btn-lg {
+    width: 100%;
+  }
+  
+  .d-flex.gap-3 {
+    flex-direction: column;
+  }
+  
+  .image-upload-item {
+    .row {
+      flex-direction: column;
+    }
+    
+    .image-preview, .image-placeholder {
+      max-width: 150px;
+      margin: 0 auto;
+    }
+  }
+}

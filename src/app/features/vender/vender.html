@@ -1,0 +1,354 @@
+<div class="container py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a routerLink="/home">Home</a></li>
+      <li class="breadcrumb-item active">Vender</li>
+    </ol>
+  </nav>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-4">
+          <h1 class="fw-bold mb-0">
+            <i class="bi bi-plus-circle text-primary me-2"></i>
+            Anunciar Produto
+          </h1>
+          <p class="text-muted">Preencha os dados abaixo para publicar seu produto no marketplace</p>
+        </div>
+
+        <div class="card-body p-4">
+          <form (ngSubmit)="onSubmit()" #productForm="ngForm">
+            <!-- Nome do Produto -->
+            <div class="mb-4">
+              <label class="form-label fw-bold">
+                Nome do Produto <span class="text-danger">*</span>
+              </label>
+              <input
+                type="text"
+                class="form-control form-control-lg"
+                [(ngModel)]="product.name"
+                name="name"
+                placeholder="Ex: iPhone 15 Pro Max - 256GB"
+                required
+                minlength="3"
+              />
+              <small class="text-muted">Título descritivo e atrativo para o comprador</small>
+            </div>
+
+            <!-- Descrição -->
+            <div class="mb-4">
+              <label class="form-label fw-bold">
+                Descrição <span class="text-danger">*</span>
+              </label>
+              <textarea
+                class="form-control"
+                rows="5"
+                [(ngModel)]="product.description"
+                name="description"
+                placeholder="Descreva detalhadamente o produto, características, condição, etc."
+                required
+                minlength="10"
+              ></textarea>
+              <small class="text-muted">Mínimo 10 caracteres. Seja o mais detalhado possível.</small>
+            </div>
+
+            <div class="row g-4">
+              <!-- Preço -->
+              <div class="col-md-4">
+                <label class="form-label fw-bold">
+                  Preço <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text">R$</span>
+                  <input
+                    type="number"
+                    class="form-control"
+                    [(ngModel)]="product.price"
+                    name="price"
+                    placeholder="0,00"
+                    step="0.01"
+                    min="0.01"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Preço Antigo -->
+              <div class="col-md-4">
+                <label class="form-label fw-bold">Preço Antigo</label>
+                <div class="input-group">
+                  <span class="input-group-text">R$</span>
+                  <input
+                    type="number"
+                    class="form-control"
+                    [(ngModel)]="product.oldPrice"
+                    name="oldPrice"
+                    placeholder="0,00"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+                <small class="text-muted">Preço original para mostrar desconto</small>
+              </div>
+
+              <!-- Estoque -->
+              <div class="col-md-4">
+                <label class="form-label fw-bold">
+                  Estoque <span class="text-danger">*</span>
+                </label>
+                <input
+                  type="number"
+                  class="form-control"
+                  [(ngModel)]="product.stock"
+                  name="stock"
+                  placeholder="Quantidade disponível"
+                  min="1"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Categoria -->
+            <div class="row g-4 mt-2">
+              <div class="col-md-6">
+                <label class="form-label fw-bold">
+                  Categoria <span class="text-danger">*</span>
+                </label>
+                <select
+                  class="form-select"
+                  [(ngModel)]="product.category"
+                  name="category"
+                  required
+                >
+                  <option value="">Selecione uma categoria</option>
+                  <option *ngFor="let category of categories" [value]="category.slug">
+                    {{ category.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Condição -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold">
+                  Condição <span class="text-danger">*</span>
+                </label>
+                <div class="d-flex gap-3">
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="radio"
+                      [(ngModel)]="product.condition"
+                      name="condition"
+                      value="new"
+                      id="conditionNew"
+                    />
+                    <label class="form-check-label" for="conditionNew">
+                      <i class="bi bi-box-seam text-success me-1"></i>
+                      Novo
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="radio"
+                      [(ngModel)]="product.condition"
+                      name="condition"
+                      value="used"
+                      id="conditionUsed"
+                    />
+                    <label class="form-check-label" for="conditionUsed">
+                      <i class="bi bi-arrow-repeat text-warning me-1"></i>
+                      Usado
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Localização -->
+            <div class="row g-4 mt-2">
+              <div class="col-md-6">
+                <label class="form-label fw-bold">
+                  Localização <span class="text-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  [(ngModel)]="product.location"
+                  name="location"
+                  placeholder="Ex: São Paulo - SP"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Imagens com Upload -->
+            <div class="mb-4 mt-4">
+              <label class="form-label fw-bold">
+                Imagens <span class="text-danger">*</span>
+              </label>
+              <p class="text-muted small">Adicione até 5 imagens (URL ou faça upload do arquivo)</p>
+
+              <div *ngFor="let image of imageUrls; let i = index" class="image-upload-item mb-3 p-3 border rounded-3">
+                <div class="row g-3 align-items-start">
+                  <!-- Preview da imagem -->
+                  <div class="col-md-3">
+                    <div class="image-preview" *ngIf="getImageSource(i)">
+                      <img [src]="getImageSource(i)" alt="Preview" class="img-fluid rounded">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-danger remove-image-btn"
+                        (click)="removeFile(i)"
+                        *ngIf="selectedFiles[i]"
+                      >
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </div>
+                    <div class="image-placeholder" *ngIf="!getImageSource(i)">
+                      <i class="bi bi-image display-4 text-muted"></i>
+                      <p class="text-muted small mb-0">Sem imagem</p>
+                    </div>
+                  </div>
+
+                  <!-- Inputs -->
+                  <div class="col-md-9">
+                    <!-- Upload de arquivo -->
+                    <div class="mb-2">
+                      <label class="form-label small fw-bold">Upload de arquivo</label>
+                      <div class="input-group">
+                        <input
+                          type="file"
+                          class="form-control"
+                          accept="image/*"
+                          (change)="onFileSelected($event, i)"
+                          id="fileInput{{i}}"
+                        />
+                        <button
+                          type="button"
+                          class="btn btn-outline-danger"
+                          (click)="removeFile(i)"
+                          *ngIf="selectedFiles[i]"
+                        >
+                          <i class="bi bi-x-circle"></i>
+                        </button>
+                      </div>
+                      <small class="text-muted">Formatos: JPG, PNG, GIF (max 5MB)</small>
+                    </div>
+
+                    <!-- OU URL -->
+                    <div class="mb-2">
+                      <label class="form-label small fw-bold">Ou insira uma URL</label>
+                      <div class="input-group">
+                        <span class="input-group-text">
+                          <i class="bi bi-link-45deg"></i>
+                        </span>
+                        <input
+                          type="url"
+                          class="form-control"
+                          [(ngModel)]="imageUrls[i]"
+                          [name]="'image' + i"
+                          placeholder="https://exemplo.com/imagem.jpg"
+                          (input)="onImageUrlChange(i, $event)"
+                        />
+                      </div>
+                      <small class="text-muted" *ngIf="imageUrls[i] && imageUrls[i].trim() === 'https://'">
+                        <span class="text-danger">URL inválida</span>
+                      </small>
+                    </div>
+
+                    <!-- Remover campo -->
+                    <button
+                      type="button"
+                      class="btn btn-outline-danger btn-sm mt-1"
+                      (click)="removeImageField(i)"
+                      *ngIf="imageUrls.length > 1"
+                    >
+                      <i class="bi bi-trash me-1"></i>
+                      Remover imagem
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-outline-primary btn-sm mt-2"
+                (click)="addImageField()"
+                [disabled]="imageUrls.length >= 5"
+              >
+                <i class="bi bi-plus-circle me-1"></i>
+                Adicionar imagem
+              </button>
+              <span class="text-muted ms-2 small">
+                {{ getValidImageCount() }}/5 imagens
+              </span>
+            </div>
+
+            <!-- Botões -->
+            <div class="d-flex gap-3 mt-4 pt-3 border-top">
+              <button
+                type="submit"
+                class="btn btn-success btn-lg px-5"
+                [disabled]="loading || !productForm.valid"
+              >
+                <span *ngIf="!loading">
+                  <i class="bi bi-rocket me-2"></i>
+                  Publicar Produto
+                </span>
+                <span *ngIf="loading">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  {{ isUploading ? 'Enviando imagens...' : 'Publicando...' }}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-lg px-4"
+                routerLink="/home"
+              >
+                Cancelar
+              </button>
+            </div>
+
+            <!-- Campos obrigatórios -->
+            <div class="mt-3">
+              <small class="text-muted">
+                <span class="text-danger">*</span> Campos obrigatórios
+              </small>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Dicas -->
+      <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body">
+          <h6 class="fw-bold">
+            <i class="bi bi-lightbulb text-warning me-2"></i>
+            Dicas para vender mais:
+          </h6>
+          <ul class="list-unstyled small mb-0">
+            <li class="mb-1">
+              <i class="bi bi-check-circle-fill text-success me-1"></i>
+              Use um título claro e descritivo
+            </li>
+            <li class="mb-1">
+              <i class="bi bi-check-circle-fill text-success me-1"></i>
+              Adicione imagens de alta qualidade (mínimo 3 imagens)
+            </li>
+            <li class="mb-1">
+              <i class="bi bi-check-circle-fill text-success me-1"></i>
+              Seja detalhado na descrição
+            </li>
+            <li>
+              <i class="bi bi-check-circle-fill text-success me-1"></i>
+              Preço competitivo e justo
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
