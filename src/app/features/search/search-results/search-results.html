@@ -2,8 +2,7 @@
   <!-- Cabeçalho -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <button class="btn btn-outline-secondary rounded-pill me-2"
-              routerLink="/home">
+      <button class="btn btn-outline-secondary rounded-pill me-2" routerLink="/home">
         <i class="bi bi-arrow-left me-1"></i>
         Voltar
       </button>
@@ -12,14 +11,16 @@
         Resultados da Busca
       </h1>
       <p class="text-muted" *ngIf="!loading">
-        Encontramos {{ totalProducts }} produtos
+        Encontramos <strong>{{ totalProducts }}</strong> produtos
         <span *ngIf="filters.search">
           para "{{ filters.search }}"
         </span>
+        <span *ngIf="totalProducts > 0" class="ms-2">
+          (Página {{ currentPage }} de {{ totalPages }})
+        </span>
       </p>
     </div>
-    <button class="btn btn-outline-primary rounded-pill d-lg-none"
-            (click)="toggleFilters()">
+    <button class="btn btn-outline-primary rounded-pill d-lg-none" (click)="toggleFilters()">
       <i class="bi bi-funnel me-1"></i>
       Filtros
     </button>
@@ -76,39 +77,47 @@
         <i class="bi bi-inbox display-1 text-muted"></i>
         <h3 class="mt-3">Nenhum produto encontrado</h3>
         <p class="text-muted">
-          Tente ajustar os filtros ou buscar por outro termo
+          <span *ngIf="filters.search">
+            Não encontramos resultados para "<strong>{{ filters.search }}</strong>"
+          </span>
+          <span *ngIf="!filters.search">
+            Tente ajustar os filtros ou buscar por outro termo
+          </span>
         </p>
-        <button class="btn btn-outline-primary rounded-pill"
-                (click)="onClearFilters()">
-          <i class="bi bi-arrow-counterclockwise me-2"></i>
-          Limpar filtros
-        </button>
+        <p class="text-muted small" *ngIf="totalProducts > 0 && currentPage > totalPages">
+          ⚠️ Você está na página {{ currentPage }}, mas só existem {{ totalPages }} páginas.
+          <br>
+          <span class="text-primary" style="cursor: pointer;" (click)="onPageChange(totalPages)">
+            Ir para a última página ({{ totalPages }})
+          </span>
+        </p>
+        <div class="d-flex gap-2 justify-content-center flex-wrap mt-3">
+          <button class="btn btn-outline-primary rounded-pill" (click)="onClearFilters()">
+            <i class="bi bi-arrow-counterclockwise me-2"></i>
+            Limpar filtros
+          </button>
+          <button class="btn btn-outline-secondary rounded-pill" (click)="loadProducts()">
+            <i class="bi bi-arrow-repeat me-2"></i>
+            Recarregar
+          </button>
+          <button *ngIf="totalProducts > 0 && currentPage > totalPages"
+                  class="btn btn-primary rounded-pill"
+                  (click)="onPageChange(totalPages)">
+            <i class="bi bi-arrow-right me-2"></i>
+            Ir para página {{ totalPages }}
+          </button>
+        </div>
       </div>
 
       <!-- Paginação -->
-      <div *ngIf="!loading && totalPages > 1" class="d-flex justify-content-center mt-4">
-        <nav>
-          <ul class="pagination">
-            <li class="page-item" [class.disabled]="currentPage === 1">
-              <button class="page-link" (click)="onPageChange(currentPage - 1)">
-                <i class="bi bi-chevron-left"></i>
-              </button>
-            </li>
-            <li *ngFor="let page of getPages()"
-                class="page-item"
-                [class.active]="page === currentPage">
-              <button class="page-link" (click)="onPageChange(page)">
-                {{ page }}
-              </button>
-            </li>
-            <li class="page-item" [class.disabled]="currentPage === totalPages">
-              <button class="page-link" (click)="onPageChange(currentPage + 1)">
-                <i class="bi bi-chevron-right"></i>
-              </button>
-            </li>
-          </ul>
-        </nav>
-      </div>
+      <app-pagination
+        *ngIf="!loading && totalProducts > 0"
+        [currentPage]="currentPage"
+        [totalPages]="totalPages"
+        [totalItems]="totalProducts"
+        [itemsPerPage]="itemsPerPage"
+        (pageChange)="onPageChange($event)">
+      </app-pagination>
     </div>
   </div>
 </div>

@@ -14,6 +14,14 @@ import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
 import { ProductFilters } from '../models/ProductModel/product-filters.model';
 
+export interface ProductResponse {
+  products: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -23,7 +31,7 @@ export class ProductService {
   private localApiUrl = 'http://localhost:3000/products';
 
   // Cache
-  private productsCache$: Observable<Product[]> | null = null;
+  private productsCache$: Observable<ProductResponse> | null = null;
   private lastCacheTime = 0;
   private readonly cacheDuration = 5 * 60 * 1000; // 5 minutos
 
@@ -38,119 +46,96 @@ export class ProductService {
     const platformId = inject(PLATFORM_ID);
     this.isBrowser = isPlatformBrowser(platformId);
 
-    // Carregar favoritos do localStorage
     if (this.isBrowser) {
       this.loadFavoritesFromStorage();
     }
   }
 
-  /**
-   * Busca produtos com filtros
-   */
-  /**
-   * Busca produtos com filtros
-   */
-  getProducts(filters?: ProductFilters, useCache = true): Observable<Product[]> {
-    // Se usar cache e tiver cache válido
+  getProducts(filters?: ProductFilters, useCache = true): Observable<ProductResponse> {
+    console.log('🔍 getProducts chamado com filtros:', filters);
+
     if (useCache && this.productsCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
+      console.log('💾 Usando cache');
       return this.productsCache$;
     }
 
     let params = new HttpParams();
 
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 12;
+
+    console.log(`📄 Buscando página ${page} com limite ${limit}`);
+
     if (filters) {
-      // Categoria - IMPORTANTE: verificar se está sendo aplicado
-      if (filters.category) {
-        params = params.set('category', filters.category);
-        console.log(`🔍 Filtrando por categoria: ${filters.category}`);
-      }
-
-      // Preço mínimo
-      if (filters.minPrice && filters.minPrice > 0) {
+      if (filters.category) params = params.set('category', filters.category);
+      if (filters.minPrice && filters.minPrice > 0)
         params = params.set('price_gte', filters.minPrice.toString());
-      }
-
-      // Preço máximo
-      if (filters.maxPrice && filters.maxPrice < 10000) {
+      if (filters.maxPrice && filters.maxPrice < 10000)
         params = params.set('price_lte', filters.maxPrice.toString());
-      }
+      if (filters.search) params = params.set('q', filters.search);
+      if (filters.condition) params = params.set('condition', filters.condition);
+      if (filters.location) params = params.set('location', filters.location);
+      if (filters.hasDiscount) params = params.set('discount_ne', '0');
+      if (filters.freeShipping) params = params.set('freeShipping', 'true');
+      if (filters.inStock) params = params.set('stock_gt', '0');
 
-      // Busca por texto
-      if (filters.search) {
-        params = params.set('q', filters.search);
-      }
-
-      // Condição
-      if (filters.condition) {
-        params = params.set('condition', filters.condition);
-      }
-
-      // Localização
-      if (filters.location) {
-        params = params.set('location', filters.location);
-      }
-
-      // Em promoção (tem desconto)
-      if (filters.hasDiscount) {
-        params = params.set('discount_ne', '0');
-      }
-
-      // Frete grátis
-      if (filters.freeShipping) {
-        params = params.set('freeShipping', 'true');
-      }
-
-      // Em estoque
-      if (filters.inStock) {
-        params = params.set('stock_gt', '0');
-      }
-
-      // Ordenação
       if (filters.sortBy === 'price_asc') {
-        params = params.set('_sort', 'price');
-        params = params.set('_order', 'asc');
+        params = params.set('_sort', 'price').set('_order', 'asc');
       } else if (filters.sortBy === 'price_desc') {
-        params = params.set('_sort', 'price');
-        params = params.set('_order', 'desc');
+        params = params.set('_sort', 'price').set('_order', 'desc');
       } else if (filters.sortBy === 'newest') {
-        params = params.set('_sort', 'createdAt');
-        params = params.set('_order', 'desc');
+        params = params.set('_sort', 'createdAt').set('_order', 'desc');
       } else if (filters.sortBy === 'popular') {
-        params = params.set('_sort', 'seller.sales');
-        params = params.set('_order', 'desc');
-      }
-
-      // Limite de resultados
-      if (filters.limit) {
-        params = params.set('_limit', filters.limit.toString());
-      }
-
-      // Paginação
-      if (filters.page) {
-        params = params.set('_page', filters.page.toString());
-        if (filters.limit) {
-          params = params.set('_limit', filters.limit.toString());
-        }
+        params = params.set('_sort', 'seller.sales').set('_order', 'desc');
       }
     }
 
-    console.log('🔍 URL completa:', `${this.apiUrl}?${params.toString()}`);
+    params = params.set('_page', page.toString());
+    params = params.set('_limit', limit.toString());
 
-    const request = this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      tap((products) => {
-        this.lastCacheTime = Date.now();
+    const fullUrl = `${this.apiUrl}?${params.toString()}`;
+    console.log('🔍 URL da requisição:', fullUrl);
+
+    return this.http.get<any>(this.apiUrl, { params, observe: 'response' }).pipe(
+      map((response) => {
+        const products = response.body || [];
+
+        console.log(`📦 Produtos recebidos: ${products.length}`);
+        if (products.length > 0) {
+          console.log('📦 Primeiro produto:', products[0]);
+        }
+
+        let total = parseInt(response.headers.get('X-Total-Count') || '0', 10);
+
+        if (total === 0 && products.length > 0) {
+          total = products.length;
+          console.warn('⚠️ Header X-Total-Count não encontrado, usando comprimento do array');
+        }
+
+        const totalPages = Math.ceil(total / limit) || 1;
+
         const favorites = this.favoritesSubject.value;
-        products.forEach((product) => {
+        products.forEach((product: Product) => {
           product.isFavorite = favorites.includes(product.id);
         });
-        console.log(`📦 ${products.length} produtos encontrados`);
+
+        console.log(`📦 ${products.length} produtos nesta página (Total: ${total})`);
+        console.log(`📄 Página ${page} de ${totalPages}`);
+
+        return {
+          products,
+          total,
+          page,
+          limit,
+          totalPages,
+        };
+      }),
+      tap(() => {
+        this.lastCacheTime = Date.now();
       }),
       shareReplay(1),
       catchError(this.handleError),
     );
-
-    this.productsCache$ = request;
-    return request;
   }
 
   /**
@@ -159,7 +144,6 @@ export class ProductService {
   getProductById(id: number): Observable<Product> {
     return this.http.get<Product>(`${this.apiUrl}/${id}`).pipe(
       map((product) => {
-        // Verificar se está nos favoritos
         const favorites = this.favoritesSubject.value;
         product.isFavorite = favorites.includes(product.id);
         return product;
@@ -248,7 +232,6 @@ export class ProductService {
    * Cria um novo produto
    */
   createProduct(product: Partial<Product>): Observable<Product> {
-    // Garantir que images seja um array
     const images =
       product.images && Array.isArray(product.images) && product.images.length > 0
         ? product.images
@@ -262,10 +245,9 @@ export class ProductService {
       condition: product.condition || 'new',
       location: product.location || '',
       stock: Number(product.stock) || 1,
-      images: images, // Garantir que é um array
+      images: images,
     };
 
-    // Adicionar oldPrice se existir
     if (product.oldPrice && product.oldPrice > 0) {
       newProduct.oldPrice = Number(product.oldPrice);
     }
@@ -279,7 +261,6 @@ export class ProductService {
       }),
       catchError((error) => {
         console.error('❌ Erro detalhado:', error);
-        // Log do corpo da resposta se disponível
         if (error.error) {
           console.error('❌ Resposta do servidor:', error.error);
         }
@@ -299,7 +280,6 @@ export class ProductService {
       })
       .pipe(
         tap(() => {
-          // Invalidar cache
           this.invalidateCache();
         }),
         catchError(this.handleError),
@@ -312,7 +292,6 @@ export class ProductService {
   deleteProduct(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
-        // Invalidar cache
         this.invalidateCache();
       }),
       catchError(this.handleError),
@@ -323,22 +302,17 @@ export class ProductService {
    * Alterna o status de favorito de um produto
    */
   toggleFavorite(productId: number): Observable<Product> {
-    // Primeiro, obter o produto atual
     return this.http.get<Product>(`${this.apiUrl}/${productId}`).pipe(
       switchMap((product) => {
-        // Alternar o status
         const newFavoriteStatus = !product.isFavorite;
 
-        // Atualizar o produto
         return this.http
           .patch<Product>(`${this.apiUrl}/${productId}`, {
             isFavorite: newFavoriteStatus,
           })
           .pipe(
             tap(() => {
-              // Atualizar lista de favoritos
               this.updateFavorites(productId, newFavoriteStatus);
-              // Invalidar cache
               this.invalidateCache();
             }),
           );
@@ -359,7 +333,6 @@ export class ProductService {
       });
     }
 
-    // Buscar produtos que estão na lista de favoritos
     let params = new HttpParams();
     favoriteIds.forEach((id) => {
       params = params.append('id', id.toString());
@@ -425,7 +398,7 @@ export class ProductService {
   /**
    * Força a atualização do cache
    */
-  refreshProducts(filters?: ProductFilters): Observable<Product[]> {
+  refreshProducts(filters?: ProductFilters): Observable<ProductResponse> {
     this.invalidateCache();
     return this.getProducts(filters, false);
   }

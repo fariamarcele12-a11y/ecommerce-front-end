@@ -1,23 +1,31 @@
 import { Component, OnInit, OnChanges, Input, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ProductService } from '../../core/services/product.service';
+import { ProductResponse, ProductService } from '../../core/services/product.service';
 import { Product } from '../../core/models/ProductModel/product.model';
 import { ProductCard } from '../../shared/components/product-card/product-card';
 import { ProductFilters } from '../../core/models/ProductModel/product-filters.model';
+import { Pagination } from '../../shared/components/pagination/pagination';
 
 @Component({
   selector: 'app-products',
   standalone: true,
-  imports: [CommonModule, ProductCard],
+  imports: [CommonModule, ProductCard, Pagination],
   templateUrl: './products.html',
   styleUrls: ['./products.scss']
 })
 export class Products implements OnInit, OnChanges {
   @Input() filters: ProductFilters = {};
   @Input() limit?: number;
+  @Input() showPagination: boolean = false;
 
   products: Product[] = [];
   loading = true;
+  totalProducts: number = 0;
+  currentPage: number = 1;
+  itemsPerPage: number = 12;
+  totalPages: number = 1;
+
+
 
   constructor(private productService: ProductService) {}
 
@@ -42,19 +50,29 @@ export class Products implements OnInit, OnChanges {
     if (this.limit) {
       filters.limit = this.limit;
     }
+    if (!filters.limit) {
+      filters.limit = this.itemsPerPage;
+    }
 
     console.log('🚀 Products carregando com filtros:', filters);
 
     // Forçar recarga sem cache se necessário
     this.productService.getProducts(filters, !forceRefresh).subscribe({
-      next: (products) => {
-        this.products = products;
+      next: (response: ProductResponse) => {
+        this.products = response.products;
+        this.totalProducts = response.total;
+        this.currentPage = response.page;
+        this.itemsPerPage = response.limit;
+        this.totalPages = response.totalPages
+
         this.loading = false;
-        console.log(`✅ ${products.length} produtos carregados no Products`);
+        console.log(`✅ ${this.products.length} produtos carregados (Total: ${this.totalProducts})`);
       },
       error: () => {
         this.loading = false;
         this.products = [];
+        this.totalProducts = 0;
+        this.totalPages = 1;
       }
     });
   }
@@ -69,6 +87,16 @@ export class Products implements OnInit, OnChanges {
 
   applyFilters(newFilters: ProductFilters): void {
     this.filters = { ...this.filters, ...newFilters };
+    this.currentPage = 1;
     this.loadProducts(true);
+  }
+
+  onPageChange(page: number): void{
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.filters.page = page;
+      this.loadProducts(true);
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
   }
 }

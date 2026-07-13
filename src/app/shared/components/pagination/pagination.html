@@ -1,0 +1,58 @@
+<div *ngIf="totalPages > 1" class="pagination-container">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <!-- Informações -->
+    <div class="pagination-info text-muted small">
+      <span>
+        Mostrando
+        <strong>{{ getStartItem() }}</strong>
+        a
+        <strong>{{ getEndItem() }}</strong>
+        de
+        <strong>{{ totalItems }}</strong>
+        produtos
+      </span>
+    </div>
+
+    <!-- Controles -->
+    <nav aria-label="Paginação">
+      <ul class="pagination mb-0">
+        <!-- Primeira página -->
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <button class="page-link" (click)="onPageChange(1)">
+            <i class="bi bi-chevron-double-left"></i>
+          </button>
+        </li>
+
+        <!-- Anterior -->
+        <li class="page-item" [class.disabled]="currentPage === 1">
+          <button class="page-link" (click)="onPageChange(currentPage - 1)">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+        </li>
+
+        <!-- Páginas -->
+        <li *ngFor="let page of getPages()"
+            class="page-item"
+            [class.active]="page === currentPage">
+          <button class="page-link" (click)="onPageChange(page)">
+            {{ page }}
+          </button>
+        </li>
+
+        <!-- Próxima -->
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <button class="page-link" (click)="onPageChange(currentPage + 1)">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </li>
+
+        <!-- Última página -->
+        <li class="page-item" [class.disabled]="currentPage === totalPages">
+          <button class="page-link" (click)="onPageChange(totalPages)">
+            <i class="bi bi-chevron-double-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>

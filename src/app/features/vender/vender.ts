@@ -6,7 +6,6 @@ import { ProductService } from '../../core/services/product.service';
 import { CategoryService } from '../../core/services/category.service';
 import { AlertService } from '../../core/services/alert.service';
 import { Category } from '../../core/models/category.model';
-import { Product } from '../../core/models/ProductModel/product.model';
 
 @Component({
   selector: 'app-vender',
