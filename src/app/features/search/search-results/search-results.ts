@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Product } from '../../../core/models/ProductModel/product.model';
 import { ProductService, ProductResponse } from '../../../core/services/product.service';
@@ -13,7 +13,7 @@ import { ProductFilters } from '../../../core/models/ProductModel/product-filter
 @Component({
   selector: 'app-search-results',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProductCard, SearchFilters, Pagination],
+  imports: [CommonModule, FormsModule, ProductCard, SearchFilters, Pagination, RouterLink],
   templateUrl: './search-results.html',
   styleUrls: ['./search-results.scss'],
 })

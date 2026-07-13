@@ -1,10 +1,10 @@
 import { Component, OnInit, OnChanges, Input, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ProductResponse, ProductService } from '../../core/services/product.service';
+import { ProductService, ProductResponse } from '../../core/services/product.service';
 import { Product } from '../../core/models/ProductModel/product.model';
 import { ProductCard } from '../../shared/components/product-card/product-card';
-import { ProductFilters } from '../../core/models/ProductModel/product-filters.model';
 import { Pagination } from '../../shared/components/pagination/pagination';
+import { ProductFilters } from '../../core/models/ProductModel/product-filters.model';
 
 @Component({
   selector: 'app-products',
@@ -19,13 +19,11 @@ export class Products implements OnInit, OnChanges {
   @Input() showPagination: boolean = false;
 
   products: Product[] = [];
-  loading = true;
   totalProducts: number = 0;
   currentPage: number = 1;
   itemsPerPage: number = 12;
   totalPages: number = 1;
-
-
+  loading = true;
 
   constructor(private productService: ProductService) {}
 
@@ -34,10 +32,8 @@ export class Products implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    // Quando os filtros mudarem, recarregar produtos
-    if (changes['filters']) {
+    if (changes['filters'] && !changes['filters'].firstChange) {
       console.log('🔄 Filtros do Products mudaram:', this.filters);
-      // Forçar recarga sem cache
       this.loadProducts(true);
     }
   }
@@ -45,7 +41,6 @@ export class Products implements OnInit, OnChanges {
   loadProducts(forceRefresh: boolean = false): void {
     this.loading = true;
 
-    // Aplicar limite se definido
     const filters = { ...this.filters };
     if (this.limit) {
       filters.limit = this.limit;
@@ -56,19 +51,18 @@ export class Products implements OnInit, OnChanges {
 
     console.log('🚀 Products carregando com filtros:', filters);
 
-    // Forçar recarga sem cache se necessário
     this.productService.getProducts(filters, !forceRefresh).subscribe({
       next: (response: ProductResponse) => {
         this.products = response.products;
         this.totalProducts = response.total;
         this.currentPage = response.page;
         this.itemsPerPage = response.limit;
-        this.totalPages = response.totalPages
-
+        this.totalPages = response.totalPages;
         this.loading = false;
         console.log(`✅ ${this.products.length} produtos carregados (Total: ${this.totalProducts})`);
       },
-      error: () => {
+      error: (error) => {
+        console.error('❌ Erro ao carregar produtos:', error);
         this.loading = false;
         this.products = [];
         this.totalProducts = 0;
@@ -91,12 +85,12 @@ export class Products implements OnInit, OnChanges {
     this.loadProducts(true);
   }
 
-  onPageChange(page: number): void{
+  onPageChange(page: number): void {
     if (page >= 1 && page <= this.totalPages) {
       this.currentPage = page;
       this.filters.page = page;
       this.loadProducts(true);
-      window.scrollTo({top: 0, behavior: 'smooth'});
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 }
