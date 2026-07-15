@@ -1,19 +1,38 @@
 <div class="card h-100 product-card border-0 shadow-sm hover-effect">
-  <!-- Badge de desconto -->
+  <!-- Imagem e Badges -->
   <div class="position-relative">
-    <img [src]="product.images[0]" class="card-img-top product-image" [alt]="product.name" />
+    <img
+      [src]="getImageUrl()"
+      class="card-img-top product-image"
+      [alt]="product.name"
+    />
+
+    <!-- Badge de Desconto -->
     <span
       class="position-absolute top-0 start-0 m-2 badge bg-danger"
       *ngIf="getDiscountPercentage() > 0"
     >
       -{{ getDiscountPercentage() }}%
     </span>
+
+    <!-- Badge de Condição -->
     <span class="position-absolute top-0 end-0 m-2 badge" [class]="getConditionClass()">
       {{ getConditionBadge() }}
     </span>
+
+    <!-- Badge de Estoque (Mobile) -->
+    <span
+      class="position-absolute bottom-0 start-0 m-2 badge d-md-none"
+      [class]="getStockClass()"
+      *ngIf="!isInStock() || isLowStock()">
+      {{ getStockStatus() }}
+    </span>
+
+    <!-- Botão de Favorito -->
     <button
       class="btn-favorite position-absolute bottom-0 end-0 m-3"
       (click)="onFavoriteClick($event)"
+      [title]="product.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'"
     >
       <i
         class="bi"
@@ -30,7 +49,9 @@
     </div>
 
     <!-- Título -->
-    <h5 class="card-title text-truncate">{{ product.name }}</h5>
+    <h5 class="card-title text-truncate" [title]="product.name">
+      {{ product.name }}
+    </h5>
 
     <!-- Preços -->
     <div class="mt-2">
@@ -49,18 +70,41 @@
       <span class="text-muted">({{ product.seller.sales }} vendas)</span>
     </div>
 
-    <!-- Frete Grátis (placeholder) -->
-    <div class="mt-2" *ngIf="product.price > 100">
+    <!-- Frete Grátis -->
+    <div class="mt-2" *ngIf="hasFreeShipping()">
       <span class="badge bg-light text-success border">
         <i class="bi bi-truck"></i> Frete Grátis
+      </span>
+    </div>
+
+    <!-- Status do Estoque (Desktop) -->
+    <div class="mt-2" *ngIf="!isInStock() || isLowStock()">
+      <span class="badge d-none d-md-inline" [class]="getStockClass()">
+        <i class="bi"
+           [class.bi-x-circle]="!isInStock()"
+           [class.bi-exclamation-triangle]="isLowStock()"
+           [class.bi-check-circle]="isInStock()"></i>
+        {{ getStockStatus() }}
       </span>
     </div>
   </div>
 
   <div class="card-footer bg-white border-0 pb-3">
-    <a [routerLink]="['/produto', product.id]" class="btn btn-outline-primary w-100 rounded-pill">
-      Ver detalhes
-      <i class="bi bi-arrow-right-short"></i>
+    <a
+      [routerLink]="['/produto', product.id]"
+      class="btn w-100 rounded-pill"
+      [class.btn-outline-primary]="isInStock()"
+      [class.btn-secondary]="!isInStock()"
+      [class.disabled]="!isInStock()"
+    >
+      <span *ngIf="isInStock()">
+        Ver detalhes
+        <i class="bi bi-arrow-right-short"></i>
+      </span>
+      <span *ngIf="!isInStock()">
+        <i class="bi bi-x-circle me-1"></i>
+        Indisponível
+      </span>
     </a>
   </div>
 </div>

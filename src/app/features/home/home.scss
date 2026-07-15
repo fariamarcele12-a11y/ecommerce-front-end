@@ -85,6 +85,7 @@
   animation-delay: 0.2s;
 }
 
+// Newsletter
 .bg-dark {
   .input-group {
     .form-control {
@@ -110,6 +111,91 @@
       &:hover {
         background: linear-gradient(135deg, #5a67d8 0%, #6b46a0 100%);
         transform: scale(1.02);
+      }
+    }
+  }
+}
+
+// Banner principal
+.bg-light {
+  .carousel {
+    border-radius: 0;
+    overflow: hidden;
+
+    .carousel-item {
+      img {
+        filter: brightness(0.9);
+      }
+    }
+
+    .carousel-caption {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8));
+      border-radius: 12px;
+      padding: 20px 30px;
+      max-width: 50%;
+      left: 10%;
+      right: auto;
+      bottom: 30%;
+      text-align: left;
+
+      h2 {
+        font-size: 2.5rem;
+        font-weight: 800;
+      }
+
+      p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+      }
+    }
+  }
+}
+
+// Seções
+section {
+  &.py-5 {
+    &:first-of-type {
+      background: white;
+    }
+  }
+}
+
+// Responsividade do banner
+@media (max-width: 768px) {
+  .bg-light {
+    .carousel {
+      .carousel-caption {
+        max-width: 80%;
+        padding: 12px 16px;
+        bottom: 20%;
+
+        h2 {
+          font-size: 1.5rem;
+        }
+
+        p {
+          font-size: 0.9rem;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .bg-light {
+    .carousel {
+      .carousel-caption {
+        max-width: 90%;
+        padding: 8px 12px;
+        bottom: 15%;
+
+        h2 {
+          font-size: 1.1rem;
+        }
+
+        p {
+          font-size: 0.75rem;
+        }
       }
     }
   }

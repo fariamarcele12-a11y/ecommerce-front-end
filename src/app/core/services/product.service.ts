@@ -9,6 +9,7 @@ import {
   shareReplay,
   BehaviorSubject,
   switchMap,
+  of,
 } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
@@ -51,6 +52,9 @@ export class ProductService {
     }
   }
 
+  /**
+   * Busca produtos com filtros e paginação
+   */
   getProducts(filters?: ProductFilters, useCache = true): Observable<ProductResponse> {
     console.log('🔍 getProducts chamado com filtros:', filters);
 
@@ -67,6 +71,7 @@ export class ProductService {
     console.log(`📄 Buscando página ${page} com limite ${limit}`);
 
     if (filters) {
+      // Filtros
       if (filters.category) params = params.set('category', filters.category);
       if (filters.minPrice && filters.minPrice > 0)
         params = params.set('price_gte', filters.minPrice.toString());
@@ -79,6 +84,7 @@ export class ProductService {
       if (filters.freeShipping) params = params.set('freeShipping', 'true');
       if (filters.inStock) params = params.set('stock_gt', '0');
 
+      // Ordenação
       if (filters.sortBy === 'price_asc') {
         params = params.set('_sort', 'price').set('_order', 'asc');
       } else if (filters.sortBy === 'price_desc') {
@@ -90,6 +96,7 @@ export class ProductService {
       }
     }
 
+    // Paginação
     params = params.set('_page', page.toString());
     params = params.set('_limit', limit.toString());
 
@@ -114,6 +121,7 @@ export class ProductService {
 
         const totalPages = Math.ceil(total / limit) || 1;
 
+        // Adicionar flag de favorito
         const favorites = this.favoritesSubject.value;
         products.forEach((product: Product) => {
           product.isFavorite = favorites.includes(product.id);
@@ -192,7 +200,9 @@ export class ProductService {
    * Busca produtos com desconto
    */
   getProductsOnSale(limit = 8): Observable<Product[]> {
-    const params = new HttpParams().set('discount_ne', '0').set('_limit', limit.toString());
+    const params = new HttpParams()
+      .set('discount_ne', '0')
+      .set('_limit', limit.toString());
 
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
@@ -299,25 +309,38 @@ export class ProductService {
   }
 
   /**
-   * Alterna o status de favorito de um produto
+   * Alterna o status de favorito de um produto (com fallback local)
    */
   toggleFavorite(productId: number): Observable<Product> {
-    return this.http.get<Product>(`${this.apiUrl}/${productId}`).pipe(
-      switchMap((product) => {
-        const newFavoriteStatus = !product.isFavorite;
+    // Verificar se o produto já está nos favoritos
+    const currentFavorites = this.favoritesSubject.value;
+    const newFavoriteStatus = !currentFavorites.includes(productId);
 
-        return this.http
-          .patch<Product>(`${this.apiUrl}/${productId}`, {
-            isFavorite: newFavoriteStatus,
-          })
-          .pipe(
-            tap(() => {
-              this.updateFavorites(productId, newFavoriteStatus);
-              this.invalidateCache();
-            }),
-          );
+    console.log(`🔄 Toggle favorito: produto ${productId} -> ${newFavoriteStatus}`);
+
+    // Atualizar localmente primeiro (feedback instantâneo)
+    this.updateFavorites(productId, newFavoriteStatus);
+    this.invalidateCache();
+
+    // Tentar sincronizar com o servidor
+    return this.http.patch<Product>(`${this.apiUrl}/${productId}`, {
+      isFavorite: newFavoriteStatus
+    }).pipe(
+      tap((updatedProduct) => {
+        console.log('✅ Favorito sincronizado com servidor:', updatedProduct);
+        // Garantir que o estado local está correto
+        this.updateFavorites(productId, newFavoriteStatus);
       }),
-      catchError(this.handleError),
+      catchError((error) => {
+        console.warn('⚠️ Erro ao sincronizar favorito, mantendo estado local:', error);
+        // Manter o estado local (já foi atualizado)
+        return this.getProductById(productId).pipe(
+          map((product) => ({
+            ...product,
+            isFavorite: newFavoriteStatus
+          }))
+        );
+      })
     );
   }
 
@@ -338,7 +361,15 @@ export class ProductService {
       params = params.append('id', id.toString());
     });
 
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
+      map((products) => {
+        products.forEach((product) => {
+          product.isFavorite = true;
+        });
+        return products;
+      }),
+      catchError(this.handleError),
+    );
   }
 
   /**

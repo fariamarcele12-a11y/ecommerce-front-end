@@ -1,0 +1,81 @@
+.empty-state {
+  i {
+    font-size: 5rem;
+    opacity: 0.3;
+  }
+  
+  .btn {
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+  }
+}
+
+// Responsividade
+@media (max-width: 768px) {
+  .empty-state {
+    i {
+      font-size: 3rem;
+    }
+
+    h3 {
+      font-size: 1.5rem;
+    }
+    
+    .btn {
+      font-size: 0.85rem;
+      padding: 8px 20px !important;
+    }
+  }
+}
+
+// Breadcrumb
+.breadcrumb {
+  background: transparent;
+  padding: 0;
+  
+  .breadcrumb-item {
+    a {
+      color: #667eea;
+      text-decoration: none;
+      
+      &:hover {
+        color: #764ba2;
+      }
+    }
+    
+    &.active {
+      color: #6c757d;
+    }
+  }
+}
+
+// Dicas
+.bg-light {
+  border: 1px solid #f1f1f1;
+  border-radius: 12px;
+  
+  h6 {
+    color: #1a1a2e;
+  }
+  
+  .bi-check-circle-fill {
+    font-size: 0.8rem;
+  }
+}
+
+// Botão Remover todos
+.btn-outline-danger {
+  transition: all 0.3s ease;
+  font-weight: 600;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.2);
+  }
+}

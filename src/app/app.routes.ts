@@ -30,10 +30,11 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/search/search-results/search-results').then((m) => m.SearchResults),
   },
-  { path: 'vender', loadComponent: () => import('./features/vender/vender').then((m) => m.Vender)},
-
-  // Rotas futuras (redirecionam para home)
-  { path: 'favoritos', redirectTo: '/home' },
+  { path: 'vender', loadComponent: () => import('./features/vender/vender').then((m) => m.Vender) },
+  {
+    path: 'favoritos',
+    loadComponent: () => import('./features/favorites/favorites').then((m) => m.Favorites),
+  },
   { path: 'perfil', redirectTo: '/home' },
   { path: 'pedidos', redirectTo: '/home' },
   { path: 'produtos', redirectTo: '/home' },

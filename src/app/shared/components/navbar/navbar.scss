@@ -40,6 +40,7 @@
   padding: 8px 12px;
   color: #495057;
   font-weight: 500;
+  position: relative;
 
   &:hover {
     background-color: rgba(0, 0, 0, 0.03);
@@ -191,6 +192,8 @@
   padding: 0.25rem 0.5rem;
   min-width: 18px;
   font-weight: 600;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 // ============================================
@@ -253,6 +256,13 @@
     padding: 6px 10px;
     font-size: 0.9rem;
   }
+
+  .badge {
+    font-size: 0.55rem !important;
+    padding: 0.15rem 0.35rem !important;
+    min-width: 16px !important;
+    border-width: 1.5px;
+  }
 }
 
 // Mobile pequeno
@@ -284,6 +294,8 @@
 .position-relative {
   .badge {
     font-size: 0.6rem;
+    top: -6px;
+    right: -6px;
   }
 }
 
@@ -337,5 +349,58 @@
   .category-btn {
     scroll-snap-align: start;
     flex-shrink: 0;
+  }
+}
+
+// ============================================
+// 15. MELHORIAS PARA FAVORITOS E CARRINHO
+// ============================================
+
+// Animações de badge
+@keyframes badgePop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.badge-primary,
+.badge-danger {
+  animation: badgePop 0.3s ease-out;
+}
+
+// Efeito de hover nos ícones de ação
+.nav-link {
+  .bi-heart,
+  .bi-cart3 {
+    transition: transform 0.2s ease, color 0.2s ease;
+  }
+
+  &:hover {
+    .bi-heart {
+      color: #dc3545;
+    }
+
+    .bi-cart3 {
+      color: #667eea;
+    }
+  }
+}
+
+// Responsividade do dropdown
+@media (max-width: 768px) {
+  .dropdown-menu {
+    border-radius: 8px;
+    padding: 6px;
+
+    .dropdown-item {
+      padding: 6px 12px;
+      font-size: 0.9rem;
+    }
   }
 }

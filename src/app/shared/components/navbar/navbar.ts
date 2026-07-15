@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { CartService } from '../../../core/services/cart.service';
+import { ProductService } from '../../../core/services/product.service';
 import { SearchBar } from '../search-bar/search-bar';
 import { Subscription } from 'rxjs';
 
@@ -19,32 +20,32 @@ export class Navbar implements OnInit, OnDestroy {
   isScrolled = false;
 
   private cartSubscription: Subscription = new Subscription();
+  private favoritesSubscription: Subscription = new Subscription();
 
   constructor(
     private cartService: CartService,
+    private productService: ProductService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    // Carrinho
     this.cartSubscription = this.cartService.getTotalItems().subscribe(total => {
       this.cartCount = total;
     });
 
-    // Carregar favoritos do localStorage
-    const favoritesData = localStorage.getItem('favorites');
-    if (favoritesData) {
-      try {
-        const favorites = JSON.parse(favoritesData);
-        this.favoritesCount = favorites.length;
-      } catch (error) {
-        console.error('Erro ao carregar favoritos:', error);
-      }
-    }
+    // Favoritos - via ProductService
+    this.favoritesSubscription = this.productService.favorites$.subscribe(favorites => {
+      this.favoritesCount = favorites.length;
+    });
   }
 
   ngOnDestroy(): void {
     if (this.cartSubscription) {
       this.cartSubscription.unsubscribe();
+    }
+    if (this.favoritesSubscription) {
+      this.favoritesSubscription.unsubscribe();
     }
   }
 

@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { Products } from '../products/products';
 import { CategoriesList } from '../categories/categories-list/categories-list';
-import { ProductFilters } from '../../core/models/ProductModel/product-filters.model';
 import { RouterLink } from '@angular/router';
+import { ProductFilters } from '../../core/models/ProductModel/product-filters.model';
 
 @Component({
   selector: 'app-home',
@@ -30,5 +30,4 @@ export class Home {
     sortBy: 'popular',
     limit: 8
   };
-
 }
