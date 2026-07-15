@@ -51,6 +51,7 @@
             </h5>
 
             <div class="row g-3">
+              <!-- 🔥 CEP - Apenas números com máscara automática -->
               <div class="col-md-4">
                 <label class="form-label small fw-bold">CEP</label>
                 <input
@@ -59,7 +60,9 @@
                   placeholder="00000-000"
                   [(ngModel)]="form.address.cep"
                   (blur)="onCepBlur()"
-                  [value]="formatCep(form.address.cep)"
+                  (input)="form.address.cep = formatCep(form.address.cep)"
+                  maxlength="9"
+                  appOnlyNumbers
                 />
               </div>
 
@@ -80,6 +83,7 @@
                   class="form-control"
                   placeholder="123"
                   [(ngModel)]="form.address.number"
+                  appOnlyNumbers
                 />
               </div>
 
@@ -162,6 +166,7 @@
             </h5>
 
             <div class="row g-3">
+              <!-- 🔥 CPF/CNPJ - Apenas números com máscara automática -->
               <div class="col-md-6">
                 <label class="form-label small fw-bold">CPF/CNPJ</label>
                 <input
@@ -170,6 +175,8 @@
                   placeholder="000.000.000-00"
                   [(ngModel)]="form.cpfCnpj"
                   (input)="form.cpfCnpj = formatCpfCnpj(form.cpfCnpj)"
+                  maxlength="18"
+                  appOnlyNumbers
                 />
               </div>
 

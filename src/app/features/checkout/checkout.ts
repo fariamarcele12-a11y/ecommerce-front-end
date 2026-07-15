@@ -6,11 +6,12 @@ import { Subscription } from 'rxjs';
 import { CartItem, CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
 import { AlertService } from '../../core/services/alert.service';
+import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, OnlyNumbersDirective],
   templateUrl: './checkout.html',
   styleUrls: ['./checkout.scss'],
 })
@@ -122,7 +123,6 @@ export class Checkout implements OnInit, OnDestroy {
   }
 
   searchCep(cep: string): void {
-    // Simulação de busca de CEP
     const mockAddresses: { [key: string]: any } = {
       '01001000': {
         street: 'Praça da Sé',
@@ -159,8 +159,10 @@ export class Checkout implements OnInit, OnDestroy {
     }
   }
 
+  // 🔥 FORMATADORES
   formatCep(value: string): string {
     const numbers = value.replace(/\D/g, '');
+    if (numbers.length === 0) return '';
     if (numbers.length <= 5) {
       return numbers;
     }
@@ -169,19 +171,98 @@ export class Checkout implements OnInit, OnDestroy {
 
   formatCpfCnpj(value: string): string {
     const numbers = value.replace(/\D/g, '');
+    if (numbers.length === 0) return '';
+    
     if (numbers.length <= 11) {
-      // CPF: 000.000.000-00
       return numbers
         .replace(/(\d{3})(\d)/, '$1.$2')
         .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+        .slice(0, 14);
     } else {
-      // CNPJ: 00.000.000/0000-00
       return numbers
         .replace(/(\d{2})(\d)/, '$1.$2')
         .replace(/(\d{3})(\d)/, '$1.$2')
         .replace(/(\d{3})(\d)/, '$1/$2')
-        .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+        .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+        .slice(0, 18);
+    }
+  }
+
+  // 🔥 VALIDAÇÕES
+  isValidCep(cep: string): boolean {
+    const numbers = cep.replace(/\D/g, '');
+    return numbers.length === 8;
+  }
+
+  isValidCpf(cpf: string): boolean {
+    const numbers = cpf.replace(/\D/g, '');
+    if (numbers.length !== 11) return false;
+    
+    if (/^(\d)\1{10}$/.test(numbers)) return false;
+    
+    let sum = 0;
+    let remainder;
+    
+    for (let i = 1; i <= 9; i++) {
+      sum += parseInt(numbers.substring(i - 1, i)) * (11 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(numbers.substring(9, 10))) return false;
+    
+    sum = 0;
+    for (let i = 1; i <= 10; i++) {
+      sum += parseInt(numbers.substring(i - 1, i)) * (12 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(numbers.substring(10, 11))) return false;
+    
+    return true;
+  }
+
+  isValidCnpj(cnpj: string): boolean {
+    const numbers = cnpj.replace(/\D/g, '');
+    if (numbers.length !== 14) return false;
+    
+    if (/^(\d)\1{13}$/.test(numbers)) return false;
+    
+    let length = numbers.length - 2;
+    let numbersArray = numbers.split('');
+    let sum = 0;
+    let pos = length - 7;
+    
+    for (let i = length; i >= 1; i--) {
+      sum += parseInt(numbersArray[length - i]) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    
+    let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (result !== parseInt(numbersArray[length])) return false;
+    
+    length = length + 1;
+    numbersArray = numbers.split('');
+    sum = 0;
+    pos = length - 7;
+    
+    for (let i = length; i >= 1; i--) {
+      sum += parseInt(numbersArray[length - i]) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    
+    result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (result !== parseInt(numbersArray[length])) return false;
+    
+    return true;
+  }
+
+  isValidDocument(document: string): boolean {
+    const numbers = document.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return this.isValidCpf(document);
+    } else {
+      return this.isValidCnpj(document);
     }
   }
 
@@ -198,8 +279,6 @@ export class Checkout implements OnInit, OnDestroy {
     }
   }
 
-  // ===== MÉTODOS DE PAGAMENTO =====
-
   onPaymentMethodChange(methodId: string): void {
     this.selectedPaymentMethod = methodId;
     this.form.paymentMethod = methodId;
@@ -213,8 +292,6 @@ export class Checkout implements OnInit, OnDestroy {
     this.installments = 1;
   }
 
-  // ===== MÉTODOS UTILITÁRIOS =====
-
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -222,14 +299,12 @@ export class Checkout implements OnInit, OnDestroy {
     }).format(price);
   }
 
-  // ===== VALIDAÇÃO =====
-
   validateForm(): boolean {
     const address = this.form.address;
     const cepClean = address.cep.replace(/\D/g, '');
 
-    if (!address.cep || cepClean.length < 8) {
-      this.alertService.warning('CEP inválido', 'Por favor, informe um CEP válido com 8 dígitos.');
+    if (!address.cep || !this.isValidCep(address.cep)) {
+      this.alertService.warning('CEP inválido', 'Por favor, informe um CEP válido com 8 dígitos (ex: 01001-000).');
       return false;
     }
     if (!address.street || address.street.trim() === '') {
@@ -258,14 +333,18 @@ export class Checkout implements OnInit, OnDestroy {
       this.alertService.warning('CPF/CNPJ inválido', 'Por favor, informe um CPF/CNPJ válido.');
       return false;
     }
+    
+    if (!this.isValidDocument(this.form.cpfCnpj)) {
+      this.alertService.warning('Documento inválido', 'Por favor, informe um CPF ou CNPJ válido.');
+      return false;
+    }
+    
     if (!this.form.termsAccepted) {
       this.alertService.warning('Aceite os termos', 'Você precisa aceitar os termos para continuar.');
       return false;
     }
     return true;
   }
-
-  // ===== FINALIZAR COMPRA =====
 
   onSubmit(): void {
     if (!this.validateForm()) {
@@ -276,7 +355,6 @@ export class Checkout implements OnInit, OnDestroy {
     this.paymentError = '';
     this.alertService.loading('Processando pagamento...', 'Aguarde enquanto processamos sua compra.');
 
-    // Simular processamento
     setTimeout(() => {
       this.alertService.close();
       this.isProcessing = false;
@@ -284,7 +362,6 @@ export class Checkout implements OnInit, OnDestroy {
       this.orderId = 'ORD-' + Date.now();
       this.cartService.clearCart();
 
-      // Salvar endereço se solicitado
       if (this.form.saveAddress) {
         localStorage.setItem('savedAddress', JSON.stringify(this.form.address));
       }
@@ -297,8 +374,6 @@ export class Checkout implements OnInit, OnDestroy {
     }, 2000);
   }
 
-  // ===== NAVEGAÇÃO =====
-
   continueShopping(): void {
     this.router.navigate(['/home']);
   }
@@ -306,8 +381,6 @@ export class Checkout implements OnInit, OnDestroy {
   viewOrder(): void {
     this.router.navigate(['/pedidos', this.orderId]);
   }
-
-  // ===== MÉTODO PARA CANCELAR =====
 
   cancelCheckout(): void {
     this.alertService.confirm(
