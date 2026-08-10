@@ -4,13 +4,13 @@ import { RouterLink } from '@angular/router';
 import { ScrollService } from '../../core/services/scroll.service';
 
 @Component({
-  selector: 'app-terms',
+  selector: 'app-privacy',
   standalone: true,
   imports: [CommonModule, RouterLink],
-  templateUrl: './terms.html',
-  styleUrls: ['./terms.scss']
+  templateUrl: './privacy.html',
+  styleUrls: ['./privacy.scss'],
 })
-export class Terms implements OnInit {
+export class Privacy implements OnInit {
   lastUpdated = '10 de Agosto de 2026';
 
   constructor(private scrollService: ScrollService) {}

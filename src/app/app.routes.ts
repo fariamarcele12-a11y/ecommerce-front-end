@@ -37,6 +37,8 @@ export const routes: Routes = [
   },
 
   { path: 'termos-de-uso', loadComponent: () => import('./features/terms/terms').then((m) => m.Terms)},
+
+  { path: 'politica-de-privacidade', loadComponent: () => import('./features/privacy/privacy').then((m) =>m.Privacy)},
   { path: 'perfil', redirectTo: '/home' },
   { path: 'pedidos', redirectTo: '/home' },
   { path: 'produtos', redirectTo: '/home' },
