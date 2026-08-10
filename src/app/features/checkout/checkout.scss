@@ -1,4 +1,18 @@
-// Confirmação de Pedido
+// ===== ANIMAÇÃO DE LOADING =====
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ===== CONFIRMAÇÃO =====
 .confirmation-card {
   background: white;
   border-radius: 16px;
@@ -13,7 +27,7 @@
   }
 }
 
-// Métodos de Pagamento
+// ===== MÉTODOS DE PAGAMENTO =====
 .payment-methods {
   .payment-method-card {
     border: 2px solid #dee2e6;
@@ -44,7 +58,7 @@
   }
 }
 
-// Resumo do Pedido
+// ===== RESUMO DO PEDIDO =====
 .order-items {
   &::-webkit-scrollbar {
     width: 4px;
@@ -61,7 +75,7 @@
   }
 }
 
-// Responsividade
+// ===== RESPONSIVIDADE =====
 @media (max-width: 991px) {
   .sticky-top {
     position: relative !important;
@@ -95,7 +109,7 @@
   }
 }
 
-// Animações
+// ===== ANIMAÇÕES =====
 @keyframes scaleIn {
   from {
     transform: scale(0);
@@ -107,21 +121,20 @@
   }
 }
 
-// Estilos para inputs com máscara
-input[type='text'] {
+// ===== INPUTS =====
+input[type="text"] {
   &::placeholder {
     color: #adb5bd;
     font-size: 0.9rem;
   }
 }
 
-// Estilos para o checkbox de termos
 .form-check-input:checked {
   background-color: #667eea;
   border-color: #667eea;
 }
 
-// Estilos para o botão de finalizar
+// ===== BOTÕES =====
 .btn-success {
   background: linear-gradient(135deg, #00b894 0%, #00a86b 100%);
   border: none;
@@ -139,12 +152,21 @@ input[type='text'] {
   }
 }
 
-// Badge de frete grátis
-.free-shipping-badge {
-  background: linear-gradient(135deg, #00b894 0%, #00a86b 100%);
-  color: white;
-  padding: 2px 10px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
+// ===== INPUT GROUP CEP =====
+.input-group {
+  .btn-outline-primary {
+    border-radius: 0 8px 8px 0;
+    transition: all 0.3s ease;
+
+    &:hover:not(:disabled) {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
 }

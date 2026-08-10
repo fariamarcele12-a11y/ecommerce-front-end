@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { CartItem, CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
 import { AlertService } from '../../core/services/alert.service';
+import { CepService, Endereco } from '../../core/services/cep.service';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
 
 @Component({
@@ -49,6 +50,7 @@ export class Checkout implements OnInit, OnDestroy {
   orderConfirmed = false;
   orderId = '';
   paymentError = '';
+  isSearchingCep = false;
 
   private subscriptions: Subscription = new Subscription();
 
@@ -57,6 +59,7 @@ export class Checkout implements OnInit, OnDestroy {
     private orderService: OrderService,
     private router: Router,
     private alertService: AlertService,
+    private cepService: CepService,
   ) {}
 
   ngOnInit(): void {
@@ -115,64 +118,81 @@ export class Checkout implements OnInit, OnDestroy {
 
   // ===== MÉTODOS DE ENDEREÇO =====
 
+  /**
+   * Busca o endereço automaticamente ao perder o foco do campo CEP
+   */
   onCepBlur(): void {
     const cep = this.form.address.cep.replace(/\D/g, '');
+
+    // Se o CEP tem 8 dígitos, buscar endereço
     if (cep.length === 8) {
-      this.searchCep(cep);
-    }
-  }
-
-  searchCep(cep: string): void {
-    const mockAddresses: { [key: string]: any } = {
-      '01001000': {
-        street: 'Praça da Sé',
-        neighborhood: 'Sé',
-        city: 'São Paulo',
-        state: 'SP',
-      },
-      '20040030': {
-        street: 'Avenida Presidente Vargas',
-        neighborhood: 'Centro',
-        city: 'Rio de Janeiro',
-        state: 'RJ',
-      },
-      '30130010': {
-        street: 'Rua da Bahia',
-        neighborhood: 'Centro',
-        city: 'Belo Horizonte',
-        state: 'MG',
-      },
-    };
-
-    const address = mockAddresses[cep];
-    if (address) {
-      this.form.address.street = address.street;
-      this.form.address.neighborhood = address.neighborhood;
-      this.form.address.city = address.city;
-      this.form.address.state = address.state;
-      this.alertService.toast('CEP encontrado! 📍', 'success', 2000);
-    } else {
+      this.buscarEndereco(cep);
+    } else if (cep.length > 0 && cep.length < 8) {
       this.alertService.warning(
-        'CEP não encontrado',
-        'Preencha os dados manualmente.'
+        'CEP incompleto',
+        'O CEP deve ter 8 dígitos. Verifique e tente novamente.'
       );
     }
   }
 
-  // 🔥 FORMATADORES
-  formatCep(value: string): string {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length === 0) return '';
-    if (numbers.length <= 5) {
-      return numbers;
+  /**
+   * Busca endereço usando o serviço ViaCEP
+   */
+  buscarEndereco(cep: string): void {
+    this.isSearchingCep = true;
+
+    this.cepService.buscarCep(cep).subscribe({
+      next: (endereco: Endereco) => {
+        // Preencher automaticamente os campos do formulário
+        this.form.address.street = endereco.logradouro || '';
+        this.form.address.neighborhood = endereco.bairro || '';
+        this.form.address.city = endereco.localidade || '';
+        this.form.address.state = endereco.uf || '';
+        this.form.address.complement = endereco.complemento || '';
+
+        this.isSearchingCep = false;
+        this.alertService.toast('CEP encontrado! 📍', 'success', 2000);
+
+        console.log('✅ Endereço encontrado:', endereco);
+      },
+      error: (error) => {
+        this.isSearchingCep = false;
+        console.error('❌ Erro ao buscar CEP:', error);
+
+        // Limpar campos que não foram preenchidos
+        this.form.address.street = '';
+        this.form.address.neighborhood = '';
+        this.form.address.city = '';
+        this.form.address.state = '';
+        this.form.address.complement = '';
+
+        this.alertService.warning(
+          'CEP não encontrado',
+          'Não foi possível encontrar o endereço para este CEP. Preencha os dados manualmente.'
+        );
+      }
+    });
+  }
+
+  /**
+   * Busca endereço ao digitar o CEP completo
+   */
+  onCepInput(): void {
+    const cep = this.form.address.cep.replace(/\D/g, '');
+    // Se o CEP tem 8 dígitos, buscar automaticamente
+    if (cep.length === 8) {
+      this.buscarEndereco(cep);
     }
-    return numbers.replace(/(\d{5})(\d{1,3})$/, '$1-$2');
+  }
+
+  formatCep(value: string): string {
+    return this.cepService.formatarCep(value);
   }
 
   formatCpfCnpj(value: string): string {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length === 0) return '';
-    
+
     if (numbers.length <= 11) {
       return numbers
         .replace(/(\d{3})(\d)/, '$1.$2')
@@ -191,26 +211,25 @@ export class Checkout implements OnInit, OnDestroy {
 
   // 🔥 VALIDAÇÕES
   isValidCep(cep: string): boolean {
-    const numbers = cep.replace(/\D/g, '');
-    return numbers.length === 8;
+    return this.cepService.validarCep(cep);
   }
 
   isValidCpf(cpf: string): boolean {
     const numbers = cpf.replace(/\D/g, '');
     if (numbers.length !== 11) return false;
-    
+
     if (/^(\d)\1{10}$/.test(numbers)) return false;
-    
+
     let sum = 0;
     let remainder;
-    
+
     for (let i = 1; i <= 9; i++) {
       sum += parseInt(numbers.substring(i - 1, i)) * (11 - i);
     }
     remainder = (sum * 10) % 11;
     if (remainder === 10 || remainder === 11) remainder = 0;
     if (remainder !== parseInt(numbers.substring(9, 10))) return false;
-    
+
     sum = 0;
     for (let i = 1; i <= 10; i++) {
       sum += parseInt(numbers.substring(i - 1, i)) * (12 - i);
@@ -218,42 +237,42 @@ export class Checkout implements OnInit, OnDestroy {
     remainder = (sum * 10) % 11;
     if (remainder === 10 || remainder === 11) remainder = 0;
     if (remainder !== parseInt(numbers.substring(10, 11))) return false;
-    
+
     return true;
   }
 
   isValidCnpj(cnpj: string): boolean {
     const numbers = cnpj.replace(/\D/g, '');
     if (numbers.length !== 14) return false;
-    
+
     if (/^(\d)\1{13}$/.test(numbers)) return false;
-    
+
     let length = numbers.length - 2;
     let numbersArray = numbers.split('');
     let sum = 0;
     let pos = length - 7;
-    
+
     for (let i = length; i >= 1; i--) {
       sum += parseInt(numbersArray[length - i]) * pos--;
       if (pos < 2) pos = 9;
     }
-    
+
     let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
     if (result !== parseInt(numbersArray[length])) return false;
-    
+
     length = length + 1;
     numbersArray = numbers.split('');
     sum = 0;
     pos = length - 7;
-    
+
     for (let i = length; i >= 1; i--) {
       sum += parseInt(numbersArray[length - i]) * pos--;
       if (pos < 2) pos = 9;
     }
-    
+
     result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
     if (result !== parseInt(numbersArray[length])) return false;
-    
+
     return true;
   }
 
@@ -278,6 +297,8 @@ export class Checkout implements OnInit, OnDestroy {
       }
     }
   }
+
+  // ===== MÉTODOS DE PAGAMENTO =====
 
   onPaymentMethodChange(methodId: string): void {
     this.selectedPaymentMethod = methodId;
@@ -333,12 +354,12 @@ export class Checkout implements OnInit, OnDestroy {
       this.alertService.warning('CPF/CNPJ inválido', 'Por favor, informe um CPF/CNPJ válido.');
       return false;
     }
-    
+
     if (!this.isValidDocument(this.form.cpfCnpj)) {
       this.alertService.warning('Documento inválido', 'Por favor, informe um CPF ou CNPJ válido.');
       return false;
     }
-    
+
     if (!this.form.termsAccepted) {
       this.alertService.warning('Aceite os termos', 'Você precisa aceitar os termos para continuar.');
       return false;

@@ -51,19 +51,30 @@
             </h5>
 
             <div class="row g-3">
-              <!-- 🔥 CEP - Apenas números com máscara automática -->
+              <!-- 🔥 CEP com busca automática -->
               <div class="col-md-4">
                 <label class="form-label small fw-bold">CEP</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="00000-000"
-                  [(ngModel)]="form.address.cep"
-                  (blur)="onCepBlur()"
-                  (input)="form.address.cep = formatCep(form.address.cep)"
-                  maxlength="9"
-                  appOnlyNumbers
-                />
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="00000-000"
+                    [(ngModel)]="form.address.cep"
+                    (blur)="onCepBlur()"
+                    (input)="form.address.cep = formatCep(form.address.cep); onCepInput()"
+                    maxlength="9"
+                    appOnlyNumbers
+                  />
+                  <button
+                    class="btn btn-outline-primary"
+                    type="button"
+                    (click)="onCepBlur()"
+                    [disabled]="isSearchingCep || form.address.cep.replace(/\D/g, '').length !== 8"
+                  >
+                    <i class="bi" [class.bi-search]="!isSearchingCep" [class.bi-arrow-repeat]="isSearchingCep" [class.spin]="isSearchingCep"></i>
+                  </button>
+                </div>
+                <small class="text-muted">Digite apenas números</small>
               </div>
 
               <div class="col-md-8">
@@ -83,7 +94,6 @@
                   class="form-control"
                   placeholder="123"
                   [(ngModel)]="form.address.number"
-                  appOnlyNumbers
                 />
               </div>
 
@@ -166,7 +176,6 @@
             </h5>
 
             <div class="row g-3">
-              <!-- 🔥 CPF/CNPJ - Apenas números com máscara automática -->
               <div class="col-md-6">
                 <label class="form-label small fw-bold">CPF/CNPJ</label>
                 <input
@@ -178,6 +187,7 @@
                   maxlength="18"
                   appOnlyNumbers
                 />
+                <small class="text-muted">Apenas números</small>
               </div>
 
               <div class="col-md-6">
@@ -249,8 +259,8 @@
               />
               <label class="form-check-label small" for="termsAccepted">
                 Li e aceito os
-                <a href="#" class="text-primary">Termos de Uso</a> e
-                <a href="#" class="text-primary">Política de Privacidade</a>
+                <a routerLink="/termos-de-uso" class="text-primary">Termos de Uso</a> e
+                <a routerLink="/politica-de-privacidade"class="text-primary">Política de Privacidade</a>
               </label>
             </div>
 
