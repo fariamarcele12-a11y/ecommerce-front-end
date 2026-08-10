@@ -35,6 +35,8 @@ export const routes: Routes = [
     path: 'favoritos',
     loadComponent: () => import('./features/favorites/favorites').then((m) => m.Favorites),
   },
+
+  { path: 'termos-de-uso', loadComponent: () => import('./features/terms/terms').then((m) => m.Terms)},
   { path: 'perfil', redirectTo: '/home' },
   { path: 'pedidos', redirectTo: '/home' },
   { path: 'produtos', redirectTo: '/home' },
