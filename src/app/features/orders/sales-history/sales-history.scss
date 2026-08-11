@@ -1,0 +1,61 @@
+.card {
+  border-radius: 12px;
+  overflow: hidden;
+
+  .card-header {
+    border-bottom: 1px solid #f1f1f1;
+  }
+}
+
+.badge {
+  padding: 6px 12px;
+  font-weight: 600;
+  font-size: 0.75rem;
+
+  &.bg-warning { background: #ffc107 !important; color: #212529; }
+  &.bg-info { background: #17a2b8 !important; }
+  &.bg-primary { background: #667eea !important; }
+  &.bg-success { background: #28a745 !important; }
+  &.bg-danger { background: #dc3545 !important; }
+}
+
+.order-items {
+  max-height: 200px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #28a745;
+    border-radius: 10px;
+  }
+}
+
+// Estatísticas
+.col-md-3 {
+  .card {
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08) !important;
+    }
+  }
+}
+
+// Responsividade
+@media (max-width: 768px) {
+  .card-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start !important;
+  }
+
+  .order-items {
+    .d-flex {
+      flex-wrap: wrap;
+    }
+  }
+}

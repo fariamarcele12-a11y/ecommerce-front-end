@@ -1,0 +1,188 @@
+<div class="container py-4">
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && order">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a routerLink="/home">Home</a></li>
+        <li class="breadcrumb-item"><a routerLink="/pedidos">Meus Pedidos</a></li>
+        <li class="breadcrumb-item active">Pedido {{ order.id }}</li>
+      </ol>
+    </nav>
+
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
+      <div>
+        <h1 class="fw-bold mb-0">
+          <i class="bi bi-box-seam text-primary me-2"></i>
+          Pedido #{{ order.id }}
+        </h1>
+        <p class="text-muted">
+          <i class="bi bi-calendar me-1"></i>
+          {{ formatDate(order.createdAt) }}
+        </p>
+      </div>
+      <div class="d-flex gap-2">
+        <span class="badge fs-6 px-3 py-2" [class]="'bg-' + getStatusColor(order.status)">
+          <i class="bi {{ getStatusIcon(order.status) }} me-1"></i>
+          {{ getStatusLabel(order.status) }}
+        </span>
+        <button
+          *ngIf="canCancel()"
+          class="btn btn-outline-danger rounded-pill"
+          (click)="cancelOrder()">
+          <i class="bi bi-x-circle me-1"></i>
+          Cancelar Pedido
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Tracker -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h6 class="fw-bold mb-3">Status do Pedido</h6>
+        <div class="status-tracker">
+          <div class="d-flex justify-content-between position-relative">
+            <div class="step-line"></div>
+            <div *ngFor="let step of statusSteps; let i = index"
+                 class="step-item text-center"
+                 [class.active]="i <= getCurrentStepIndex()">
+              <div class="step-circle">
+                <i class="bi"
+                   [class.bi-check-lg]="i < getCurrentStepIndex()"
+                   [class.bi-arrow-repeat]="i === getCurrentStepIndex() && order.status === 'processing'"
+                   [class.bi-check-circle]="i === getCurrentStepIndex() && order.status === 'delivered'"
+                   [class.bi-clock]="i === getCurrentStepIndex() && order.status === 'pending'">
+                </i>
+              </div>
+              <div class="step-label small mt-2">{{ step.label }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conteúdo do Pedido -->
+    <div class="row g-4">
+      <!-- Itens do Pedido -->
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white p-3">
+            <h6 class="fw-bold mb-0">
+              <i class="bi bi-bag me-2"></i>
+              Itens do Pedido ({{ getTotalItems() }})
+            </h6>
+          </div>
+          <div class="card-body p-0">
+            <div *ngFor="let item of order.items" class="order-item p-3 border-bottom">
+              <div class="d-flex gap-3 align-items-center">
+                <img
+                  [src]="item.image"
+                  [alt]="item.productName"
+                  class="rounded"
+                  style="width: 80px; height: 80px; object-fit: cover;"
+                  (error)="item.image = 'https://via.placeholder.com/80x80/667eea/ffffff?text=Sem+Imagem'"
+                />
+                <div class="flex-grow-1">
+                  <div class="fw-bold">{{ item.productName }}</div>
+                  <div class="text-muted small">
+                    <i class="bi bi-tag me-1"></i>
+                    {{ item.quantity }}x {{ formatPrice(item.price) }}
+                  </div>
+                </div>
+                <div class="text-end">
+                  <div class="fw-bold text-primary">
+                    {{ formatPrice(item.subtotal) }}
+                  </div>
+                  <a [routerLink]="['/produto', item.productId]" class="btn btn-sm btn-outline-primary rounded-pill mt-1">
+                    <i class="bi bi-eye me-1"></i>
+                    Ver produto
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumo do Pedido -->
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm sticky-top" style="top: 100px;">
+          <div class="card-body">
+            <h6 class="fw-bold mb-3">Resumo do Pedido</h6>
+
+            <div class="summary-item d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted">Subtotal</span>
+              <span>{{ formatPrice(order.subtotal) }}</span>
+            </div>
+
+            <div class="summary-item d-flex justify-content-between py-2 border-bottom" *ngIf="order.discount > 0">
+              <span class="text-success">
+                <i class="bi bi-tag me-1"></i>
+                Desconto
+              </span>
+              <span class="text-success">-{{ formatPrice(order.discount) }}</span>
+            </div>
+
+            <div class="summary-item d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted">
+                <i class="bi bi-truck me-1"></i>
+                Frete
+              </span>
+              <span *ngIf="order.shipping === 0" class="text-success">
+                <i class="bi bi-star-fill me-1"></i>
+                Grátis
+              </span>
+              <span *ngIf="order.shipping > 0">{{ formatPrice(order.shipping) }}</span>
+            </div>
+
+            <div class="summary-item d-flex justify-content-between py-3">
+              <span class="fw-bold fs-5">Total</span>
+              <span class="fw-bold fs-5 text-primary">{{ formatPrice(order.total) }}</span>
+            </div>
+
+            <hr>
+
+            <h6 class="fw-bold mb-2">Pagamento</h6>
+            <p class="small text-muted mb-0">
+              <i class="bi {{ order.paymentMethod.icon }} me-1"></i>
+              {{ order.paymentMethod.name }}
+            </p>
+
+            <hr>
+
+            <h6 class="fw-bold mb-2">Endereço de Entrega</h6>
+            <p class="small text-muted mb-0">
+              {{ getShippingAddress() }}
+            </p>
+
+            <hr>
+
+            <div *ngIf="order.trackingCode">
+              <h6 class="fw-bold mb-2">Código de Rastreio</h6>
+              <p class="small text-muted mb-0">
+                <i class="bi bi-truck me-1"></i>
+                {{ order.trackingCode }}
+              </p>
+            </div>
+
+            <hr>
+
+            <div class="d-grid gap-2">
+              <button class="btn btn-outline-secondary rounded-pill" routerLink="/pedidos">
+                <i class="bi bi-arrow-left me-2"></i>
+                Voltar para pedidos
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

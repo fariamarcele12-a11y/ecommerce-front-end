@@ -1,0 +1,150 @@
+// Status Tracker
+.status-tracker {
+  position: relative;
+  padding: 20px 0;
+
+  .step-line {
+    position: absolute;
+    top: 30px;
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    background: #dee2e6;
+    z-index: 0;
+  }
+
+  .step-item {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+
+    .step-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #dee2e6;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+
+      i {
+        font-size: 1.2rem;
+        color: white;
+      }
+    }
+
+    .step-label {
+      color: #6c757d;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    &.active {
+      .step-circle {
+        background: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        animation: pulse 2s infinite;
+      }
+
+      .step-label {
+        color: #1a1a2e;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+  }
+}
+
+// Badge
+.badge {
+  font-weight: 600;
+  font-size: 0.9rem;
+
+  &.bg-warning { background: #ffc107 !important; color: #212529; }
+  &.bg-info { background: #17a2b8 !important; }
+  &.bg-primary { background: #667eea !important; }
+  &.bg-success { background: #28a745 !important; }
+  &.bg-danger { background: #dc3545 !important; }
+}
+
+// Card
+.card {
+  border-radius: 12px;
+  overflow: hidden;
+
+  .card-header {
+    border-bottom: 1px solid #f1f1f1;
+    background: #f8f9fa;
+  }
+}
+
+// Order Item
+.order-item {
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f8f9fa;
+  }
+
+  &:last-child {
+    border-bottom: none !important;
+  }
+}
+
+// Summary
+.summary-item {
+  padding: 10px 0;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+// Responsividade
+@media (max-width: 768px) {
+  .status-tracker {
+    .step-item {
+      .step-circle {
+        width: 32px;
+        height: 32px;
+
+        i {
+          font-size: 0.9rem;
+        }
+      }
+
+      .step-label {
+        font-size: 0.7rem;
+      }
+    }
+  }
+
+  .order-item {
+    .d-flex {
+      flex-direction: column;
+      text-align: center;
+
+      img {
+        margin: 0 auto;
+      }
+    }
+  }
+}
+
+// Sticky top
+.sticky-top {
+  top: 100px;
+}
