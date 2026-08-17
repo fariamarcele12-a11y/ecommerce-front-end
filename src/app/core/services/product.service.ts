@@ -71,7 +71,13 @@ export class ProductService {
     console.log(`📄 Buscando página ${page} com limite ${limit}`);
 
     if (filters) {
-      // Filtros
+      // 🔥 Filtro por vendedor (sellerId)
+      if (filters.sellerId) {
+        params = params.set('seller.id', filters.sellerId.toString());
+        console.log(`🔍 Filtrando por vendedor ID: ${filters.sellerId}`);
+      }
+      
+      // Filtros existentes
       if (filters.category) params = params.set('category', filters.category);
       if (filters.minPrice && filters.minPrice > 0)
         params = params.set('price_gte', filters.minPrice.toString());

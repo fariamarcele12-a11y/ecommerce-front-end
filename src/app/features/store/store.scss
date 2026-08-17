@@ -1,0 +1,67 @@
+.store-header {
+  border-left: 4px solid #667eea;
+  
+  .store-avatar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  }
+}
+
+.stat-card {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08) !important;
+  }
+  
+  h3 {
+    font-size: 1.8rem;
+  }
+}
+
+// Responsividade
+@media (max-width: 768px) {
+  .store-header {
+    .row {
+      flex-direction: column;
+      text-align: center;
+      
+      .col-md-8 {
+        .d-flex {
+          flex-direction: column;
+        }
+      }
+      
+      .col-md-4 {
+        text-align: center !important;
+      }
+    }
+  }
+  
+  .stat-card {
+    h3 {
+      font-size: 1.4rem;
+    }
+  }
+}
+
+// Animações
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stat-card {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stat-card:nth-child(2) { animation-delay: 0.1s; }
+.stat-card:nth-child(3) { animation-delay: 0.15s; }
+.stat-card:nth-child(4) { animation-delay: 0.2s; }
