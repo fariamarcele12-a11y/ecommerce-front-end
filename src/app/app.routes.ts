@@ -79,6 +79,12 @@ export const routes: Routes = [
       import('./features/orders/order-detail/order-detail').then((m) => m.OrderDetail),
   },
 
+  { 
+    path: 'chat',
+    loadComponent: () =>
+      import('./features/chat/chat').then((m) => m.Chat),
+  },
+
   // ============================================
   // TERMOS E POLÍTICAS
   // ============================================
