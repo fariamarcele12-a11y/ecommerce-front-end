@@ -22,4 +22,5 @@ export interface ChatConversation {
   lastMessageDate: Date;
   unreadCount: number;
   messages: Message[];
+  isStoreChat?: boolean;
 }

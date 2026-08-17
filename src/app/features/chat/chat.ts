@@ -3,9 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { ChatConversation, Message } from '../../core/models/message.model';
 import { ChatService } from '../../core/services/chat.service';
 import { AlertService } from '../../core/services/alert.service';
+import { ChatConversation, Message } from '../../core/models/message.model';
 
 @Component({
   selector: 'app-chat',
@@ -91,7 +91,6 @@ export class Chat implements OnInit, OnDestroy {
         this.messages = messages;
         this.loading = false;
 
-        // Usar o nome do produto da URL ou do banco
         const productName = this.productNameParam || (messages.length > 0 ? messages[0].productName : 'Produto');
         const sellerName = this.sellerNameParam || (messages.length > 0 ? messages[0].sellerName : 'Vendedor');
 
@@ -104,7 +103,8 @@ export class Chat implements OnInit, OnDestroy {
           lastMessage: messages.length > 0 ? messages[messages.length - 1]?.content || '' : '',
           lastMessageDate: messages.length > 0 ? messages[messages.length - 1]?.createdAt || new Date() : new Date(),
           unreadCount: 0,
-          messages: messages || []
+          messages: messages || [],
+          isStoreChat: false
         };
 
         this.scrollToBottom();
@@ -127,7 +127,8 @@ export class Chat implements OnInit, OnDestroy {
           lastMessage: '',
           lastMessageDate: new Date(),
           unreadCount: 0,
-          messages: []
+          messages: [],
+          isStoreChat: false
         };
       }
     });
@@ -137,7 +138,6 @@ export class Chat implements OnInit, OnDestroy {
     this.loading = true;
     const sellerName = this.sellerNameParam || 'Vendedor';
     
-    // Buscar conversas da loja (por enquanto, criar uma conversa genérica)
     this.selectedConversation = {
       productId: 0,
       productName: 'Conversa com a Loja',
@@ -147,7 +147,8 @@ export class Chat implements OnInit, OnDestroy {
       lastMessage: '',
       lastMessageDate: new Date(),
       unreadCount: 0,
-      messages: []
+      messages: [],
+      isStoreChat: true
     };
     
     this.messages = [];
@@ -183,7 +184,6 @@ export class Chat implements OnInit, OnDestroy {
       isFromSeller: this.isSeller
     };
 
-    // Adicionar mensagem localmente
     const tempMessage: Message = {
       id: Date.now(),
       productId: message.productId!,
@@ -252,5 +252,22 @@ export class Chat implements OnInit, OnDestroy {
   getInitials(name: string): string {
     if (!name) return '?';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  // 🔥 Métodos para verificar o tipo de chat
+  isProductChat(): boolean {
+    return this.selectedConversation?.productId !== 0 && !this.selectedConversation?.isStoreChat;
+  }
+
+  isStoreChatType(): boolean {
+    return this.selectedConversation?.isStoreChat === true;
+  }
+
+  getProductId(): number {
+    return this.selectedConversation?.productId || 0;
+  }
+
+  getSellerId(): number {
+    return this.selectedConversation?.sellerId || 0;
   }
 }
