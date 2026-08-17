@@ -191,21 +191,42 @@
                 class="form-control"
                 placeholder="Digite seu cupom"
                 [(ngModel)]="couponCode"
-                [disabled]="couponApplied"
+                [disabled]="couponApplied || isApplyingCoupon"
+                (keyup.enter)="applyCoupon()"
               />
-              <button class="btn btn-primary" (click)="applyCoupon()" [disabled]="couponApplied">
-                Aplicar
+              <button
+                class="btn btn-primary"
+                (click)="applyCoupon()"
+                [disabled]="couponApplied || isApplyingCoupon || !couponCode.trim()">
+                <span *ngIf="!isApplyingCoupon">
+                  <i class="bi bi-tag me-1"></i>
+                  Aplicar
+                </span>
+                <span *ngIf="isApplyingCoupon">
+                  <span class="spinner-border spinner-border-sm me-1"></span>
+                  Validando...
+                </span>
               </button>
             </div>
-            <div *ngIf="couponMessage" class="mt-2 small">
-              <span [class.text-success]="couponApplied" [class.text-danger]="!couponApplied">
-                {{ couponMessage }}
-              </span>
+
+            <!-- Mensagem do Cupom -->
+            <div *ngIf="couponMessage" class="mt-2 small"
+                 [class.text-success]="couponApplied"
+                 [class.text-danger]="!couponApplied">
+              {{ couponMessage }}
             </div>
+
+            <!-- Cupom Aplicado -->
             <div *ngIf="couponApplied" class="mt-2">
-              <button class="btn btn-sm btn-outline-danger" (click)="removeCoupon()">
+              <span class="badge bg-success">
+                <i class="bi bi-check-circle me-1"></i>
+                Cupom aplicado!
+              </span>
+              <button
+                class="btn btn-link text-danger btn-sm p-0 ms-2"
+                (click)="removeCoupon()">
                 <i class="bi bi-x-circle me-1"></i>
-                Remover Cupom
+                Remover
               </button>
             </div>
           </div>

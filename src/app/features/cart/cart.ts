@@ -24,6 +24,7 @@ export class Cart implements OnInit, OnDestroy {
   couponApplied = false;
   couponMessage = '';
   isLoading = false;
+  isApplyingCoupon = false;
 
   private subscriptions: Subscription = new Subscription();
 
@@ -134,42 +135,61 @@ export class Cart implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Aplica cupom de desconto
+   */
   applyCoupon(): void {
     if (!this.couponCode.trim()) {
-      this.couponMessage = 'Digite um cupom válido.';
+      this.couponMessage = 'Digite um código de cupom.';
       this.couponApplied = false;
       this.alertService.warning('Cupom inválido', 'Por favor, digite um código de cupom.');
       return;
     }
 
-    const success = this.cartService.applyDiscount(this.couponCode);
-    if (success) {
-      this.couponMessage = `Cupom ${this.couponCode} aplicado com sucesso!`;
-      this.couponApplied = true;
-      this.alertService.success(
-        'Cupom aplicado!',
-        `O cupom ${this.couponCode} foi aplicado com sucesso.`
-      );
-      this.couponCode = '';
-    } else {
-      this.couponMessage = 'Cupom inválido. Tente novamente.';
-      this.couponApplied = false;
-      this.alertService.error(
-        'Cupom inválido',
-        'O código informado não é válido. Verifique e tente novamente.'
-      );
-    }
+    this.isApplyingCoupon = true;
+    this.couponMessage = '';
 
-    setTimeout(() => {
-      this.couponMessage = '';
-    }, 5000);
+    this.cartService.applyCoupon(this.couponCode).subscribe({
+      next: (result) => {
+        this.isApplyingCoupon = false;
+
+        if (result.valid) {
+          this.couponApplied = true;
+          this.couponMessage = `✅ ${result.message}`;
+          this.alertService.success(
+            'Cupom aplicado! 🎉',
+            `Desconto de ${this.formatPrice(result.discountAmount || 0)} aplicado.`,
+            3000
+          );
+          this.couponCode = '';
+          this.updateTotals();
+        } else {
+          this.couponApplied = false;
+          this.couponMessage = `❌ ${result.message}`;
+          this.alertService.warning('Cupom inválido', result.message);
+        }
+      },
+      error: (error) => {
+        this.isApplyingCoupon = false;
+        this.couponApplied = false;
+        this.couponMessage = '❌ Erro ao aplicar cupom. Tente novamente.';
+        this.alertService.error('Erro', 'Não foi possível aplicar o cupom.');
+        console.error('❌ Erro ao aplicar cupom:', error);
+      }
+    });
   }
 
+  /**
+   * Remove o cupom aplicado
+   */
   removeCoupon(): void {
     this.cartService.removeDiscount();
     this.couponApplied = false;
-    this.couponMessage = 'Cupom removido.';
-    this.alertService.info('Cupom removido', 'O cupom de desconto foi removido.');
+    this.couponCode = '';
+    this.couponMessage = 'Cupom removido com sucesso.';
+    this.updateTotals();
+    this.alertService.info('Cupom removido', 'O cupom foi removido do seu carrinho.');
+
     setTimeout(() => {
       this.couponMessage = '';
     }, 3000);

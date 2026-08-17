@@ -1,5 +1,5 @@
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
-import { BehaviorSubject, Observable, throwError, catchError, of } from 'rxjs';
+import { BehaviorSubject, Observable, throwError, catchError, of, tap } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
 import { HttpClient } from '@angular/common/http';
@@ -166,9 +166,9 @@ export class CartService {
   }
 
   /**
-   * Aplica cupom de desconto
+   * Aplica cupom de desconto (versão integrada com o sistema de cupons)
    */
-  applyDiscount(code: string): boolean {
+  applyDiscount(code: string): Observable<boolean> {
     const validCoupons: Coupon = {
       PROMO10: 10,
       PROMO20: 20,
@@ -203,9 +203,64 @@ export class CartService {
         );
       }
 
-      return true;
+      return of(true);
     }
-    return false;
+    return of(false);
+  }
+
+  /**
+   * Aplica cupom com validação (método público)
+   */
+  applyCoupon(code: string): Observable<{ valid: boolean; message: string; discountAmount?: number }> {
+    const currentTotal = this.totalPrice.value;
+
+    if (currentTotal === 0) {
+      return of({
+        valid: false,
+        message: 'Carrinho vazio. Adicione produtos para aplicar o cupom.'
+      });
+    }
+
+    const upperCode = code.toUpperCase().trim();
+    const validCoupons: Coupon = {
+      PROMO10: 10,
+      PROMO20: 20,
+      PROMO30: 30,
+      BLACKFRIDAY: 50,
+      FREEGIFT: 0,
+      WELCOME10: 10,
+      VIP20: 20,
+    };
+
+    if (upperCode in validCoupons) {
+      const discountValue = validCoupons[upperCode];
+      const maxDiscount = currentTotal * 0.5;
+      const discountAmount = Math.min((currentTotal * discountValue) / 100, maxDiscount);
+
+      this.discount.next(discountAmount);
+      this.couponCode.next(upperCode);
+
+      if (this.isBrowser) {
+        localStorage.setItem(
+          'appliedCoupon',
+          JSON.stringify({
+            code: upperCode,
+            discount: discountAmount,
+          }),
+        );
+      }
+
+      return of({
+        valid: true,
+        message: 'Cupom aplicado com sucesso!',
+        discountAmount: discountAmount
+      });
+    }
+
+    return of({
+      valid: false,
+      message: 'Cupom inválido. Verifique o código digitado.'
+    });
   }
 
   /**
@@ -224,6 +279,19 @@ export class CartService {
    */
   hasDiscount(): boolean {
     return this.discount.value > 0;
+  }
+
+  /**
+   * Obtém o cupom aplicado
+   */
+  getAppliedCoupon(): { code: string; discount: number } | null {
+    const code = this.couponCode.value;
+    const discount = this.discount.value;
+
+    if (code && discount > 0) {
+      return { code, discount };
+    }
+    return null;
   }
 
   /**
@@ -357,8 +425,6 @@ export class CartService {
       quantity: item.quantity,
     }));
 
-    // Como json-server não tem um endpoint de carrinho simples,
-    // vamos simular salvando em um recurso "cart"
     this.http
       .put(`${this.apiUrl}/1`, { items: cartData })
       .pipe(
@@ -381,7 +447,6 @@ export class CartService {
       if (cartData) {
         const parsedData = JSON.parse(cartData);
 
-        // Se tiver dados no localStorage, tentar buscar os produtos
         if (parsedData && parsedData.length > 0) {
           this.loadProductsForCart(parsedData);
         }
@@ -403,10 +468,7 @@ export class CartService {
    * Carrega produtos para o carrinho a partir do localStorage
    */
   private loadProductsForCart(cartData: { productId: number; quantity: number }[]): void {
-    // Buscar produtos individualmente
     const productIds = cartData.map((item) => item.productId);
-    // Nota: Isso seria idealmente feito com um endpoint de busca em lote
-    // Por enquanto, vamos apenas limpar o carrinho para evitar dados inconsistentes
     console.log('🛒 Carrinho carregado do localStorage:', { productIds });
   }
 
@@ -423,7 +485,6 @@ export class CartService {
       .pipe(
         catchError((error) => {
           if (error.status === 404) {
-            // Criar recurso de carrinho se não existir
             return this.http.post<ServerCart>(this.apiUrl, {
               id: 1,
               items: [],
@@ -441,7 +502,6 @@ export class CartService {
         this.isSyncing = false;
 
         if (serverCart && serverCart.items) {
-          // Carregar produtos do servidor (seria necessário buscar os produtos)
           console.log('📦 Carrinho carregado do servidor:', serverCart.items);
         }
       });
