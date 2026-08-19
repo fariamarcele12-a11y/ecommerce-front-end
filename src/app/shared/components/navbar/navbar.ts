@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { CartService } from '../../../core/services/cart.service';
 import { ProductService } from '../../../core/services/product.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { SearchBar } from '../search-bar/search-bar';
 import { Subscription } from 'rxjs';
 
@@ -18,13 +19,16 @@ export class Navbar implements OnInit, OnDestroy {
   favoritesCount = 0;
   isLoggedIn = false;
   isScrolled = false;
+  userName = '';
 
   private cartSubscription: Subscription = new Subscription();
   private favoritesSubscription: Subscription = new Subscription();
+  private userSubscription: Subscription = new Subscription();
 
   constructor(
     private cartService: CartService,
     private productService: ProductService,
+    private authService: AuthService,
     private router: Router
   ) {}
 
@@ -34,9 +38,15 @@ export class Navbar implements OnInit, OnDestroy {
       this.cartCount = total;
     });
 
-    // Favoritos - via ProductService
+    // Favoritos
     this.favoritesSubscription = this.productService.favorites$.subscribe(favorites => {
       this.favoritesCount = favorites.length;
+    });
+
+    // Usuário
+    this.userSubscription = this.authService.currentUser$.subscribe(user => {
+      this.isLoggedIn = !!user;
+      this.userName = user?.name || '';
     });
   }
 
@@ -46,6 +56,9 @@ export class Navbar implements OnInit, OnDestroy {
     }
     if (this.favoritesSubscription) {
       this.favoritesSubscription.unsubscribe();
+    }
+    if (this.userSubscription) {
+      this.userSubscription.unsubscribe();
     }
   }
 
@@ -60,5 +73,10 @@ export class Navbar implements OnInit, OnDestroy {
         queryParams: { q: searchTerm }
       });
     }
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/home']);
   }
 }

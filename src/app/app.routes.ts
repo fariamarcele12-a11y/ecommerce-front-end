@@ -91,6 +91,18 @@ export const routes: Routes = [
       import('./features/store/store').then((m) => m.Store),
   },
 
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./features/auth/login/login').then((m) => m.Login),
+  },
+
+  {
+    path: 'registrar',
+    loadComponent: () =>
+      import('./features/auth/register/register').then((m) => m.Register),
+  },
+
   // ============================================
   // TERMOS E POLÍTICAS
   // ============================================

@@ -1,0 +1,114 @@
+<div class="auth-container">
+  <div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100">
+      <div class="col-md-6 col-lg-5">
+        <div class="card border-0 shadow-lg">
+          <div class="card-body p-5">
+            <!-- Logo -->
+            <div class="text-center mb-4">
+              <h1 class="fw-bold text-gradient-primary">MarketHub</h1>
+              <p class="text-muted">Faça login para continuar</p>
+            </div>
+
+            <!-- Formulário -->
+            <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+              <!-- Email -->
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">E-mail</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-envelope"></i>
+                  </span>
+                  <input
+                    type="email"
+                    class="form-control"
+                    placeholder="seu@email.com"
+                    [(ngModel)]="credentials.email"
+                    name="email"
+                    required
+                    autocomplete="email"
+                  />
+                </div>
+              </div>
+
+              <!-- Senha -->
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">Senha</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-lock"></i>
+                  </span>
+                  <input
+                    [type]="showPassword ? 'text' : 'password'"
+                    class="form-control"
+                    placeholder="Digite sua senha"
+                    [(ngModel)]="credentials.password"
+                    name="password"
+                    required
+                    autocomplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    (click)="togglePassword()"
+                  >
+                    <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Lembrar-me e Esqueci senha -->
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="form-check">
+                  <input type="checkbox" class="form-check-input" id="remember" />
+                  <label class="form-check-label small" for="remember">Lembrar-me</label>
+                </div>
+                <a href="#" class="text-decoration-none small text-primary">Esqueceu a senha?</a>
+              </div>
+
+              <!-- Botão Login -->
+              <button
+                type="submit"
+                class="btn btn-primary w-100 rounded-pill py-2 fw-bold"
+                [disabled]="loading || !loginForm.valid"
+              >
+                <span *ngIf="!loading">
+                  <i class="bi bi-box-arrow-in-right me-2"></i>
+                  Entrar
+                </span>
+                <span *ngIf="loading">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Entrando...
+                </span>
+              </button>
+            </form>
+
+            <!-- Separador -->
+            <div class="divider my-4">
+              <span>ou</span>
+            </div>
+
+            <!-- Registro -->
+            <div class="text-center">
+              <p class="text-muted small mb-0">
+                Não tem uma conta?
+                <a routerLink="/registrar" class="text-primary fw-bold text-decoration-none">
+                  Cadastre-se
+                </a>
+              </p>
+            </div>
+
+            <!-- Voltar -->
+            <div class="text-center mt-3">
+              <a routerLink="/home" class="text-muted small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i>
+                Voltar para a loja
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

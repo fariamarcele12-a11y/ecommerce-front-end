@@ -1,0 +1,384 @@
+<div class="auth-container">
+  <div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100">
+      <div class="col-md-8 col-lg-7">
+        <div class="card border-0 shadow-lg">
+          <div class="card-body p-5">
+            <!-- Logo -->
+            <div class="text-center mb-4">
+              <h1 class="fw-bold text-gradient-primary">MarketHub</h1>
+              <p class="text-muted">Crie sua conta gratuitamente</p>
+            </div>
+
+            <!-- Formulário -->
+            <form (ngSubmit)="onSubmit()" #registerForm="ngForm">
+              <!-- Tipo de Pessoa -->
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">Tipo de cadastro</label>
+                <div class="d-flex gap-3">
+                  <div class="form-check">
+                    <input
+                      type="radio"
+                      class="form-check-input"
+                      id="pf"
+                      [checked]="documentType === 'pf'"
+                      (change)="onDocumentTypeChange('pf')"
+                    />
+                    <label class="form-check-label" for="pf">
+                      <i class="bi bi-person me-1"></i>
+                      Pessoa Física
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input
+                      type="radio"
+                      class="form-check-input"
+                      id="pj"
+                      [checked]="documentType === 'pj'"
+                      (change)="onDocumentTypeChange('pj')"
+                    />
+                    <label class="form-check-label" for="pj">
+                      <i class="bi bi-building me-1"></i>
+                      Pessoa Jurídica
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Nome / Razão Social -->
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">
+                  {{ documentType === 'pf' ? 'Nome completo' : 'Razão Social' }}
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-person"></i>
+                  </span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [placeholder]="documentType === 'pf' ? 'Seu nome completo' : 'Razão Social da empresa'"
+                    [(ngModel)]="credentials.name"
+                    name="name"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Nome Fantasia (apenas PJ) -->
+              <div class="form-group mb-3" *ngIf="documentType === 'pj'">
+                <label class="form-label fw-bold small">Nome Fantasia</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-shop"></i>
+                  </span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="Nome fantasia da empresa"
+                    [(ngModel)]="tradeName"
+                    name="tradeName"
+                  />
+                </div>
+              </div>
+
+              <!-- Email -->
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">E-mail</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-envelope"></i>
+                  </span>
+                  <input
+                    type="email"
+                    class="form-control"
+                    placeholder="seu@email.com"
+                    [(ngModel)]="credentials.email"
+                    name="email"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Senha -->
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">Senha</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-lock"></i>
+                  </span>
+                  <input
+                    [type]="showPassword ? 'text' : 'password'"
+                    class="form-control"
+                    placeholder="Mínimo 6 caracteres"
+                    [(ngModel)]="credentials.password"
+                    name="password"
+                    required
+                    minlength="6"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    (click)="togglePassword()"
+                  >
+                    <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Confirmar Senha -->
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">Confirmar senha</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-shield-lock"></i>
+                  </span>
+                  <input
+                    [type]="showConfirmPassword ? 'text' : 'password'"
+                    class="form-control"
+                    placeholder="Digite a senha novamente"
+                    [(ngModel)]="credentials.confirmPassword"
+                    name="confirmPassword"
+                    required
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    (click)="toggleConfirmPassword()"
+                  >
+                    <i class="bi" [class.bi-eye]="!showConfirmPassword" [class.bi-eye-slash]="showConfirmPassword"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="row g-3">
+                <!-- Documento (CPF/CNPJ) -->
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="form-label fw-bold small">
+                      {{ documentType === 'pf' ? 'CPF' : 'CNPJ' }}
+                    </label>
+                    <div class="input-group">
+                      <span class="input-group-text bg-light">
+                        <i class="bi bi-credit-card"></i>
+                      </span>
+                      <input
+                        type="text"
+                        class="form-control"
+                        [placeholder]="documentType === 'pf' ? '000.000.000-00' : '00.000.000/0000-00'"
+                        [(ngModel)]="credentials.document"
+                        (input)="credentials.document = formatDocument(credentials.document)"
+                        name="document"
+                        required
+                        [maxlength]="documentType === 'pf' ? 14 : 18"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Telefone -->
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="form-label fw-bold small">Telefone</label>
+                    <div class="input-group">
+                      <span class="input-group-text bg-light">
+                        <i class="bi bi-phone"></i>
+                      </span>
+                      <input
+                        type="text"
+                        class="form-control"
+                        placeholder="(00) 00000-0000"
+                        [(ngModel)]="credentials.phone"
+                        (input)="credentials.phone = formatPhone(credentials.phone)"
+                        name="phone"
+                        required
+                        maxlength="15"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Data de Nascimento (apenas PF) -->
+              <div class="form-group mb-3 mt-3" *ngIf="documentType === 'pf'">
+                <label class="form-label fw-bold small">Data de Nascimento</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-calendar"></i>
+                  </span>
+                  <input
+                    type="date"
+                    class="form-control"
+                    [(ngModel)]="birthDate"
+                    name="birthDate"
+                  />
+                </div>
+              </div>
+
+              <!-- Endereço -->
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">Endereço</label>
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder="CEP"
+                      [(ngModel)]="credentials.address.cep"
+                      (input)="credentials.address.cep = formatCep(credentials.address.cep)"
+                      (blur)="onCepBlur()"
+                      name="cep"
+                      maxlength="9"
+                    />
+                  </div>
+                  <div class="col-md-8">
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder="Rua"
+                      [(ngModel)]="credentials.address.street"
+                      name="street"
+                    />
+                  </div>
+                  <div class="col-md-3">
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder="Número"
+                      [(ngModel)]="credentials.address.number"
+                      name="number"
+                    />
+                  </div>
+                  <div class="col-md-5">
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder="Complemento"
+                      [(ngModel)]="credentials.address.complement"
+                      name="complement"
+                    />
+                  </div>
+                  <div class="col-md-4">
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder="Bairro"
+                      [(ngModel)]="credentials.address.neighborhood"
+                      name="neighborhood"
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder="Cidade"
+                      [(ngModel)]="credentials.address.city"
+                      name="city"
+                    />
+                  </div>
+                  <div class="col-md-3">
+                    <select class="form-select" [(ngModel)]="credentials.address.state" name="state">
+                      <option value="">UF</option>
+                      <option value="AC">AC</option>
+                      <option value="AL">AL</option>
+                      <option value="AP">AP</option>
+                      <option value="AM">AM</option>
+                      <option value="BA">BA</option>
+                      <option value="CE">CE</option>
+                      <option value="DF">DF</option>
+                      <option value="ES">ES</option>
+                      <option value="GO">GO</option>
+                      <option value="MA">MA</option>
+                      <option value="MT">MT</option>
+                      <option value="MS">MS</option>
+                      <option value="MG">MG</option>
+                      <option value="PA">PA</option>
+                      <option value="PB">PB</option>
+                      <option value="PR">PR</option>
+                      <option value="PE">PE</option>
+                      <option value="PI">PI</option>
+                      <option value="RJ">RJ</option>
+                      <option value="RN">RN</option>
+                      <option value="RS">RS</option>
+                      <option value="RO">RO</option>
+                      <option value="RR">RR</option>
+                      <option value="SC">SC</option>
+                      <option value="SP">SP</option>
+                      <option value="SE">SE</option>
+                      <option value="TO">TO</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <input
+                      type="text"
+                      class="form-control"
+                      value="Brasil"
+                      disabled
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Termos -->
+              <div class="form-check mb-3">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  id="terms"
+                  [(ngModel)]="termsAccepted"
+                  name="terms"
+                  required
+                />
+                <label class="form-check-label small" for="terms">
+                  Li e aceito os
+                  <a routerLink="/termos-de-uso" class="text-primary">Termos de Uso</a>
+                  e a
+                  <a routerLink="/politica-de-privacidade" class="text-primary">Política de Privacidade</a>
+                </label>
+              </div>
+
+              <!-- Botão Cadastrar -->
+              <button
+                type="submit"
+                class="btn btn-primary w-100 rounded-pill py-2 fw-bold"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">
+                  <i class="bi bi-person-plus me-2"></i>
+                  Cadastrar
+                </span>
+                <span *ngIf="loading">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Cadastrando...
+                </span>
+              </button>
+            </form>
+
+            <!-- Separador -->
+            <div class="divider my-4">
+              <span>ou</span>
+            </div>
+
+            <!-- Login -->
+            <div class="text-center">
+              <p class="text-muted small mb-0">
+                Já tem uma conta?
+                <a routerLink="/login" class="text-primary fw-bold text-decoration-none">
+                  Faça login
+                </a>
+              </p>
+            </div>
+
+            <!-- Voltar -->
+            <div class="text-center mt-3">
+              <a routerLink="/home" class="text-muted small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i>
+                Voltar para a loja
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

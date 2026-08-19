@@ -68,35 +68,53 @@
             <div class="rounded-circle bg-secondary bg-opacity-25 p-2">
               <i class="bi bi-person-circle fs-5"></i>
             </div>
-            <span class="d-none d-lg-block">Minha Conta</span>
+            <span class="d-none d-lg-block" *ngIf="!isLoggedIn">Minha Conta</span>
+            <span class="d-none d-lg-block" *ngIf="isLoggedIn">{{ userName }}</span>
           </button>
           <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
-            <li>
-              <a class="dropdown-item" routerLink="/perfil"
-                ><i class="bi bi-person me-2"></i>Meu Perfil</a
-              >
-            </li>
-            <li>
-              <a class="dropdown-item" routerLink="/pedidos"
-                ><i class="bi bi-box-seam me-2"></i>Meus Pedidos</a
-              >
-            </li>
-            <li>
-              <a class="dropdown-item" routerLink="/vendas"
-                ><i class="bi bi-graph-up-arrow me-2"></i>Minhas Vendas</a
-              >
-            </li>
-            <li>
-              <a class="dropdown-item" routerLink="/favoritos"
-                ><i class="bi bi-heart me-2"></i>Favoritos</a
-              >
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li>
-              <a class="dropdown-item text-danger" href="#"
-                ><i class="bi bi-box-arrow-right me-2"></i>Sair</a
-              >
-            </li>
+            <!-- Logado -->
+            <ng-container *ngIf="isLoggedIn">
+              <li>
+                <a class="dropdown-item" routerLink="/perfil"
+                  ><i class="bi bi-person me-2"></i>Meu Perfil</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" routerLink="/pedidos"
+                  ><i class="bi bi-box-seam me-2"></i>Meus Pedidos</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" routerLink="/vendas"
+                  ><i class="bi bi-graph-up-arrow me-2"></i>Minhas Vendas</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" routerLink="/favoritos"
+                  ><i class="bi bi-heart me-2"></i>Favoritos</a
+                >
+              </li>
+              <li><hr class="dropdown-divider" /></li>
+              <li>
+                <a class="dropdown-item text-danger" (click)="logout()"
+                  ><i class="bi bi-box-arrow-right me-2"></i>Sair</a
+                >
+              </li>
+            </ng-container>
+
+            <!-- Deslogado -->
+            <ng-container *ngIf="!isLoggedIn">
+              <li>
+                <a class="dropdown-item" routerLink="/login"
+                  ><i class="bi bi-box-arrow-in-right me-2"></i>Entrar</a
+                >
+              </li>
+              <li>
+                <a class="dropdown-item" routerLink="/registrar"
+                  ><i class="bi bi-person-plus me-2"></i>Cadastrar</a
+                >
+              </li>
+            </ng-container>
           </ul>
         </div>
       </div>
