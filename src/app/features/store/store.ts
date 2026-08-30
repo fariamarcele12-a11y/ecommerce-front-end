@@ -1,135 +1,172 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+// src/app/features/store/store.ts
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Product } from '../../core/models/ProductModel/product.model';
+import { StoreService } from '../../core/services/store.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ProductService } from '../../core/services/product.service';
+import { Store as StoreModel } from '../../core/models/store.model';
 import { ProductCard } from '../../shared/components/product-card/product-card';
-import { AlertService } from '../../core/services/alert.service';
-import { Subscription } from 'rxjs';
+import { Product } from '../../core/models/ProductModel/product.model';
 
 @Component({
   selector: 'app-store',
   standalone: true,
   imports: [CommonModule, RouterLink, ProductCard],
   templateUrl: './store.html',
-  styleUrls: ['./store.scss']
+  styleUrls: ['./store.scss'],
 })
-export class Store implements OnInit, OnDestroy {
-  sellerId: number = 0;
-  sellerName: string = '';
+export class Store implements OnInit {
+  store: StoreModel | null = null;
   products: Product[] = [];
   loading = true;
-  totalProducts = 0;
-  averageRating = 0;
-  totalSales = 0;
-  memberSince = '';
-  sellerInfo: any = null;
-
-  private routeSub: Subscription = new Subscription();
-  private productsSub: Subscription = new Subscription();
+  isOwner = false;
+  storeId: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private storeService: StoreService,
+    private authService: AuthService,
     private productService: ProductService,
-    private alertService: AlertService
   ) {}
 
   ngOnInit(): void {
-    this.routeSub = this.route.params.subscribe(params => {
-      this.sellerId = +params['id'];
-      if (this.sellerId) {
-        this.loadStoreData();
+    this.route.params.subscribe((params) => {
+      const id = params['id'];
+      console.log('🔍 ID da loja na rota:', id);
+
+      if (id) {
+        this.storeId = id;
+        this.loadStore(id);
       } else {
-        this.router.navigate(['/home']);
+        this.loadUserStore();
       }
     });
   }
 
-  ngOnDestroy(): void {
-    this.routeSub.unsubscribe();
-    this.productsSub.unsubscribe();
+  loadUserStore(): void {
+    const user = this.authService.getCurrentUser();
+    console.log('👤 Usuário atual:', user);
+
+    if (user?.storeId) {
+      this.storeId = String(user.storeId);
+      this.loadStore(this.storeId);
+    } else {
+      this.loading = false;
+      console.log('❌ Usuário não tem loja, redirecionando para criar');
+      this.router.navigate(['/criar-loja']);
+    }
   }
 
-  loadStoreData(): void {
+  loadStore(id: string): void {
     this.loading = true;
-    
-    // 🔥 Buscar produtos do vendedor usando sellerId
-    this.productsSub = this.productService.getProducts({ 
-      sellerId: this.sellerId,
-      limit: 100,
-      sortBy: 'newest'
-    }).subscribe({
-      next: (response) => {
-        console.log('📦 Produtos da loja:', response);
-        this.products = response.products;
-        this.totalProducts = response.total;
-        
-        // 🔥 Verificar se encontrou produtos
-        if (this.products.length > 0) {
-          // Pegar informações do primeiro produto
-          const firstProduct = this.products[0];
-          this.sellerInfo = firstProduct.seller;
-          this.sellerName = firstProduct.seller.name;
-          this.totalSales = this.products.reduce((sum, p) => sum + (p.seller.sales || 0), 0);
-          
-          // Calcular média de avaliação
-          const totalRatings = this.products.reduce((sum, p) => sum + (p.seller.rating || 0), 0);
-          this.averageRating = totalRatings / this.products.length;
-          
-          // Data de criação do primeiro produto
-          const firstCreated = this.products.reduce((oldest, p) => 
-            new Date(p.createdAt) < new Date(oldest.createdAt) ? p : oldest
-          );
-          this.memberSince = new Date(firstCreated.createdAt).toLocaleDateString('pt-BR', {
-            month: 'long',
-            year: 'numeric'
-          });
+    console.log(`🔍 Buscando loja com ID: ${id}`);
+
+    this.storeService.getStoreById(id).subscribe({
+      next: (store) => {
+        console.log('📦 Resposta da loja:', store);
+
+        if (store) {
+          this.store = store;
+          this.checkOwnership(store.userId);
+          this.loadProducts(store.id);
         } else {
-          // 🔥 Se não encontrou produtos, tentar buscar informações do vendedor de outra forma
-          this.sellerName = `Vendedor #${this.sellerId}`;
-          this.totalSales = 0;
-          this.averageRating = 0;
-          this.memberSince = 'recentemente';
+          console.log('❌ Loja não encontrada');
+          this.router.navigate(['/home']);
         }
-        
         this.loading = false;
-        console.log(`🏪 Loja carregada: ${this.sellerName} - ${this.totalProducts} produtos`);
       },
       error: (error) => {
         console.error('❌ Erro ao carregar loja:', error);
         this.loading = false;
-        this.alertService.error('Erro', 'Não foi possível carregar a loja.');
         this.router.navigate(['/home']);
-      }
+      },
     });
   }
 
+  loadProducts(storeId: number): void {
+    console.log(`🔍 Buscando produtos da loja ${storeId}`);
+    this.storeService.getStoreProducts(storeId).subscribe({
+      next: (products) => {
+        console.log(`📦 ${products.length} produtos encontrados`);
+        this.products = products;
+      },
+      error: (error) => {
+        console.error('❌ Erro ao carregar produtos:', error);
+      },
+    });
+  }
+
+  checkOwnership(userId: number): void {
+    const user = this.authService.getCurrentUser();
+    this.isOwner = user?.id === userId;
+    console.log('👤 É o dono da loja?', this.isOwner);
+  }
+
+  /**
+   * 🔥 Retorna as iniciais do nome da loja
+   */
+  getInitials(name: string): string {
+    if (!name) return '?';
+    const words = name.trim().split(' ');
+    if (words.length === 1) {
+      return words[0].charAt(0).toUpperCase();
+    }
+    return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  }
+
+  /**
+   * 🔥 Formata uma data para exibição
+   */
+  formatDate(date: string | Date): string {
+    if (!date) return 'Data não disponível';
+
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).format(dateObj);
+  }
+
+  goToCreateProduct(): void {
+    if (this.store?.id) {
+      const storeId = this.store.id;
+      console.log('🔗 Navegando para criar produto com storeId:', storeId);
+      this.router.navigate([`/loja/${storeId}/produto/novo`]);
+    } else {
+      console.error('❌ ID da loja não disponível');
+    }
+  }
+
+  testNavigate(): void {
+    if (this.store?.id) {
+      const storeId = String(this.store.id);
+      console.log('🧪 TESTE: Navegando para /loja/' + storeId + '/produto/novo');
+      this.router.navigate(['/loja', storeId, 'produto/novo']);
+    }
+  }
+
+  /**
+   * 🔥 Formata preço para exibição
+   */
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(price);
   }
 
-  getStars(rating: number): number[] {
-    return Array(5).fill(0).map((_, i) => i < Math.floor(rating) ? 1 : 0);
-  }
-
-  formatDate(date: string): string {
-    return new Date(date).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  }
-
-  getInitials(name: string): string {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  }
-
-  onFavoriteToggle(): void {
-    this.loadStoreData();
+  /**
+   * 🔥 Alterna favorito do produto
+   */
+  onFavoriteToggle(productId: number): void {
+    console.log('⭐ Toggle favorito para produto:', productId);
+    this.productService.toggleFavorite(productId);
+    const product = this.products.find((p) => p.id === productId);
+    if (product) {
+      product.isFavorite = !product.isFavorite;
+    }
   }
 }

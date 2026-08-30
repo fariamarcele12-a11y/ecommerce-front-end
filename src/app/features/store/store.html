@@ -1,15 +1,16 @@
+<!-- src/app/features/store/store.html -->
 <div *ngIf="loading" class="container py-5 text-center">
   <div class="spinner-border text-primary" role="status">
     <span class="visually-hidden">Carregando loja...</span>
   </div>
 </div>
 
-<div *ngIf="!loading && products.length > 0" class="container py-4">
+<div *ngIf="!loading && store" class="container py-4">
   <!-- Breadcrumb -->
   <nav aria-label="breadcrumb" class="mb-4">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a routerLink="/home">Home</a></li>
-      <li class="breadcrumb-item active">{{ sellerName }}</li>
+      <li class="breadcrumb-item active">{{ store.storeName }}</li>
     </ol>
   </nav>
 
@@ -19,46 +20,60 @@
       <div class="col-md-8">
         <div class="d-flex align-items-center gap-4">
           <!-- Avatar -->
-          <div class="store-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-               style="width: 80px; height: 80px; font-size: 32px; font-weight: bold;">
-            {{ getInitials(sellerName) }}
+          <div
+            class="store-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+            style="width: 80px; height: 80px; font-size: 32px; font-weight: bold"
+          >
+            {{ getInitials(store.storeName) }}
           </div>
-          
+
           <!-- Informações -->
           <div>
-            <h1 class="fw-bold mb-1">{{ sellerName }}</h1>
+            <h1 class="fw-bold mb-1">{{ store.storeName }}</h1>
             <div class="d-flex flex-wrap align-items-center gap-3 text-muted small">
               <span>
                 <i class="bi bi-star-fill text-warning me-1"></i>
-                {{ averageRating.toFixed(1) }}
+                {{ store.rating || 0 }}
               </span>
               <span>|</span>
               <span>
                 <i class="bi bi-box-seam me-1"></i>
-                {{ totalProducts }} produtos
+                {{ products.length }} produtos
               </span>
               <span>|</span>
               <span>
                 <i class="bi bi-cart-check me-1"></i>
-                {{ totalSales }} vendas
+                {{ store.totalSales || 0 }} vendas
               </span>
               <span>|</span>
               <span>
                 <i class="bi bi-calendar me-1"></i>
-                Membro desde {{ memberSince }}
+                Membro desde {{ formatDate(store.createdAt) }}
               </span>
             </div>
           </div>
         </div>
       </div>
-      
+
       <div class="col-md-4 text-md-end mt-3 mt-md-0">
-        <button class="btn btn-outline-success rounded-pill px-4"
-                [routerLink]="['/chat']" 
-                [queryParams]="{ sellerId: sellerId, sellerName: sellerName, store: 'true' }">
-          <i class="bi bi-chat me-2"></i>
-          Falar com o vendedor
-        </button>
+        <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+          <button
+            class="btn btn-outline-success rounded-pill px-4"
+            [routerLink]="['/chat']"
+            [queryParams]="{ sellerId: store.userId, sellerName: store.storeName, store: 'true' }"
+          >
+            <i class="bi bi-chat me-2"></i>
+            Falar com a loja
+          </button>
+          <button
+            *ngIf="isOwner"
+            class="btn btn-primary rounded-pill px-4"
+            (click)="goToCreateProduct()"
+          >
+            <i class="bi bi-plus-circle me-2"></i>
+            Adicionar Produto
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -67,47 +82,141 @@
   <div class="row g-3 mb-4">
     <div class="col-md-3 col-6">
       <div class="stat-card bg-white rounded-3 shadow-sm p-3 text-center">
-        <h3 class="fw-bold text-primary mb-0">{{ totalProducts }}</h3>
+        <h3 class="fw-bold text-primary mb-0">{{ products.length }}</h3>
         <small class="text-muted">Produtos</small>
       </div>
     </div>
     <div class="col-md-3 col-6">
       <div class="stat-card bg-white rounded-3 shadow-sm p-3 text-center">
-        <h3 class="fw-bold text-success mb-0">{{ totalSales }}</h3>
+        <h3 class="fw-bold text-success mb-0">{{ store.totalSales || 0 }}</h3>
         <small class="text-muted">Vendas</small>
       </div>
     </div>
     <div class="col-md-3 col-6">
       <div class="stat-card bg-white rounded-3 shadow-sm p-3 text-center">
-        <h3 class="fw-bold text-warning mb-0">{{ averageRating.toFixed(1) }}</h3>
+        <h3 class="fw-bold text-warning mb-0">{{ store.rating || 0 }}</h3>
         <small class="text-muted">Avaliação média</small>
       </div>
     </div>
     <div class="col-md-3 col-6">
       <div class="stat-card bg-white rounded-3 shadow-sm p-3 text-center">
         <h3 class="fw-bold text-info mb-0">
-          {{ products.filter(p => p.stock > 0).length }}
+          {{ products.filter((p) => p.stock > 0).length }}
         </h3>
         <small class="text-muted">Disponíveis</small>
       </div>
     </div>
   </div>
 
-  <!-- Produtos do Vendedor -->
+  <!-- Descrição da Loja -->
+  <div *ngIf="store.description" class="mb-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="fw-bold mb-2"><i class="bi bi-info-circle me-2"></i>Sobre a loja</h6>
+        <p class="text-secondary mb-0">{{ store.description }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Informações de Contato -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3"><i class="bi bi-geo-alt me-2"></i>Localização</h6>
+          <!-- 🔥 Removido o operador '?.' porque address é obrigatório -->
+          <p class="text-secondary small mb-1">
+            <i class="bi bi-building me-2"></i>
+            {{ store.address.street }}, {{ store.address.number }}
+          </p>
+          <p class="text-secondary small mb-1" *ngIf="store.address.complement">
+            <i class="bi bi-pin me-2"></i>
+            {{ store.address.complement }}
+          </p>
+          <p class="text-secondary small mb-1">
+            <i class="bi bi-geo me-2"></i>
+            {{ store.address.neighborhood }}, {{ store.address.city }} - {{ store.address.state }}
+          </p>
+          <p class="text-secondary small mb-0">
+            <i class="bi bi-mailbox me-2"></i>
+            {{ store.address.cep }}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3"><i class="bi bi-envelope me-2"></i>Contato</h6>
+          <p class="text-secondary small mb-1">
+            <i class="bi bi-envelope me-2"></i>
+            <a href="mailto:{{ store.email }}" class="text-decoration-none">{{ store.email }}</a>
+          </p>
+          <p class="text-secondary small mb-1">
+            <i class="bi bi-telephone me-2"></i>
+            <a href="tel:{{ store.phone }}" class="text-decoration-none">{{ store.phone }}</a>
+          </p>
+          <p class="text-secondary small mb-0" *ngIf="store.website">
+            <i class="bi bi-globe me-2"></i>
+            <a href="{{ store.website }}" target="_blank" class="text-decoration-none">{{
+              store.website
+            }}</a>
+          </p>
+          <div
+            class="mt-2"
+            *ngIf="
+              store.socialMedia?.instagram ||
+              store.socialMedia?.facebook ||
+              store.socialMedia?.youtube
+            "
+          >
+            <small class="text-muted">Redes sociais:</small>
+            <div class="d-flex gap-2 mt-1">
+              <a
+                *ngIf="store.socialMedia?.instagram"
+                [href]="'https://instagram.com/' + store.socialMedia?.instagram"
+                target="_blank"
+                class="btn btn-sm btn-outline-secondary"
+              >
+                <i class="bi bi-instagram"></i>
+              </a>
+              <a
+                *ngIf="store.socialMedia?.facebook"
+                [href]="'https://facebook.com/' + store.socialMedia?.facebook"
+                target="_blank"
+                class="btn btn-sm btn-outline-secondary"
+              >
+                <i class="bi bi-facebook"></i>
+              </a>
+              <a
+                *ngIf="store.socialMedia?.youtube"
+                [href]="'https://youtube.com/@' + store.socialMedia?.youtube"
+                target="_blank"
+                class="btn btn-sm btn-outline-secondary"
+              >
+                <i class="bi bi-youtube"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Produtos da Loja -->
   <div>
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h4 class="fw-bold mb-0">Produtos do Vendedor</h4>
-        <p class="text-muted small">Todos os produtos anunciados por {{ sellerName }}</p>
+        <h4 class="fw-bold mb-0">Produtos da Loja</h4>
+        <p class="text-muted small">Todos os produtos anunciados por {{ store.storeName }}</p>
       </div>
+      <span class="badge bg-primary rounded-pill">{{ products.length }} produtos</span>
     </div>
 
     <!-- Lista de Produtos -->
     <div *ngIf="products.length > 0" class="row g-4">
       <div *ngFor="let product of products" class="col-md-4 col-sm-6">
-        <app-product-card
-          [product]="product"
-          (favoriteToggle)="onFavoriteToggle()">
+        <app-product-card [product]="product" (favoriteToggle)="onFavoriteToggle($event)">
         </app-product-card>
       </div>
     </div>
@@ -116,16 +225,24 @@
     <div *ngIf="products.length === 0" class="text-center py-5">
       <i class="bi bi-box display-1 text-muted"></i>
       <h5 class="mt-3">Nenhum produto disponível</h5>
-      <p class="text-muted">Este vendedor ainda não publicou produtos.</p>
+      <p class="text-muted">Esta loja ainda não publicou produtos.</p>
+      <button
+        *ngIf="isOwner"
+        class="btn btn-primary rounded-pill mt-2"
+        (click)="goToCreateProduct()"
+      >
+        <i class="bi bi-plus-circle me-2"></i>
+        Adicionar primeiro produto
+      </button>
     </div>
   </div>
 </div>
 
-<!-- Vendedor não encontrado -->
-<div *ngIf="!loading && products.length === 0" class="container py-5 text-center">
+<!-- Loja não encontrada -->
+<div *ngIf="!loading && !store" class="container py-5 text-center">
   <i class="bi bi-shop display-1 text-muted"></i>
   <h3 class="mt-3">Loja não encontrada</h3>
-  <p class="text-muted">O vendedor que você está procurando não existe.</p>
+  <p class="text-muted">A loja que você está procurando não existe.</p>
   <a routerLink="/home" class="btn btn-primary rounded-pill">
     <i class="bi bi-arrow-left me-2"></i>
     Voltar para Home

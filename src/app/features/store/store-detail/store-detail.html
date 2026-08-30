@@ -1,0 +1,111 @@
+<div *ngIf="loading" class="container py-5 text-center">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Carregando...</span>
+  </div>
+</div>
+
+<div *ngIf="!loading && store" class="container py-4">
+  <!-- Banner da Loja -->
+  <div class="store-banner rounded-4 overflow-hidden position-relative mb-4">
+    <img [src]="store.banner"
+         [alt]="store.storeName"
+         class="w-100"
+         style="height: 250px; object-fit: cover;"
+         (error)="store.banner = 'https://via.placeholder.com/1200x300/667eea/ffffff?text=' + store.storeName">
+
+    <div class="store-overlay d-flex align-items-end p-4">
+      <div class="d-flex align-items-center gap-4">
+        <img [src]="store.logo"
+             [alt]="store.storeName"
+             class="store-logo rounded-circle border border-4 border-white"
+             style="width: 100px; height: 100px; object-fit: cover;"
+             (error)="store.logo = 'https://via.placeholder.com/100x100/764ba2/ffffff?text=' + store.storeName.charAt(0)">
+        <div class="text-white">
+          <h1 class="fw-bold mb-0">{{ store.storeName }}</h1>
+          <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-warning text-dark">
+              <i class="bi bi-star-fill me-1"></i> {{ store.rating || 0 }}
+            </span>
+            <span>{{ store.totalSales || 0 }} vendas</span>
+            <span *ngIf="store.category">
+              <i class="bi bi-tag me-1"></i> {{ store.category }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ms-auto" *ngIf="isOwner">
+        <a [routerLink]="['/loja', store.id, 'editar']" class="btn btn-light rounded-pill">
+          <i class="bi bi-pencil me-1"></i> Editar Loja
+        </a>
+        <a [routerLink]="[`/loja/${store.id}/produto/novo`]" class="btn btn-success rounded-pill ms-2">
+          <i class="bi bi-plus-circle me-1"></i> Adicionar Produto
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Descrição -->
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h5>Sobre a Loja</h5>
+      <p class="text-secondary">{{ store.description || 'Descrição da loja em breve...' }}</p>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 bg-light">
+        <div class="card-body">
+          <h6 class="fw-bold">Informações de Contato</h6>
+          <div class="small">
+            <p class="mb-1"><i class="bi bi-envelope me-2"></i> {{ store.email }}</p>
+            <p class="mb-1"><i class="bi bi-telephone me-2"></i> {{ store.phone }}</p>
+            <p *ngIf="store.website" class="mb-1">
+              <i class="bi bi-globe me-2"></i> {{ store.website }}
+            </p>
+            <!-- 🔥 CORRIGIDO: Removidos os operadores '?.' -->
+            <p class="mb-0"><i class="bi bi-geo-alt me-2"></i> {{ store.address.city }}, {{ store.address.state }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Produtos da Loja -->
+  <h4 class="fw-bold mb-3">Produtos da Loja</h4>
+  <div *ngIf="products.length === 0" class="text-center py-5">
+    <i class="bi bi-box-seam display-1 text-muted"></i>
+    <h5 class="mt-3">Nenhum produto cadastrado</h5>
+    <p class="text-muted" *ngIf="isOwner">
+      <a [routerLink]="['/loja', store.id, 'produto/novo']" class="btn btn-primary rounded-pill mt-2">
+        <i class="bi bi-plus-circle me-1"></i> Adicionar Primeiro Produto
+      </a>
+    </p>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-3 col-md-4 col-sm-6 col-12" *ngFor="let product of products">
+      <div class="card h-100 shadow-sm hover-effect">
+        <img [src]="product.images[0]"
+             [alt]="product.name"
+             class="card-img-top"
+             style="height: 200px; object-fit: cover;"
+             (error)="product.images[0] = 'https://via.placeholder.com/300x200/667eea/ffffff?text=Produto'">
+        <div class="card-body">
+          <h6 class="card-title text-truncate">{{ product.name }}</h6>
+          <p class="fw-bold text-primary">{{ formatPrice(product.price) }}</p>
+          <a [routerLink]="['/produto', product.id]" class="btn btn-outline-primary btn-sm w-100 rounded-pill">
+            Ver detalhes
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="!loading && !store" class="container py-5 text-center">
+  <i class="bi bi-shop display-1 text-muted"></i>
+  <h3 class="mt-3">Loja não encontrada</h3>
+  <p class="text-muted">A loja que você está procurando não existe ou foi removida.</p>
+  <a routerLink="/home" class="btn btn-primary rounded-pill mt-2">
+    <i class="bi bi-arrow-left me-1"></i> Voltar para Home
+  </a>
+</div>

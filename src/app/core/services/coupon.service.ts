@@ -1,3 +1,4 @@
+// src/app/core/services/coupon.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError, catchError, tap, map } from 'rxjs';
@@ -7,8 +8,9 @@ import { Coupon, CouponValidation, CouponFilter } from '../models/coupon.model';
   providedIn: 'root'
 })
 export class CouponService {
-  private apiUrl = 'https://ecommerce-api-mf.vercel.app/coupons';
-  private localApiUrl = 'http://localhost:3000/coupons';
+  // 🔥 URL da API local apenas
+  private apiUrl = 'http://localhost:3000/coupons';
+  //private apiUrl = 'https://ecommerce-api-mf.vercel.app/coupons';
 
   // Cache local de cupons válidos
   private validCoupons = new BehaviorSubject<Coupon[]>([]);
@@ -46,9 +48,13 @@ export class CouponService {
    * Busca cupom por código
    */
   getCouponByCode(code: string): Observable<Coupon | null> {
-    return this.http.get<Coupon[]>(`${this.apiUrl}?code=${code.toUpperCase()}`).pipe(
+    const upperCode = code.toUpperCase().trim();
+    return this.http.get<Coupon[]>(`${this.apiUrl}?code=${upperCode}`).pipe(
       map((coupons) => coupons.length > 0 ? coupons[0] : null),
-      catchError(this.handleError)
+      catchError((error) => {
+        console.warn('⚠️ Erro ao buscar cupom por código:', error);
+        return of(null);
+      })
     );
   }
 
@@ -164,7 +170,10 @@ export class CouponService {
       usedCount: 1,
       updatedAt: new Date()
     }).pipe(
-      catchError(this.handleError)
+      catchError((error) => {
+        console.warn('⚠️ Erro ao incrementar uso do cupom:', error);
+        return of({} as Coupon);
+      })
     );
   }
 
@@ -222,6 +231,13 @@ export class CouponService {
   }
 
   /**
+   * Obtém cupons válidos do cache
+   */
+  getValidCoupons(): Observable<Coupon[]> {
+    return this.validCoupons.asObservable();
+  }
+
+  /**
    * Verifica se um cupom é válido
    */
   private isCouponValid(coupon: Coupon): boolean {
@@ -251,5 +267,23 @@ export class CouponService {
   private handleError(error: any) {
     console.error('❌ Erro no CouponService:', error);
     return throwError(() => new Error('Erro ao processar cupom.'));
+  }
+
+  /**
+   * 🔥 Verifica o status da API local
+   */
+  checkApiHealth(): Observable<{ status: string; timestamp: string }> {
+    return this.http
+      .get<{ status: string; timestamp: string }>(`http://localhost:3000/`)
+      .pipe(
+        map(() => ({
+          status: 'online',
+          timestamp: new Date().toISOString(),
+        })),
+        catchError((error) => {
+          console.error('❌ API local não está respondendo:', error);
+          return throwError(() => new Error('API local indisponível. Execute: json-server --watch db.json --port 3000'));
+        }),
+      );
   }
 }

@@ -1,3 +1,4 @@
+// src/app/core/services/product.service.ts
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import {
@@ -27,9 +28,8 @@ export interface ProductResponse {
   providedIn: 'root',
 })
 export class ProductService {
-  // URLs da API
-  private apiUrl = 'https://ecommerce-api-mf.vercel.app/products';
-  private localApiUrl = 'http://localhost:3000/products';
+  // 🔥 URL da API local apenas
+  private apiUrl = 'http://localhost:3000/products';
 
   // Cache
   private productsCache$: Observable<ProductResponse> | null = null;
@@ -71,13 +71,11 @@ export class ProductService {
     console.log(`📄 Buscando página ${page} com limite ${limit}`);
 
     if (filters) {
-      // 🔥 Filtro por vendedor (sellerId)
       if (filters.sellerId) {
         params = params.set('seller.id', filters.sellerId.toString());
         console.log(`🔍 Filtrando por vendedor ID: ${filters.sellerId}`);
       }
-      
-      // Filtros existentes
+
       if (filters.category) params = params.set('category', filters.category);
       if (filters.minPrice && filters.minPrice > 0)
         params = params.set('price_gte', filters.minPrice.toString());
@@ -90,7 +88,6 @@ export class ProductService {
       if (filters.freeShipping) params = params.set('freeShipping', 'true');
       if (filters.inStock) params = params.set('stock_gt', '0');
 
-      // Ordenação
       if (filters.sortBy === 'price_asc') {
         params = params.set('_sort', 'price').set('_order', 'asc');
       } else if (filters.sortBy === 'price_desc') {
@@ -102,7 +99,6 @@ export class ProductService {
       }
     }
 
-    // Paginação
     params = params.set('_page', page.toString());
     params = params.set('_limit', limit.toString());
 
@@ -127,7 +123,6 @@ export class ProductService {
 
         const totalPages = Math.ceil(total / limit) || 1;
 
-        // Adicionar flag de favorito
         const favorites = this.favoritesSubject.value;
         products.forEach((product: Product) => {
           product.isFavorite = favorites.includes(product.id);
@@ -153,9 +148,17 @@ export class ProductService {
   }
 
   /**
-   * Busca produto por ID
+   * 🔥 Busca produto por ID (aceita string ou number)
    */
-  getProductById(id: number): Observable<Product> {
+  // src/app/core/services/product.service.ts
+
+  /**
+   * 🔥 Busca produto por ID (aceita string ou number)
+   */
+  getProductById(id: string | number): Observable<Product> {
+    // 🔥 NÃO CONVERTER! Passar o ID como está
+    console.log(`🔍 Buscando produto por ID: ${id}`);
+
     return this.http.get<Product>(`${this.apiUrl}/${id}`).pipe(
       map((product) => {
         const favorites = this.favoritesSubject.value;
@@ -206,9 +209,7 @@ export class ProductService {
    * Busca produtos com desconto
    */
   getProductsOnSale(limit = 8): Observable<Product[]> {
-    const params = new HttpParams()
-      .set('discount_ne', '0')
-      .set('_limit', limit.toString());
+    const params = new HttpParams().set('discount_ne', '0').set('_limit', limit.toString());
 
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
@@ -315,39 +316,36 @@ export class ProductService {
   }
 
   /**
-   * Alterna o status de favorito de um produto (com fallback local)
+   * Alterna o status de favorito de um produto
    */
   toggleFavorite(productId: number): Observable<Product> {
-    // Verificar se o produto já está nos favoritos
     const currentFavorites = this.favoritesSubject.value;
     const newFavoriteStatus = !currentFavorites.includes(productId);
 
     console.log(`🔄 Toggle favorito: produto ${productId} -> ${newFavoriteStatus}`);
 
-    // Atualizar localmente primeiro (feedback instantâneo)
     this.updateFavorites(productId, newFavoriteStatus);
     this.invalidateCache();
 
-    // Tentar sincronizar com o servidor
-    return this.http.patch<Product>(`${this.apiUrl}/${productId}`, {
-      isFavorite: newFavoriteStatus
-    }).pipe(
-      tap((updatedProduct) => {
-        console.log('✅ Favorito sincronizado com servidor:', updatedProduct);
-        // Garantir que o estado local está correto
-        this.updateFavorites(productId, newFavoriteStatus);
-      }),
-      catchError((error) => {
-        console.warn('⚠️ Erro ao sincronizar favorito, mantendo estado local:', error);
-        // Manter o estado local (já foi atualizado)
-        return this.getProductById(productId).pipe(
-          map((product) => ({
-            ...product,
-            isFavorite: newFavoriteStatus
-          }))
-        );
+    return this.http
+      .patch<Product>(`${this.apiUrl}/${productId}`, {
+        isFavorite: newFavoriteStatus,
       })
-    );
+      .pipe(
+        tap((updatedProduct) => {
+          console.log('✅ Favorito sincronizado com servidor:', updatedProduct);
+          this.updateFavorites(productId, newFavoriteStatus);
+        }),
+        catchError((error) => {
+          console.warn('⚠️ Erro ao sincronizar favorito, mantendo estado local:', error);
+          return this.getProductById(productId).pipe(
+            map((product) => ({
+              ...product,
+              isFavorite: newFavoriteStatus,
+            })),
+          );
+        }),
+      );
   }
 
   /**
@@ -441,18 +439,6 @@ export class ProductService {
   }
 
   /**
-   * Alterna entre ambiente local e produção
-   */
-  setEnvironment(environment: 'local' | 'production'): void {
-    if (environment === 'local') {
-      this.apiUrl = this.localApiUrl;
-    } else {
-      this.apiUrl = 'https://ecommerce-api-mf.vercel.app/products';
-    }
-    this.invalidateCache();
-  }
-
-  /**
    * Tratamento de erros
    */
   private handleError(error: HttpErrorResponse) {
@@ -463,7 +449,8 @@ export class ProductService {
     } else {
       switch (error.status) {
         case 0:
-          errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão.';
+          errorMessage =
+            'Não foi possível conectar ao servidor local. Verifique se o JSON Server está rodando.';
           break;
         case 404:
           errorMessage = 'Produto não encontrado.';
@@ -484,14 +471,20 @@ export class ProductService {
   }
 
   /**
-   * Verifica o status da API
+   * 🔥 Verifica o status da API local
    */
   checkApiHealth(): Observable<{ status: string; timestamp: string }> {
-    const baseUrl = this.apiUrl.replace('/products', '');
-    return this.http.get<{ status: string; timestamp: string }>(`${baseUrl}/health`).pipe(
+    return this.http.get<{ status: string; timestamp: string }>(`http://localhost:3000/`).pipe(
+      map(() => ({
+        status: 'online',
+        timestamp: new Date().toISOString(),
+      })),
       catchError((error) => {
-        console.error('❌ API não está respondendo:', error);
-        return throwError(() => new Error('API indisponível'));
+        console.error('❌ API local não está respondendo:', error);
+        return throwError(
+          () =>
+            new Error('API local indisponível. Execute: json-server --watch db.json --port 3000'),
+        );
       }),
     );
   }

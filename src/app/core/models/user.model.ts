@@ -1,12 +1,13 @@
+// src/app/core/models/user.model.ts
 export interface User {
-  id: number;
+  id: string | number; // 🔥 Aceitar string ou number (JSON Server usa string)
   name: string;
   email: string;
   password?: string;
-  documentType: 'pf' | 'pj';
-  document: string;
-  phone: string;
-  address: {
+  document?: string;
+  documentType?: 'pf' | 'pj';
+  phone?: string;
+  address?: {
     street: string;
     number: string;
     complement?: string;
@@ -16,11 +17,13 @@ export interface User {
     cep: string;
     country: string;
   };
-  createdAt: Date;
-  updatedAt?: Date;
+  hasStore?: boolean;
+  storeId?: string | number | null; // 🔥 Aceitar string, number ou null
   companyName?: string;
   tradeName?: string;
   birthDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface LoginCredentials {
@@ -33,13 +36,10 @@ export interface RegisterCredentials {
   name: string;
   email: string;
   password: string;
-  confirmPassword: string;
+  confirmPassword?: string;
   document: string;
   phone: string;
-  companyName?: string;
-  tradeName?: string;
-  birthDate?: string;
-  address: {
+  address?: {
     street: string;
     number: string;
     complement?: string;
@@ -49,6 +49,9 @@ export interface RegisterCredentials {
     cep: string;
     country: string;
   };
+  companyName?: string;
+  tradeName?: string;
+  birthDate?: string;
 }
 
 export interface AuthResponse {

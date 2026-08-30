@@ -1,3 +1,4 @@
+// src/app/features/chat/chat.ts
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -5,6 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ChatService } from '../../core/services/chat.service';
 import { AlertService } from '../../core/services/alert.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ChatConversation, Message } from '../../core/models/message.model';
 
 @Component({
@@ -22,7 +24,8 @@ export class Chat implements OnInit, OnDestroy {
   selectedConversation: ChatConversation | null = null;
   newMessage = '';
   loading = true;
-  userId = 1;
+  userId: number = 0;
+  userName: string = '';
   isSeller = false;
 
   // Parâmetros recebidos da URL
@@ -39,16 +42,36 @@ export class Chat implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private chatService: ChatService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    // 🔥 Buscar usuário logado
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      this.alertService.warning('Login necessário', 'Faça login para acessar o chat.');
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    this.userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+    this.userName = user.name || 'Usuário';
+
     this.routeSub = this.route.queryParams.subscribe(params => {
       this.productIdParam = params['productId'] ? +params['productId'] : null;
       this.sellerIdParam = params['sellerId'] ? +params['sellerId'] : null;
       this.productNameParam = params['productName'] || null;
       this.sellerNameParam = params['sellerName'] || null;
       this.isStoreChat = params['store'] === 'true';
+
+      console.log('📋 Parâmetros do chat:', {
+        productId: this.productIdParam,
+        sellerId: this.sellerIdParam,
+        productName: this.productNameParam,
+        sellerName: this.sellerNameParam,
+        isStoreChat: this.isStoreChat
+      });
 
       if (this.productIdParam && this.sellerIdParam) {
         this.loadProductChat(this.productIdParam, this.sellerIdParam);
@@ -67,19 +90,21 @@ export class Chat implements OnInit, OnDestroy {
 
   loadConversations(): void {
     this.loading = true;
-    this.chatSub = (this.isSeller
+    const observable = this.isSeller
       ? this.chatService.getSellerConversations(this.userId)
-      : this.chatService.getConversations(this.userId)
-    ).subscribe({
+      : this.chatService.getConversations(this.userId);
+
+    this.chatSub = observable.subscribe({
       next: (conversations: ChatConversation[]) => {
         this.conversations = conversations;
         this.loading = false;
-        console.log('💬 Conversas carregadas:', conversations);
+        console.log('💬 Conversas carregadas:', conversations.length);
       },
       error: (error: Error) => {
         console.error('❌ Erro ao carregar conversas:', error);
         this.loading = false;
         this.conversations = [];
+        this.alertService.error('Erro', 'Não foi possível carregar as conversas.');
       }
     });
   }
@@ -108,7 +133,7 @@ export class Chat implements OnInit, OnDestroy {
         };
 
         this.scrollToBottom();
-        console.log('💬 Chat do produto carregado:', { productName, sellerName });
+        console.log('💬 Chat do produto carregado:', { productName, sellerName, messages: messages.length });
       },
       error: (error: Error) => {
         console.error('❌ Erro ao carregar mensagens:', error);
@@ -137,7 +162,7 @@ export class Chat implements OnInit, OnDestroy {
   loadStoreChat(sellerId: number): void {
     this.loading = true;
     const sellerName = this.sellerNameParam || 'Vendedor';
-    
+
     this.selectedConversation = {
       productId: 0,
       productName: 'Conversa com a Loja',
@@ -150,7 +175,7 @@ export class Chat implements OnInit, OnDestroy {
       messages: [],
       isStoreChat: true
     };
-    
+
     this.messages = [];
     this.loading = false;
     this.scrollToBottom();
@@ -161,11 +186,22 @@ export class Chat implements OnInit, OnDestroy {
     this.selectedConversation = conversation;
     this.messages = conversation.messages || [];
 
+    // 🔥 Marcar como lida
     this.chatService.markConversationAsRead(
       conversation.productId,
       this.userId,
       conversation.sellerId
-    ).subscribe();
+    ).subscribe({
+      next: () => {
+        // Atualizar contador de não lidas
+        if (this.selectedConversation) {
+          this.selectedConversation.unreadCount = 0;
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erro ao marcar conversa como lida:', error);
+      }
+    });
 
     this.scrollToBottom();
   }
@@ -179,11 +215,12 @@ export class Chat implements OnInit, OnDestroy {
       sellerId: this.selectedConversation.sellerId,
       sellerName: this.selectedConversation.sellerName,
       userId: this.userId,
-      userName: 'Jocimar Galante',
+      userName: this.userName,
       content: this.newMessage.trim(),
       isFromSeller: this.isSeller
     };
 
+    // 🔥 Mensagem temporária (otimista)
     const tempMessage: Message = {
       id: Date.now(),
       productId: message.productId!,
@@ -197,17 +234,19 @@ export class Chat implements OnInit, OnDestroy {
       read: false,
       isFromSeller: message.isFromSeller || false
     };
-    
+
     this.messages.push(tempMessage);
     this.newMessage = '';
     this.scrollToBottom();
 
+    // 🔥 Enviar para o servidor
     this.chatService.sendMessage(message).subscribe({
       next: (sentMessage: Message) => {
         const index = this.messages.findIndex(m => m.id === tempMessage.id);
         if (index !== -1) {
           this.messages[index] = sentMessage;
         }
+        // 🔥 Atualizar lista de conversas
         this.loadConversations();
       },
       error: (error: Error) => {
@@ -233,10 +272,10 @@ export class Chat implements OnInit, OnDestroy {
     }, 100);
   }
 
-  formatDate(date: Date): string {
+  formatDate(date: Date | string): string {
     if (!date) return '';
+    const msgDate = typeof date === 'string' ? new Date(date) : date;
     const now = new Date();
-    const msgDate = new Date(date);
     const diff = now.getTime() - msgDate.getTime();
     const hours = diff / (1000 * 60 * 60);
 
@@ -254,7 +293,6 @@ export class Chat implements OnInit, OnDestroy {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   }
 
-  // 🔥 Métodos para verificar o tipo de chat
   isProductChat(): boolean {
     return this.selectedConversation?.productId !== 0 && !this.selectedConversation?.isStoreChat;
   }
@@ -263,11 +301,19 @@ export class Chat implements OnInit, OnDestroy {
     return this.selectedConversation?.isStoreChat === true;
   }
 
+  /**
+   * 🔥 Obtém o ID do produto da conversa selecionada
+   */
   getProductId(): number {
-    return this.selectedConversation?.productId || 0;
+    const id = this.selectedConversation?.productId;
+    return typeof id === 'string' ? parseInt(id, 10) : (id || 0);
   }
 
+  /**
+   * 🔥 Obtém o ID do vendedor da conversa selecionada
+   */
   getSellerId(): number {
-    return this.selectedConversation?.sellerId || 0;
+    const id = this.selectedConversation?.sellerId;
+    return typeof id === 'string' ? parseInt(id, 10) : (id || 0);
   }
 }

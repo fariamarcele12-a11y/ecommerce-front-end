@@ -1,3 +1,4 @@
+<!-- src/app/features/auth/register/register.html -->
 <div class="auth-container">
   <div class="container">
     <div class="row justify-content-center align-items-center min-vh-100">
@@ -215,7 +216,7 @@
                 </div>
               </div>
 
-              <!-- Endereço -->
+              <!-- 🔥 Endereço CORRIGIDO com operador '!' -->
               <div class="form-group mb-3">
                 <label class="form-label fw-bold small">Endereço</label>
                 <div class="row g-2">
@@ -224,8 +225,8 @@
                       type="text"
                       class="form-control"
                       placeholder="CEP"
-                      [(ngModel)]="credentials.address.cep"
-                      (input)="credentials.address.cep = formatCep(credentials.address.cep)"
+                      [(ngModel)]="address!.cep"
+                      (input)="address!.cep = formatCep(address!.cep)"
                       (blur)="onCepBlur()"
                       name="cep"
                       maxlength="9"
@@ -236,7 +237,7 @@
                       type="text"
                       class="form-control"
                       placeholder="Rua"
-                      [(ngModel)]="credentials.address.street"
+                      [(ngModel)]="address!.street"
                       name="street"
                     />
                   </div>
@@ -245,7 +246,7 @@
                       type="text"
                       class="form-control"
                       placeholder="Número"
-                      [(ngModel)]="credentials.address.number"
+                      [(ngModel)]="address!.number"
                       name="number"
                     />
                   </div>
@@ -254,7 +255,7 @@
                       type="text"
                       class="form-control"
                       placeholder="Complemento"
-                      [(ngModel)]="credentials.address.complement"
+                      [(ngModel)]="address!.complement"
                       name="complement"
                     />
                   </div>
@@ -263,7 +264,7 @@
                       type="text"
                       class="form-control"
                       placeholder="Bairro"
-                      [(ngModel)]="credentials.address.neighborhood"
+                      [(ngModel)]="address!.neighborhood"
                       name="neighborhood"
                     />
                   </div>
@@ -272,12 +273,12 @@
                       type="text"
                       class="form-control"
                       placeholder="Cidade"
-                      [(ngModel)]="credentials.address.city"
+                      [(ngModel)]="address!.city"
                       name="city"
                     />
                   </div>
                   <div class="col-md-3">
-                    <select class="form-select" [(ngModel)]="credentials.address.state" name="state">
+                    <select class="form-select" [(ngModel)]="address!.state" name="state">
                       <option value="">UF</option>
                       <option value="AC">AC</option>
                       <option value="AL">AL</option>

@@ -14,10 +14,11 @@ export interface Product {
     rating: number;
     sales: number;
   };
+  storeId?: number;
   location: string;
   stock: number;
+  freeShipping?: boolean;
   createdAt: string;
   updatedAt?: string;
   isFavorite?: boolean;
-  freeShipping?: boolean;
 }

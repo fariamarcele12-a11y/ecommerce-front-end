@@ -1,3 +1,4 @@
+<!-- src/app/features/products/product-detail/product-detail.html -->
 <div *ngIf="loading" class="container py-5 text-center">
   <div class="spinner-border text-primary" role="status">
     <span class="visually-hidden">Carregando...</span>
@@ -88,18 +89,20 @@
 
       <div class="d-flex align-items-center gap-3 mb-3">
         <div class="d-flex align-items-center">
+          <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
           <i
             class="bi bi-star-fill text-warning me-1"
-            *ngFor="let star of getStars(product.seller.rating)"
+            *ngFor="let star of getStars(product.seller.rating || 0)"
           ></i>
           <i
             class="bi bi-star text-warning me-1"
-            *ngFor="let star of [].constructor(5 - getStars(product.seller.rating).length)"
+            *ngFor="let star of [].constructor(5 - getStars(product.seller.rating || 0).length)"
           ></i>
-          <span class="ms-2 fw-bold">{{ product.seller.rating }}</span>
+          <span class="ms-2 fw-bold">{{ product.seller.rating || 0 }}</span>
         </div>
         <span class="text-muted">|</span>
-        <span class="text-muted">{{ product.seller.sales }} vendas</span>
+        <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
+        <span class="text-muted">{{ product.seller.sales || 0 }} vendas</span>
         <span class="text-muted">|</span>
         <span class="text-muted">
           <i class="bi bi-geo-alt-fill me-1"></i>{{ product.location }}
@@ -192,11 +195,18 @@
         </button>
       </div>
 
-      <!-- 🔥 Botão: Perguntar sobre o produto -->
+      <!-- Botão: Perguntar sobre o produto -->
       <div class="chat-buttons mt-4">
-        <button class="btn btn-outline-primary rounded-pill w-100 py-2" 
-                [routerLink]="['/chat']" 
-                [queryParams]="{ productId: product.id, sellerId: product.seller.id, productName: product.name, sellerName: product.seller.name }">
+        <button
+          class="btn btn-outline-primary rounded-pill w-100 py-2"
+          [routerLink]="['/chat']"
+          [queryParams]="{
+            productId: product.id,
+            sellerId: product.seller.id || product.storeId,
+            productName: product.name,
+            sellerName: getSellerName()
+          }"
+        >
           <i class="bi bi-chat-dots me-2"></i>
           Perguntar sobre o produto
         </button>
@@ -238,56 +248,47 @@
     </div>
   </div>
 
-  <!-- 🔥 Informações do Vendedor com dois botões -->
+  <!-- Seção do Vendedor -->
   <div class="seller-section mt-5 p-4 bg-light rounded-3">
-    <h5 class="fw-bold mb-3">Sobre o Vendedor</h5>
-    <div class="d-flex flex-wrap align-items-center gap-4">
-      <!-- Avatar e informações do vendedor -->
-      <div class="d-flex align-items-center gap-2">
+    <h5 class="fw-bold mb-3">
+      <i class="bi bi-shop me-2"></i>
+      Sobre o Vendedor
+    </h5>
+    <div class="d-flex align-items-center gap-4 flex-wrap">
+      <div class="d-flex align-items-center gap-3">
         <div
           class="avatar-placeholder rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
           style="width: 60px; height: 60px; font-size: 24px; font-weight: bold"
         >
-          {{ product.seller.name.charAt(0) }}
+          {{ getSellerName().charAt(0) || 'V' }}
         </div>
         <div>
-          <h6 class="mb-0">{{ product.seller.name }}</h6>
+          <h6 class="mb-0">{{ getSellerName() }}</h6>
           <div class="d-flex align-items-center gap-2 small text-muted">
             <span>
               <i class="bi bi-star-fill text-warning me-1"></i>
-              {{ product.seller.rating }}
+              {{ getSellerRating() }}
             </span>
             <span>|</span>
-            <span>{{ product.seller.sales }} vendas</span>
+            <span>{{ getSellerSales() }} vendas</span>
             <span>|</span>
             <span>Membro desde 2024</span>
           </div>
         </div>
       </div>
-
-      <!-- Botões do vendedor -->
-      <div class="d-flex gap-2 ms-auto flex-wrap">
-        <!-- 🔥 Botão: Falar com o vendedor -->
-        <button class="btn btn-outline-success rounded-pill px-4 py-2"
-                [routerLink]="['/chat']" 
-                [queryParams]="{ sellerId: product.seller.id, sellerName: product.seller.name, store: 'true' }">
-          <i class="bi bi-chat me-2"></i>
-          Falar com o vendedor
-        </button>
-        
-        <!-- 🔥 Botão: Ver Loja -->
-        <button class="btn btn-outline-secondary rounded-pill px-4 py-2"
-                [routerLink]="['/loja', product.seller.id]">
-          <i class="bi bi-shop me-2"></i>
-          Ver Loja
-        </button>
-      </div>
-    </div>
-    <div class="d-flex flex-wrap gap-4 mt-3">
-      <small class="text-muted">
-        <i class="bi bi-info-circle me-1"></i>
-        Converse com o vendedor sobre outros produtos, negociações ou dúvidas gerais
-      </small>
+      <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
+      <button
+        class="btn btn-outline-primary rounded-pill ms-auto"
+        [routerLink]="['/chat']"
+        [queryParams]="{
+          sellerId: product.seller.id || product.storeId,
+          sellerName: getSellerName(),
+          productId: product.id,
+          store: 'true'
+        }"
+      >
+        <i class="bi bi-chat me-1"></i> Perguntar ao vendedor
+      </button>
     </div>
   </div>
 

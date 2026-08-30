@@ -1,5 +1,6 @@
+// src/app/core/services/cart.service.ts
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
-import { BehaviorSubject, Observable, throwError, catchError, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, throwError, catchError, of, tap, switchMap, forkJoin, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
 import { HttpClient } from '@angular/common/http';
@@ -32,12 +33,10 @@ type Coupon = Record<string, number>;
 @Injectable({
   providedIn: 'root',
 })
+// 🔥 CORRIGIDO: Nome da classe deve ser CartService
 export class CartService {
-  // URLs da API
-  private apiUrl = 'https://ecommerce-api-mf.vercel.app/cart';
-  private localApiUrl = 'http://localhost:3000/cart';
+  private apiUrl = 'http://localhost:3000/cart';
 
-  // Estado do carrinho
   private cartItems = new BehaviorSubject<CartItem[]>([]);
   private totalItems = new BehaviorSubject<number>(0);
   private totalPrice = new BehaviorSubject<number>(0);
@@ -54,16 +53,12 @@ export class CartService {
   constructor() {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
-    // Carregar carrinho do localStorage e sincronizar com servidor
     if (this.isBrowser) {
       this.loadCartFromStorage();
       this.syncCartWithServer();
     }
   }
 
-  /**
-   * Observables públicos
-   */
   getCartItems(): Observable<CartItem[]> {
     return this.cartItems.asObservable();
   }
@@ -88,9 +83,6 @@ export class CartService {
     return this.couponCode.asObservable();
   }
 
-  /**
-   * Adiciona produto ao carrinho
-   */
   addToCart(product: Product, quantity = 1): void {
     const currentItems = this.cartItems.value;
     const existingItem = currentItems.find((item) => item.product.id === product.id);
@@ -124,18 +116,12 @@ export class CartService {
     this.saveToStorageAndServer(currentItems);
   }
 
-  /**
-   * Remove produto do carrinho
-   */
   removeFromCart(productId: number): void {
     const currentItems = this.cartItems.value.filter((item) => item.product.id !== productId);
     this.updateCart(currentItems);
     this.saveToStorageAndServer(currentItems);
   }
 
-  /**
-   * Atualiza quantidade de um produto
-   */
   updateQuantity(productId: number, quantity: number): void {
     const currentItems = this.cartItems.value;
     const item = currentItems.find((item) => item.product.id === productId);
@@ -155,9 +141,6 @@ export class CartService {
     }
   }
 
-  /**
-   * Limpa o carrinho
-   */
   clearCart(): void {
     this.updateCart([]);
     this.discount.next(0);
@@ -165,59 +148,13 @@ export class CartService {
     this.saveToStorageAndServer([]);
   }
 
-  /**
-   * Aplica cupom de desconto (versão integrada com o sistema de cupons)
-   */
-  applyDiscount(code: string): Observable<boolean> {
-    const validCoupons: Coupon = {
-      PROMO10: 10,
-      PROMO20: 20,
-      PROMO30: 30,
-      BLACKFRIDAY: 50,
-      FREEGIFT: 0,
-      WELCOME10: 10,
-      VIP20: 20,
-    };
-
-    const upperCode = code.toUpperCase().trim();
-
-    if (upperCode in validCoupons) {
-      const discountValue = validCoupons[upperCode];
-      const currentTotal = this.totalPrice.value;
-
-      // Desconto máximo de 50% do total
-      const maxDiscount = currentTotal * 0.5;
-      const discountAmount = Math.min((currentTotal * discountValue) / 100, maxDiscount);
-
-      this.discount.next(discountAmount);
-      this.couponCode.next(upperCode);
-
-      // Salvar cupom aplicado
-      if (this.isBrowser) {
-        localStorage.setItem(
-          'appliedCoupon',
-          JSON.stringify({
-            code: upperCode,
-            discount: discountAmount,
-          }),
-        );
-      }
-
-      return of(true);
-    }
-    return of(false);
-  }
-
-  /**
-   * Aplica cupom com validação (método público)
-   */
   applyCoupon(code: string): Observable<{ valid: boolean; message: string; discountAmount?: number }> {
     const currentTotal = this.totalPrice.value;
 
     if (currentTotal === 0) {
       return of({
         valid: false,
-        message: 'Carrinho vazio. Adicione produtos para aplicar o cupom.'
+        message: 'Carrinho vazio. Adicione produtos para aplicar o cupom.',
       });
     }
 
@@ -253,19 +190,16 @@ export class CartService {
       return of({
         valid: true,
         message: 'Cupom aplicado com sucesso!',
-        discountAmount: discountAmount
+        discountAmount: discountAmount,
       });
     }
 
     return of({
       valid: false,
-      message: 'Cupom inválido. Verifique o código digitado.'
+      message: 'Cupom inválido. Verifique o código digitado.',
     });
   }
 
-  /**
-   * Remove cupom de desconto
-   */
   removeDiscount(): void {
     this.discount.next(0);
     this.couponCode.next('');
@@ -274,16 +208,10 @@ export class CartService {
     }
   }
 
-  /**
-   * Verifica se há cupom aplicado
-   */
   hasDiscount(): boolean {
     return this.discount.value > 0;
   }
 
-  /**
-   * Obtém o cupom aplicado
-   */
   getAppliedCoupon(): { code: string; discount: number } | null {
     const code = this.couponCode.value;
     const discount = this.discount.value;
@@ -294,16 +222,13 @@ export class CartService {
     return null;
   }
 
-  /**
-   * Calcula o frete
-   */
   calculateShipping(): void {
     const total = this.totalPrice.value;
     let shippingCost = 0;
 
     if (total > 0) {
       if (total >= 100) {
-        shippingCost = 0; // Frete grátis
+        shippingCost = 0;
       } else if (total >= 50) {
         shippingCost = 15.9;
       } else {
@@ -314,9 +239,6 @@ export class CartService {
     this.shipping.next(shippingCost);
   }
 
-  /**
-   * Obtém o resumo completo do carrinho
-   */
   getCartSummary(): CartSummary {
     const subtotal = this.totalPrice.value;
     const discount = this.discount.value;
@@ -324,9 +246,8 @@ export class CartService {
     const total = subtotal - discount + shipping;
     const itemCount = this.totalItems.value;
 
-    // Calcular economia total (preços originais vs atuais)
     const originalTotal = this.cartItems.value.reduce(
-      (sum, item) => sum + ((item.product.oldPrice || item.product.price) * item.quantity),
+      (sum, item) => sum + (item.product.oldPrice || item.product.price) * item.quantity,
       0,
     );
     const savings = originalTotal - subtotal;
@@ -341,38 +262,23 @@ export class CartService {
     };
   }
 
-  /**
-   * Verifica se o carrinho está vazio
-   */
   isEmpty(): boolean {
     return this.cartItems.value.length === 0;
   }
 
-  /**
-   * Obtém o número total de itens únicos
-   */
   getUniqueItemCount(): number {
     return this.cartItems.value.length;
   }
 
-  /**
-   * Verifica se um produto está no carrinho
-   */
   isProductInCart(productId: number): boolean {
     return this.cartItems.value.some((item) => item.product.id === productId);
   }
 
-  /**
-   * Obtém a quantidade de um produto no carrinho
-   */
   getProductQuantity(productId: number): number {
     const item = this.cartItems.value.find((item) => item.product.id === productId);
     return item ? item.quantity : 0;
   }
 
-  /**
-   * Atualiza o estado do carrinho
-   */
   private updateCart(items: CartItem[]): void {
     items.forEach((item) => {
       item.subtotal = item.product.price * item.quantity;
@@ -383,15 +289,12 @@ export class CartService {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     this.totalItems.next(totalItems);
 
-    const totalPrice = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+    const totalPrice = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
     this.totalPrice.next(totalPrice);
 
     this.calculateShipping();
   }
 
-  /**
-   * Salva no localStorage e sincroniza com o servidor
-   */
   private saveToStorageAndServer(items: CartItem[]): void {
     if (this.isBrowser) {
       this.saveCartToStorage(items);
@@ -399,9 +302,6 @@ export class CartService {
     this.saveCartToServer(items);
   }
 
-  /**
-   * Salva carrinho no localStorage
-   */
   private saveCartToStorage(items: CartItem[]): void {
     try {
       const cartData = items.map((item) => ({
@@ -414,9 +314,6 @@ export class CartService {
     }
   }
 
-  /**
-   * Salva carrinho no servidor
-   */
   private saveCartToServer(items: CartItem[]): void {
     if (this.isSyncing) return;
 
@@ -426,19 +323,30 @@ export class CartService {
     }));
 
     this.http
-      .put(`${this.apiUrl}/1`, { items: cartData })
+      .get<ServerCart[]>(this.apiUrl)
       .pipe(
+        switchMap((carts) => {
+          if (carts && carts.length > 0) {
+            const cart = carts[0];
+            return this.http.put<ServerCart>(`${this.apiUrl}/${cart.id}`, {
+              ...cart,
+              items: cartData,
+            });
+          } else {
+            return this.http.post<ServerCart>(this.apiUrl, {
+              id: 1,
+              items: cartData,
+            });
+          }
+        }),
         catchError((error) => {
-          console.warn('Erro ao sincronizar carrinho com servidor:', error);
+          console.warn('⚠️ Erro ao salvar carrinho:', error);
           return of(null);
         }),
       )
       .subscribe();
   }
 
-  /**
-   * Carrega carrinho do localStorage
-   */
   private loadCartFromStorage(): void {
     if (!this.isBrowser) return;
 
@@ -446,13 +354,11 @@ export class CartService {
       const cartData = localStorage.getItem('cart');
       if (cartData) {
         const parsedData = JSON.parse(cartData);
-
         if (parsedData && parsedData.length > 0) {
           this.loadProductsForCart(parsedData);
         }
       }
 
-      // Recuperar cupom aplicado
       const couponData = localStorage.getItem('appliedCoupon');
       if (couponData) {
         const coupon = JSON.parse(couponData);
@@ -464,70 +370,76 @@ export class CartService {
     }
   }
 
-  /**
-   * Carrega produtos para o carrinho a partir do localStorage
-   */
   private loadProductsForCart(cartData: { productId: number; quantity: number }[]): void {
     const productIds = cartData.map((item) => item.productId);
     console.log('🛒 Carrinho carregado do localStorage:', { productIds });
   }
 
-  /**
-   * Sincroniza carrinho com o servidor
-   */
   private syncCartWithServer(): void {
     if (!this.isBrowser) return;
 
     this.isSyncing = true;
 
     this.http
-      .get<ServerCart>(`${this.apiUrl}/1`)
+      .get<ServerCart[]>(this.apiUrl)
       .pipe(
-        catchError((error) => {
-          if (error.status === 404) {
-            return this.http.post<ServerCart>(this.apiUrl, {
-              id: 1,
-              items: [],
-            });
+        switchMap((carts) => {
+          if (carts && carts.length > 0) {
+            console.log('📦 Carrinho existente encontrado:', carts[0]);
+            return of(carts[0]);
           }
-          return throwError(() => error);
+          console.log('📦 Criando novo carrinho...');
+          return this.http.post<ServerCart>(this.apiUrl, {
+            id: 1,
+            items: [],
+          });
         }),
         catchError((error) => {
-          console.warn('Erro ao sincronizar carrinho com servidor:', error);
+          console.warn('⚠️ Erro ao sincronizar carrinho:', error);
           this.isSyncing = false;
           return of(null);
         }),
       )
       .subscribe((serverCart) => {
         this.isSyncing = false;
-
-        if (serverCart && serverCart.items) {
-          console.log('📦 Carrinho carregado do servidor:', serverCart.items);
+        if (serverCart) {
+          console.log('📦 Carrinho carregado:', serverCart);
         }
       });
   }
 
-  /**
-   * Força a sincronização com o servidor
-   */
   syncCart(): void {
-    this.syncCartWithServer();
+    if (!this.isBrowser) return;
+    this.cleanupDuplicatedCarts().subscribe(() => {
+      this.syncCartWithServer();
+    });
   }
 
-  /**
-   * Alterna entre ambiente local e produção
-   */
-  setEnvironment(environment: 'local' | 'production'): void {
-    if (environment === 'local') {
-      this.apiUrl = this.localApiUrl;
-    } else {
-      this.apiUrl = 'https://ecommerce-api-mf.vercel.app/cart';
-    }
+  private cleanupDuplicatedCarts(): Observable<void> {
+    return this.http.get<ServerCart[]>(this.apiUrl).pipe(
+      switchMap((carts) => {
+        if (!carts || carts.length <= 1) {
+          return of(void 0);
+        }
+        console.log(`🗑️ Removendo ${carts.length - 1} carrinhos duplicados...`);
+        const deleteCarts = carts.slice(1);
+        const deleteRequests = deleteCarts.map((cart) =>
+          this.http.delete(`${this.apiUrl}/${cart.id}`),
+        );
+        return forkJoin(deleteRequests).pipe(
+          map(() => {
+            console.log('✅ Carrinhos duplicados removidos!');
+            return void 0;
+          })
+        );
+      }),
+      catchError((error) => {
+        console.warn('⚠️ Erro ao limpar carrinhos:', error);
+        return of(void 0);
+      }),
+    );
   }
 
-  /**
-   * Log do carrinho para debug
-   */
   debugCart(): void {
     console.log('🛒 Estado atual do carrinho:');
     console.log('  - Itens:', this.cartItems.value);

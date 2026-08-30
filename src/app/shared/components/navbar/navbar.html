@@ -30,10 +30,14 @@
 
       <!-- Ícones e Ações -->
       <div class="d-flex align-items-center gap-2 gap-lg-3 ms-auto">
-        <!-- Vender -->
-        <a class="btn btn-outline-success rounded-pill px-3 px-lg-4" routerLink="/vender">
-          <i class="bi bi-plus-circle me-1"></i>
-          <span class="d-none d-md-inline">Vender</span>
+        <!-- 🔥 Minha Loja (visível apenas se tiver loja) -->
+        <a
+          *ngIf="hasStore && storeId"
+          class="btn btn-outline-primary rounded-pill px-3 px-lg-4"
+          [routerLink]="['/loja', storeId]"
+        >
+          <i class="bi bi-shop me-1"></i>
+          <span class="d-none d-md-inline">Minha Loja</span>
         </a>
 
         <!-- Favoritos -->
@@ -64,6 +68,7 @@
             class="btn btn-link text-dark text-decoration-none dropdown-toggle d-flex align-items-center gap-2"
             type="button"
             data-bs-toggle="dropdown"
+            aria-expanded="false"
           >
             <div class="rounded-circle bg-secondary bg-opacity-25 p-2">
               <i class="bi bi-person-circle fs-5"></i>
@@ -71,48 +76,104 @@
             <span class="d-none d-lg-block" *ngIf="!isLoggedIn">Minha Conta</span>
             <span class="d-none d-lg-block" *ngIf="isLoggedIn">{{ userName }}</span>
           </button>
+
+          <!-- Dropdown Menu -->
           <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
-            <!-- Logado -->
+            <!-- ========================================== -->
+            <!-- USUÁRIO LOGADO -->
+            <!-- ========================================== -->
             <ng-container *ngIf="isLoggedIn">
+              <!-- Perfil -->
               <li>
-                <a class="dropdown-item" routerLink="/perfil"
-                  ><i class="bi bi-person me-2"></i>Meu Perfil</a
-                >
+                <a class="dropdown-item" routerLink="/perfil">
+                  <i class="bi bi-person me-2"></i>Meu Perfil
+                </a>
               </li>
+
+              <!-- Meus Pedidos -->
               <li>
-                <a class="dropdown-item" routerLink="/pedidos"
-                  ><i class="bi bi-box-seam me-2"></i>Meus Pedidos</a
-                >
+                <a class="dropdown-item" routerLink="/pedidos">
+                  <i class="bi bi-box-seam me-2"></i>Meus Pedidos
+                </a>
               </li>
+
+              <!-- Minhas Vendas -->
               <li>
-                <a class="dropdown-item" routerLink="/vendas"
-                  ><i class="bi bi-graph-up-arrow me-2"></i>Minhas Vendas</a
-                >
+                <a class="dropdown-item" routerLink="/vendas">
+                  <i class="bi bi-graph-up-arrow me-2"></i>Minhas Vendas
+                </a>
               </li>
+
+              <!-- Favoritos -->
               <li>
-                <a class="dropdown-item" routerLink="/favoritos"
-                  ><i class="bi bi-heart me-2"></i>Favoritos</a
-                >
+                <a class="dropdown-item" routerLink="/favoritos">
+                  <i class="bi bi-heart me-2"></i>Favoritos
+                </a>
               </li>
+
+              <!-- Chat -->
+              <li>
+                <a class="dropdown-item" routerLink="/chat">
+                  <i class="bi bi-chat-dots me-2"></i>Mensagens
+                </a>
+              </li>
+
               <li><hr class="dropdown-divider" /></li>
+
+              <!-- ========================================== -->
+              <!-- SEÇÃO DA LOJA -->
+              <!-- ========================================== -->
+              <!-- Criar Loja (aparece apenas se NÃO tiver loja) -->
+              <li *ngIf="!hasStore">
+                <a class="dropdown-item fw-bold text-primary" routerLink="/criar-loja">
+                  <i class="bi bi-shop me-2"></i>Criar Loja
+                  <span class="badge bg-primary ms-2">Novo</span>
+                </a>
+              </li>
+
+              <!-- Minha Loja (aparece apenas se tiver loja) -->
+              <li *ngIf="hasStore && storeId">
+                <a class="dropdown-item fw-bold" [routerLink]="['/loja', storeId]">
+                  <i class="bi bi-shop me-2"></i>Minha Loja
+                </a>
+              </li>
+
+              <!-- Adicionar Produto (aparece apenas se tiver loja) -->
+              <li *ngIf="hasStore && storeId">
+                <a class="dropdown-item" [routerLink]="[`/loja/${storeId}/produto/novo`]">
+                  <i class="bi bi-plus-circle me-2"></i>Adicionar Produto
+                </a>
+              </li>
+
+              <li><hr class="dropdown-divider" /></li>
+
+              <!-- Sair -->
               <li>
-                <a class="dropdown-item text-danger" (click)="logout()"
-                  ><i class="bi bi-box-arrow-right me-2"></i>Sair</a
-                >
+                <a class="dropdown-item text-danger" (click)="logout()">
+                  <i class="bi bi-box-arrow-right me-2"></i>Sair
+                </a>
               </li>
             </ng-container>
 
-            <!-- Deslogado -->
+            <!-- ========================================== -->
+            <!-- USUÁRIO DESLOGADO -->
+            <!-- ========================================== -->
             <ng-container *ngIf="!isLoggedIn">
               <li>
-                <a class="dropdown-item" routerLink="/login"
-                  ><i class="bi bi-box-arrow-in-right me-2"></i>Entrar</a
-                >
+                <a class="dropdown-item" routerLink="/login">
+                  <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
+                </a>
               </li>
               <li>
-                <a class="dropdown-item" routerLink="/registrar"
-                  ><i class="bi bi-person-plus me-2"></i>Cadastrar</a
-                >
+                <a class="dropdown-item" routerLink="/registrar">
+                  <i class="bi bi-person-plus me-2"></i>Cadastrar
+                </a>
+              </li>
+              <li><hr class="dropdown-divider" /></li>
+              <li>
+                <a class="dropdown-item text-muted" routerLink="/criar-loja">
+                  <i class="bi bi-shop me-2"></i>Quero Vender
+                </a>
               </li>
             </ng-container>
           </ul>
@@ -122,7 +183,9 @@
   </div>
 </nav>
 
-<!-- Categorias Navbar Secundária (Desktop) -->
+<!-- ========================================== -->
+<!-- CATEGORIAS NAVBAR SECUNDÁRIA (Desktop) -->
+<!-- ========================================== -->
 <div class="bg-light border-bottom d-none d-lg-block">
   <div class="container-fluid px-5">
     <ul class="nav nav-underline justify-content-start gap-4 small">
@@ -165,7 +228,9 @@
   </div>
 </div>
 
-<!-- Menu Mobile de Categorias -->
+<!-- ========================================== -->
+<!-- MENU MOBILE DE CATEGORIAS -->
+<!-- ========================================== -->
 <div class="d-lg-none bg-white border-bottom py-2">
   <div class="container-fluid px-3">
     <div class="d-flex gap-2 overflow-auto pb-2" style="scrollbar-width: thin">

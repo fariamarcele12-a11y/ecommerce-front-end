@@ -1,3 +1,4 @@
+// src/app/core/services/category.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, catchError, shareReplay, tap, map } from 'rxjs';
@@ -7,9 +8,9 @@ import { Category, CategoryFilter } from '../models/category.model';
   providedIn: 'root',
 })
 export class CategoryService {
-  // URLs da API
-  private apiUrl = 'https://ecommerce-api-mf.vercel.app/categories';
-  private localApiUrl = 'http://localhost:3000/categories';
+  // 🔥 URL da API local apenas
+  private apiUrl = 'http://localhost:3000/categories';
+  //private apiUrl = 'https://ecommerce-api-mf.vercel.app/categories';
 
   // Cache para categorias
   private categoriesCache$: Observable<Category[]> | null = null;
@@ -27,7 +28,7 @@ export class CategoryService {
       return this.categoriesCache$;
     }
 
-    // Buscar do servidor
+    // Buscar do servidor local
     const request = this.http.get<Category[]>(this.apiUrl).pipe(
       tap(() => {
         this.lastCacheTime = Date.now();
@@ -61,6 +62,12 @@ export class CategoryService {
       }
       if (filters.categoryId) {
         params.push(`id=${filters.categoryId}`);
+      }
+      if (filters.active !== undefined) {
+        params.push(`active=${filters.active}`);
+      }
+      if (filters.search) {
+        params.push(`q=${filters.search}`);
       }
     }
 
@@ -148,7 +155,7 @@ export class CategoryService {
    */
   updateCategory(id: number, category: Partial<Category>): Observable<Category> {
     return this.http
-      .put<Category>(`${this.apiUrl}/${id}`, {
+      .patch<Category>(`${this.apiUrl}/${id}`, {
         ...category,
         updatedAt: new Date().toISOString(),
       })
@@ -213,7 +220,7 @@ export class CategoryService {
       switch (error.status) {
         case 0:
           errorMessage =
-            'Não foi possível conectar ao servidor. Verifique sua conexão com a internet.';
+            'Não foi possível conectar ao servidor local. Verifique se o JSON Server está rodando.';
           break;
         case 404:
           errorMessage = 'Recurso não encontrado. Verifique a URL.';
@@ -231,27 +238,21 @@ export class CategoryService {
   }
 
   /**
-   * Alterna entre ambiente local e produção (útil para desenvolvimento)
-   */
-  setEnvironment(environment: 'local' | 'production'): void {
-    if (environment === 'local') {
-      this.apiUrl = this.localApiUrl;
-    } else {
-      this.apiUrl = 'https://ecommerce-api-mf.vercel.app/categories';
-    }
-    this.invalidateCache();
-  }
-
-  /**
-   * Verifica o status da API
+   * 🔥 Verifica o status da API local
    */
   checkApiHealth(): Observable<{ status: string; timestamp: string }> {
-    const baseUrl = this.apiUrl.replace('/categories', '');
-    return this.http.get<{ status: string; timestamp: string }>(`${baseUrl}/health`).pipe(
-      catchError((error) => {
-        console.error('❌ API não está respondendo:', error);
-        return throwError(() => new Error('API indisponível'));
-      }),
-    );
+    // Para JSON Server, verificar se a raiz responde
+    return this.http
+      .get<{ status: string; timestamp: string }>(`http://localhost:3000/`)
+      .pipe(
+        map(() => ({
+          status: 'online',
+          timestamp: new Date().toISOString(),
+        })),
+        catchError((error) => {
+          console.error('❌ API local não está respondendo:', error);
+          return throwError(() => new Error('API local indisponível. Execute: json-server --watch db.json --port 3000'));
+        }),
+      );
   }
 }

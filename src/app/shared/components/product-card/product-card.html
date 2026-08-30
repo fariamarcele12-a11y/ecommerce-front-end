@@ -1,3 +1,4 @@
+<!-- src/app/shared/components/product-card/product-card.html -->
 <div class="card h-100 product-card border-0 shadow-sm hover-effect">
   <!-- Imagem e Badges -->
   <div class="position-relative">
@@ -5,6 +6,8 @@
       [src]="getImageUrl()"
       class="card-img-top product-image"
       [alt]="product.name"
+      loading="lazy"
+      (error)="product.images[0] = 'https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'"
     />
 
     <!-- Badge de Desconto -->
@@ -33,6 +36,7 @@
       class="btn-favorite position-absolute bottom-0 end-0 m-3"
       (click)="onFavoriteClick($event)"
       [title]="product.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'"
+      type="button"
     >
       <i
         class="bi"
@@ -66,8 +70,8 @@
     <!-- Vendedor -->
     <div class="d-flex align-items-center mt-2 small">
       <i class="bi bi-star-fill text-warning me-1"></i>
-      <span class="me-2">{{ product.seller.rating }}</span>
-      <span class="text-muted">({{ product.seller.sales }} vendas)</span>
+      <span class="me-2">{{ getSellerRating() }}</span>
+      <span class="text-muted">({{ getSellerSales() }} vendas)</span>
     </div>
 
     <!-- Frete Grátis -->
@@ -90,8 +94,9 @@
   </div>
 
   <div class="card-footer bg-white border-0 pb-3">
+    <!-- 🔥 Link para detalhe do produto com ID -->
     <a
-      [routerLink]="['/produto', product.id]"
+      [routerLink]="[`/produto/${product.id}`]"
       class="btn w-100 rounded-pill"
       [class.btn-outline-primary]="isInStock()"
       [class.btn-secondary]="!isInStock()"

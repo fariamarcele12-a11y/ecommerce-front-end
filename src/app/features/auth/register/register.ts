@@ -1,3 +1,4 @@
+// src/app/features/auth/register/register.ts
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +18,7 @@ import { RegisterCredentials } from '../../../core/models/user.model';
 export class Register {
   documentType: 'pf' | 'pj' = 'pf';
   isSearchingCep = false;
-  
+
   credentials: RegisterCredentials = {
     documentType: 'pf',
     name: '',
@@ -51,6 +52,11 @@ export class Register {
   showConfirmPassword = false;
   formSubmitted = false;
 
+  // 🔥 Getter com asserção de não-nulo
+  get address() {
+    return this.credentials.address!;
+  }
+
   constructor(
     private authService: AuthService,
     private router: Router,
@@ -71,7 +77,7 @@ export class Register {
   }
 
   onCepBlur(): void {
-    const cep = this.credentials.address.cep.replace(/\D/g, '');
+    const cep = this.address.cep.replace(/\D/g, '');
     if (cep.length === 8) {
       this.buscarEndereco(cep);
     }
@@ -79,14 +85,14 @@ export class Register {
 
   buscarEndereco(cep: string): void {
     this.isSearchingCep = true;
-    
+
     this.cepService.buscarCep(cep).subscribe({
       next: (endereco) => {
-        this.credentials.address.street = endereco.logradouro || '';
-        this.credentials.address.neighborhood = endereco.bairro || '';
-        this.credentials.address.city = endereco.localidade || '';
-        this.credentials.address.state = endereco.uf || '';
-        this.credentials.address.complement = endereco.complemento || '';
+        this.address.street = endereco.logradouro || '';
+        this.address.neighborhood = endereco.bairro || '';
+        this.address.city = endereco.localidade || '';
+        this.address.state = endereco.uf || '';
+        this.address.complement = endereco.complemento || '';
         this.isSearchingCep = false;
         this.alertService.toast('CEP encontrado! 📍', 'success', 2000);
       },
@@ -131,7 +137,7 @@ export class Register {
       return false;
     }
 
-    const cepClean = this.credentials.address.cep.replace(/\D/g, '');
+    const cepClean = this.address.cep.replace(/\D/g, '');
     if (cepClean.length !== 8) {
       this.alertService.warning('CEP inválido', 'Digite um CEP válido com 8 dígitos.');
       return false;
@@ -209,6 +215,7 @@ export class Register {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 2) return numbers;
     if (numbers.length <= 7) return numbers.replace(/(\d{2})(\d{1,5})/, '($1) $2');
+    if (numbers.length <= 10) return numbers.replace(/(\d{2})(\d{4})(\d{1,4})/, '($1) $2-$3');
     return numbers.replace(/(\d{2})(\d{5})(\d{1,4})/, '($1) $2-$3');
   }
 

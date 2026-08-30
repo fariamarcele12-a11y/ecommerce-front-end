@@ -1,0 +1,386 @@
+<!-- src/app/features/store/create-store/create-store.html -->
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a routerLink="/home">Home</a></li>
+          <li class="breadcrumb-item active">Criar Loja</li>
+        </ol>
+      </nav>
+
+      <!-- Cabeçalho -->
+      <div class="text-center mb-4">
+        <h1 class="fw-bold">
+          <i class="bi bi-shop text-primary me-2"></i>
+          Criar sua Loja
+        </h1>
+        <p class="text-muted">Preencha os dados abaixo para criar sua loja no MarketHub</p>
+      </div>
+
+      <!-- Verificação de loja existente -->
+      <div *ngIf="hasExistingStore" class="alert alert-warning text-center">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Loja já existente</strong>
+        <p class="mb-2">Você já possui uma loja cadastrada. Cada usuário pode ter apenas uma loja.</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button class="btn btn-primary rounded-pill" (click)="goToExistingStore()">
+            <i class="bi bi-shop me-1"></i>
+            Acessar minha loja
+          </button>
+          <a routerLink="/home" class="btn btn-outline-secondary rounded-pill">
+            <i class="bi bi-arrow-left me-1"></i>
+            Voltar para Home
+          </a>
+        </div>
+      </div>
+
+      <!-- Formulário -->
+      <div *ngIf="!hasExistingStore" class="card border-0 shadow-lg">
+        <div class="card-body p-5">
+          <form (ngSubmit)="onSubmit()" #form="ngForm">
+            <!-- Informações do Usuário -->
+            <div class="mb-4">
+              <h5 class="fw-bold">
+                <i class="bi bi-person text-primary me-2"></i>
+                Dados do Responsável
+              </h5>
+              <div class="row g-3 bg-light p-3 rounded-3">
+                <div class="col-md-6">
+                  <label class="fw-bold small text-muted">Nome</label>
+                  <p class="mb-0">{{ user?.name }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label class="fw-bold small text-muted">Tipo</label>
+                  <p class="mb-0">{{ getUserTypeLabel() }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label class="fw-bold small text-muted">{{ getDocumentLabel() }}</label>
+                  <p class="mb-0">{{ getDocumentValue() }}</p>
+                </div>
+                <div class="col-md-6">
+                  <label class="fw-bold small text-muted">E-mail</label>
+                  <p class="mb-0">{{ user?.email }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dados da Loja -->
+            <h5 class="fw-bold mb-3">
+              <i class="bi bi-shop text-primary me-2"></i>
+              Dados da Loja
+            </h5>
+
+            <!-- Nome da Loja -->
+            <div class="form-group mb-3">
+              <label class="form-label fw-bold small">
+                Nome da Loja <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-tag"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Ex: Loja do João"
+                  [(ngModel)]="storeData.storeName"
+                  name="storeName"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Categoria -->
+            <div class="form-group mb-3">
+              <label class="form-label fw-bold small">
+                Categoria <span class="text-danger">*</span>
+              </label>
+              <select
+                class="form-select"
+                [(ngModel)]="storeData.category"
+                name="category"
+                required
+              >
+                <option value="">Selecione uma categoria</option>
+                <option *ngFor="let cat of categories" [value]="cat">
+                  {{ cat }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Descrição -->
+            <div class="form-group mb-3">
+              <label class="form-label fw-bold small">
+                Descrição <span class="text-danger">*</span>
+              </label>
+              <textarea
+                class="form-control"
+                rows="4"
+                placeholder="Descreva sua loja, o que você vende, sua história..."
+                [(ngModel)]="storeData.description"
+                name="description"
+                required
+              ></textarea>
+            </div>
+
+            <!-- Contato -->
+            <h5 class="fw-bold mt-4 mb-3">
+              <i class="bi bi-phone text-primary me-2"></i>
+              Contato
+            </h5>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                  Telefone <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-phone"></i>
+                  </span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="(00) 00000-0000"
+                    [(ngModel)]="storeData.phone"
+                    name="phone"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold small">
+                  E-mail <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-envelope"></i>
+                  </span>
+                  <input
+                    type="email"
+                    class="form-control"
+                    placeholder="contato@loja.com"
+                    [(ngModel)]="storeData.email"
+                    name="email"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label fw-bold small">Website</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-globe"></i>
+                  </span>
+                  <input
+                    type="url"
+                    class="form-control"
+                    placeholder="https://www.minhaloja.com"
+                    [(ngModel)]="storeData.website"
+                    name="website"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Redes Sociais -->
+            <h5 class="fw-bold mt-4 mb-3">
+              <i class="bi bi-share text-primary me-2"></i>
+              Redes Sociais
+            </h5>
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-bold small">Instagram</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-instagram"></i>
+                  </span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="@seuinstagram"
+                    [(ngModel)]="storeData.socialMedia.instagram"
+                    name="instagram"
+                  />
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold small">Facebook</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-facebook"></i>
+                  </span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="seufacebook"
+                    [(ngModel)]="storeData.socialMedia.facebook"
+                    name="facebook"
+                  />
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold small">YouTube</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-youtube"></i>
+                  </span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="seucanal"
+                    [(ngModel)]="storeData.socialMedia.youtube"
+                    name="youtube"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Endereço -->
+            <h5 class="fw-bold mt-4 mb-3">
+              <i class="bi bi-geo-alt text-primary me-2"></i>
+              Endereço
+            </h5>
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-bold small">CEP</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="00000-000"
+                  [(ngModel)]="storeData.address.cep"
+                  (input)="storeData.address.cep = formatCep(storeData.address.cep)"
+                  (blur)="onCepBlur()"
+                  name="cep"
+                  maxlength="9"
+                />
+              </div>
+              <div class="col-md-8">
+                <label class="form-label fw-bold small">Rua</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Nome da rua"
+                  [(ngModel)]="storeData.address.street"
+                  name="street"
+                />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold small">Número</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="123"
+                  [(ngModel)]="storeData.address.number"
+                  name="number"
+                />
+              </div>
+              <div class="col-md-5">
+                <label class="form-label fw-bold small">Complemento</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Apto, Bloco, etc."
+                  [(ngModel)]="storeData.address.complement"
+                  name="complement"
+                />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold small">Bairro</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Bairro"
+                  [(ngModel)]="storeData.address.neighborhood"
+                  name="neighborhood"
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold small">Cidade</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Cidade"
+                  [(ngModel)]="storeData.address.city"
+                  name="city"
+                />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold small">Estado</label>
+                <select class="form-select" [(ngModel)]="storeData.address.state" name="state">
+                  <option value="">UF</option>
+                  <option value="AC">AC</option>
+                  <option value="AL">AL</option>
+                  <option value="AP">AP</option>
+                  <option value="AM">AM</option>
+                  <option value="BA">BA</option>
+                  <option value="CE">CE</option>
+                  <option value="DF">DF</option>
+                  <option value="ES">ES</option>
+                  <option value="GO">GO</option>
+                  <option value="MA">MA</option>
+                  <option value="MT">MT</option>
+                  <option value="MS">MS</option>
+                  <option value="MG">MG</option>
+                  <option value="PA">PA</option>
+                  <option value="PB">PB</option>
+                  <option value="PR">PR</option>
+                  <option value="PE">PE</option>
+                  <option value="PI">PI</option>
+                  <option value="RJ">RJ</option>
+                  <option value="RN">RN</option>
+                  <option value="RS">RS</option>
+                  <option value="RO">RO</option>
+                  <option value="RR">RR</option>
+                  <option value="SC">SC</option>
+                  <option value="SP">SP</option>
+                  <option value="SE">SE</option>
+                  <option value="TO">TO</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold small">País</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  value="Brasil"
+                  disabled
+                />
+              </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="d-flex gap-3 mt-4 pt-3 border-top">
+              <button
+                type="submit"
+                class="btn btn-success btn-lg px-5 rounded-pill"
+                [disabled]="loading || isSearchingCep"
+              >
+                <span *ngIf="!loading">
+                  <i class="bi bi-rocket me-2"></i>
+                  Criar Loja
+                </span>
+                <span *ngIf="loading">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Criando...
+                </span>
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-lg px-4 rounded-pill"
+                routerLink="/home"
+              >
+                <i class="bi bi-x-lg me-1"></i>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

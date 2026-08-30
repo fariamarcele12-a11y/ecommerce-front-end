@@ -1,3 +1,4 @@
+// src/app/features/checkout/checkout.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -74,7 +75,7 @@ export class Checkout implements OnInit, OnDestroy {
 
   loadCartData(): void {
     this.subscriptions.add(
-      this.cartService.getCartItems().subscribe((items) => {
+      this.cartService.getCartItems().subscribe((items: CartItem[]) => {
         this.cartItems = items;
         if (items.length === 0) {
           this.alertService.warning(
@@ -87,21 +88,21 @@ export class Checkout implements OnInit, OnDestroy {
     );
 
     this.subscriptions.add(
-      this.cartService.getTotalPrice().subscribe((total) => {
+      this.cartService.getTotalPrice().subscribe((total: number) => {
         this.subtotal = total;
         this.updateTotals();
       }),
     );
 
     this.subscriptions.add(
-      this.cartService.getDiscount().subscribe((discount) => {
+      this.cartService.getDiscount().subscribe((discount: number) => {
         this.discount = discount;
         this.updateTotals();
       }),
     );
 
     this.subscriptions.add(
-      this.cartService.getShipping().subscribe((shipping) => {
+      this.cartService.getShipping().subscribe((shipping: number) => {
         this.shipping = shipping;
         this.updateTotals();
       }),
@@ -116,15 +117,8 @@ export class Checkout implements OnInit, OnDestroy {
     this.total = summary.total;
   }
 
-  // ===== MÉTODOS DE ENDEREÇO =====
-
-  /**
-   * Busca o endereço automaticamente ao perder o foco do campo CEP
-   */
   onCepBlur(): void {
     const cep = this.form.address.cep.replace(/\D/g, '');
-
-    // Se o CEP tem 8 dígitos, buscar endereço
     if (cep.length === 8) {
       this.buscarEndereco(cep);
     } else if (cep.length > 0 && cep.length < 8) {
@@ -135,37 +129,27 @@ export class Checkout implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Busca endereço usando o serviço ViaCEP
-   */
   buscarEndereco(cep: string): void {
     this.isSearchingCep = true;
 
     this.cepService.buscarCep(cep).subscribe({
       next: (endereco: Endereco) => {
-        // Preencher automaticamente os campos do formulário
         this.form.address.street = endereco.logradouro || '';
         this.form.address.neighborhood = endereco.bairro || '';
         this.form.address.city = endereco.localidade || '';
         this.form.address.state = endereco.uf || '';
         this.form.address.complement = endereco.complemento || '';
-
         this.isSearchingCep = false;
         this.alertService.toast('CEP encontrado! 📍', 'success', 2000);
-
-        console.log('✅ Endereço encontrado:', endereco);
       },
-      error: (error) => {
+      error: (error: any) => {
         this.isSearchingCep = false;
         console.error('❌ Erro ao buscar CEP:', error);
-
-        // Limpar campos que não foram preenchidos
         this.form.address.street = '';
         this.form.address.neighborhood = '';
         this.form.address.city = '';
         this.form.address.state = '';
         this.form.address.complement = '';
-
         this.alertService.warning(
           'CEP não encontrado',
           'Não foi possível encontrar o endereço para este CEP. Preencha os dados manualmente.'
@@ -174,12 +158,8 @@ export class Checkout implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Busca endereço ao digitar o CEP completo
-   */
   onCepInput(): void {
     const cep = this.form.address.cep.replace(/\D/g, '');
-    // Se o CEP tem 8 dígitos, buscar automaticamente
     if (cep.length === 8) {
       this.buscarEndereco(cep);
     }
@@ -209,7 +189,6 @@ export class Checkout implements OnInit, OnDestroy {
     }
   }
 
-  // 🔥 VALIDAÇÕES
   isValidCep(cep: string): boolean {
     return this.cepService.validarCep(cep);
   }
@@ -217,7 +196,6 @@ export class Checkout implements OnInit, OnDestroy {
   isValidCpf(cpf: string): boolean {
     const numbers = cpf.replace(/\D/g, '');
     if (numbers.length !== 11) return false;
-
     if (/^(\d)\1{10}$/.test(numbers)) return false;
 
     let sum = 0;
@@ -244,7 +222,6 @@ export class Checkout implements OnInit, OnDestroy {
   isValidCnpj(cnpj: string): boolean {
     const numbers = cnpj.replace(/\D/g, '');
     if (numbers.length !== 14) return false;
-
     if (/^(\d)\1{13}$/.test(numbers)) return false;
 
     let length = numbers.length - 2;
@@ -297,8 +274,6 @@ export class Checkout implements OnInit, OnDestroy {
       }
     }
   }
-
-  // ===== MÉTODOS DE PAGAMENTO =====
 
   onPaymentMethodChange(methodId: string): void {
     this.selectedPaymentMethod = methodId;

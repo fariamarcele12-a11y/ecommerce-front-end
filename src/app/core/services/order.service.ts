@@ -1,3 +1,4 @@
+// src/app/core/services/order.service.ts
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError, catchError, tap, map } from 'rxjs';
@@ -8,9 +9,9 @@ import { Order, OrderFilter, PaymentMethod, CardData } from '../models/checkout.
   providedIn: 'root',
 })
 export class OrderService {
-  // URLs da API
-  private apiUrl = 'https://ecommerce-api-mf.vercel.app/orders';
-  private localApiUrl = 'http://localhost:3000/orders';
+  // 🔥 URL da API local apenas
+  private apiUrl = 'http://localhost:3000/orders';
+  //private apiUrl = 'https://ecommerce-api-mf.vercel.app/orders';
 
   // Estado local
   private orders = new BehaviorSubject<Order[]>([]);
@@ -398,7 +399,7 @@ export class OrderService {
     } else {
       switch (error.status) {
         case 0:
-          errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão.';
+          errorMessage = 'Não foi possível conectar ao servidor local. Verifique se o JSON Server está rodando.';
           break;
         case 404:
           errorMessage = 'Pedido não encontrado.';
@@ -416,17 +417,6 @@ export class OrderService {
 
     console.error('❌ Erro no OrderService:', errorMessage);
     return throwError(() => new Error(errorMessage));
-  }
-
-  /**
-   * Alterna entre ambiente local e produção
-   */
-  setEnvironment(environment: 'local' | 'production'): void {
-    if (environment === 'local') {
-      this.apiUrl = this.localApiUrl;
-    } else {
-      this.apiUrl = 'https://ecommerce-api-mf.vercel.app/orders';
-    }
   }
 
   /**
@@ -457,5 +447,23 @@ export class OrderService {
       }),
       catchError(this.handleError),
     );
+  }
+
+  /**
+   * 🔥 Verifica o status da API local
+   */
+  checkApiHealth(): Observable<{ status: string; timestamp: string }> {
+    return this.http
+      .get<{ status: string; timestamp: string }>(`http://localhost:3000/`)
+      .pipe(
+        map(() => ({
+          status: 'online',
+          timestamp: new Date().toISOString(),
+        })),
+        catchError((error) => {
+          console.error('❌ API local não está respondendo:', error);
+          return throwError(() => new Error('API local indisponível. Execute: json-server --watch db.json --port 3000'));
+        }),
+      );
   }
 }

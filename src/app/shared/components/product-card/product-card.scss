@@ -1,3 +1,4 @@
+// src/app/shared/components/product-card/product-card.scss
 .product-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
@@ -279,7 +280,7 @@
 .product-card:nth-child(11) { animation-delay: 0.55s; }
 .product-card:nth-child(12) { animation-delay: 0.6s; }
 
-// Scrollbar customizada para a página de favoritos
+// Scrollbar customizada
 ::-webkit-scrollbar {
   width: 6px;
 }

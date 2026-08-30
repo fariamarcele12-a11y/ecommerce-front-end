@@ -1,8 +1,10 @@
+// src/app/app.routes.ts
 import { Routes } from '@angular/router';
 import { Home } from './features/home/home';
 import { ProductDetail } from './features/products/product-detail/product-detail';
 import { Cart } from './features/cart/cart';
 import { Checkout } from './features/checkout/checkout';
+import { DebugGuard } from './core/guards/debug.guard';
 
 export const routes: Routes = [
   // ============================================
@@ -79,29 +81,65 @@ export const routes: Routes = [
       import('./features/orders/order-detail/order-detail').then((m) => m.OrderDetail),
   },
 
-  { 
+  // ============================================
+  // CHAT
+  // ============================================
+  {
     path: 'chat',
-    loadComponent: () =>
-      import('./features/chat/chat').then((m) => m.Chat),
+    loadComponent: () => import('./features/chat/chat').then((m) => m.Chat),
   },
 
+  // ============================================
+  // LOJA - VISUALIZAÇÃO
+  // ============================================
   {
     path: 'loja/:id',
-    loadComponent: () =>
-      import('./features/store/store').then((m) => m.Store),
+    loadComponent: () => import('./features/store/store').then((m) => m.Store),
   },
 
+  // ============================================
+  // AUTENTICAÇÃO
+  // ============================================
   {
     path: 'login',
-    loadComponent: () =>
-      import('./features/auth/login/login').then((m) => m.Login),
+    loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
-
   {
     path: 'registrar',
-    loadComponent: () =>
-      import('./features/auth/register/register').then((m) => m.Register),
+    loadComponent: () => import('./features/auth/register/register').then((m) => m.Register),
   },
+
+  // ============================================
+  // GESTÃO DE LOJA
+  // ============================================
+  {
+    path: 'criar-loja',
+    loadComponent: () =>
+      import('./features/store/create-store/create-store').then((m) => m.CreateStore),
+  },
+  // 🔥 Rota para criar produto (storeId como string)
+  {
+    path: 'loja/:storeId/produto/novo',
+    canActivate: [DebugGuard],
+    loadComponent: () =>
+      import('./features/store/product-form/product-form').then((m) => {
+        console.log('📦 ProductForm carregado pela rota!');
+        return m.ProductForm;
+      }),
+  },
+  {
+    path: 'loja/:storeId/produto/:id/editar',
+    canActivate: [DebugGuard],
+    loadComponent: () =>
+      import('./features/store/product-form/product-form').then((m) => {
+        console.log('📦 ProductForm carregado pela rota (edição)!');
+        return m.ProductForm;
+      }),
+  },
+
+  // ============================================
+  // PERFIL DO USUÁRIO
+  // ============================================
 
   // ============================================
   // TERMOS E POLÍTICAS
@@ -116,9 +154,8 @@ export const routes: Routes = [
   },
 
   // ============================================
-  // ROTAS FUTURAS (REDIRECIONAM PARA HOME)
+  // ROTAS DE PRODUTOS (REDIRECIONAMENTO)
   // ============================================
-  { path: 'perfil', redirectTo: '/home' },
   { path: 'produtos', redirectTo: '/home' },
   { path: 'sobre', redirectTo: '/home' },
   { path: 'contato', redirectTo: '/home' },

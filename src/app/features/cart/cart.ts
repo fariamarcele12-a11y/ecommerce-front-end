@@ -1,3 +1,4 @@
+// src/app/features/cart/cart.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -46,34 +47,34 @@ export class Cart implements OnInit, OnDestroy {
     this.isLoading = true;
 
     this.subscriptions.add(
-      this.cartService.getCartItems().subscribe((items) => {
+      this.cartService.getCartItems().subscribe((items: CartItem[]) => {
         this.cartItems = items;
         this.isLoading = false;
       }),
     );
 
     this.subscriptions.add(
-      this.cartService.getTotalItems().subscribe((total) => {
+      this.cartService.getTotalItems().subscribe((total: number) => {
         this.totalItems = total;
       }),
     );
 
     this.subscriptions.add(
-      this.cartService.getTotalPrice().subscribe((total) => {
+      this.cartService.getTotalPrice().subscribe((total: number) => {
         this.subtotal = total;
         this.updateTotals();
       }),
     );
 
     this.subscriptions.add(
-      this.cartService.getDiscount().subscribe((discount) => {
+      this.cartService.getDiscount().subscribe((discount: number) => {
         this.discount = discount;
         this.updateTotals();
       }),
     );
 
     this.subscriptions.add(
-      this.cartService.getShipping().subscribe((shipping) => {
+      this.cartService.getShipping().subscribe((shipping: number) => {
         this.shipping = shipping;
         this.updateTotals();
       }),
@@ -135,9 +136,6 @@ export class Cart implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Aplica cupom de desconto
-   */
   applyCoupon(): void {
     if (!this.couponCode.trim()) {
       this.couponMessage = 'Digite um código de cupom.';
@@ -150,7 +148,7 @@ export class Cart implements OnInit, OnDestroy {
     this.couponMessage = '';
 
     this.cartService.applyCoupon(this.couponCode).subscribe({
-      next: (result) => {
+      next: (result: { valid: boolean; message: string; discountAmount?: number }) => {
         this.isApplyingCoupon = false;
 
         if (result.valid) {
@@ -169,7 +167,7 @@ export class Cart implements OnInit, OnDestroy {
           this.alertService.warning('Cupom inválido', result.message);
         }
       },
-      error: (error) => {
+      error: (error: any) => {
         this.isApplyingCoupon = false;
         this.couponApplied = false;
         this.couponMessage = '❌ Erro ao aplicar cupom. Tente novamente.';
@@ -179,9 +177,6 @@ export class Cart implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Remove o cupom aplicado
-   */
   removeCoupon(): void {
     this.cartService.removeDiscount();
     this.couponApplied = false;

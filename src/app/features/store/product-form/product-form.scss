@@ -1,0 +1,33 @@
+.card {
+  border-radius: 16px;
+}
+
+.form-control, .form-select {
+  border-radius: 8px;
+
+  &:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+}
+
+.input-group-text {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #00b894 0%, #00a86b 100%);
+  border: none;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #00a86b 0%, #00995d 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 184, 148, 0.3);
+  }
+}
+
+.form-switch .form-check-input:checked {
+  background-color: #667eea;
+  border-color: #667eea;
+}

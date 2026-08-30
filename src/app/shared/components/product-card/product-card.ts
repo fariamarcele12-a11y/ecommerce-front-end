@@ -1,3 +1,4 @@
+// src/app/shared/components/product-card/product-card.ts
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -95,7 +96,7 @@ export class ProductCard {
    * Verifica se tem frete grátis
    */
   hasFreeShipping(): boolean {
-    return this.product.price > 100;
+    return this.product.freeShipping || this.product.price > 100;
   }
 
   /**
@@ -106,5 +107,26 @@ export class ProductCard {
       return this.product.images[0];
     }
     return 'https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem';
+  }
+
+  /**
+   * 🔥 Obtém o nome do vendedor com fallback
+   */
+  getSellerName(): string {
+    return this.product.seller?.name || 'Vendedor';
+  }
+
+  /**
+   * 🔥 Obtém a avaliação do vendedor com fallback
+   */
+  getSellerRating(): number {
+    return this.product.seller?.rating || 0;
+  }
+
+  /**
+   * 🔥 Obtém o número de vendas do vendedor com fallback
+   */
+  getSellerSales(): number {
+    return this.product.seller?.sales || 0;
   }
 }
