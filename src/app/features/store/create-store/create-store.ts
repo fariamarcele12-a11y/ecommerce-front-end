@@ -31,7 +31,7 @@ export class CreateStore implements OnInit, OnDestroy {
   storeData: StoreForm = {
     storeName: '',
     description: '',
-    category: '',
+    category: '', // Mantido para compatibilidade, será preenchido com "Outros"
     logo: '',
     banner: '',
     phone: '',
@@ -54,19 +54,6 @@ export class CreateStore implements OnInit, OnDestroy {
     }
   };
 
-  categories = [
-    'Eletrônicos',
-    'Moda',
-    'Casa e Decoração',
-    'Esportes',
-    'Automóveis',
-    'Imóveis',
-    'Livros',
-    'Beleza',
-    'Alimentação',
-    'Outros'
-  ];
-
   constructor(
     private storeService: StoreService,
     private authService: AuthService,
@@ -82,7 +69,6 @@ export class CreateStore implements OnInit, OnDestroy {
           this.user = user;
           console.log('👤 Usuário logado:', user);
 
-          // 🔥 Converter user.id para número antes de passar
           const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
           this.checkExistingStore(userId);
           this.preencherDadosUsuario(user);
@@ -97,9 +83,6 @@ export class CreateStore implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
-  /**
-   * 🔥 Verifica se o usuário já tem uma loja
-   */
   checkExistingStore(userId: number): void {
     this.checkingStore = true;
     console.log('🔍 Verificando se usuário tem loja...');
@@ -139,9 +122,6 @@ export class CreateStore implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * 🔥 Mostra alerta de loja existente
-   */
   showStoreExistsAlert(): void {
     this.alertService.warning(
       'Loja já existente',
@@ -149,9 +129,6 @@ export class CreateStore implements OnInit, OnDestroy {
     );
   }
 
-  /**
-   * 🔥 Preenche dados do formulário com informações do usuário
-   */
   preencherDadosUsuario(user: User): void {
     if (user) {
       this.storeData.phone = user.phone || '';
@@ -172,9 +149,6 @@ export class CreateStore implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Busca endereço pelo CEP
-   */
   onCepBlur(): void {
     const cep = this.storeData.address.cep.replace(/\D/g, '');
     if (cep.length === 8) {
@@ -203,16 +177,10 @@ export class CreateStore implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * 🔥 Formata CEP
-   */
   formatCep(value: string): string {
     return this.cepService.formatarCep(value);
   }
 
-  /**
-   * 🔥 Valida e envia o formulário
-   */
   onSubmit(): void {
     if (!this.user) {
       this.alertService.error('Erro', 'Usuário não autenticado.');
@@ -235,10 +203,7 @@ export class CreateStore implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.storeData.category) {
-      this.alertService.warning('Categoria obrigatória', 'Selecione uma categoria para sua loja.');
-      return;
-    }
+    // 🔥 Categoria removida da validação
 
     if (!this.storeData.description || this.storeData.description.trim().length < 10) {
       this.alertService.warning('Descrição inválida', 'Descreva sua loja (mínimo 10 caracteres).');
@@ -258,7 +223,13 @@ export class CreateStore implements OnInit, OnDestroy {
     this.loading = true;
     this.alertService.info('Criando loja...', 'Por favor, aguarde um momento.');
 
-    this.storeService.createStore(this.storeData, this.user).subscribe({
+    // 🔥 Definir categoria padrão
+    const storeDataWithCategory = {
+      ...this.storeData,
+      category: 'Outros'
+    };
+
+    this.storeService.createStore(storeDataWithCategory, this.user).subscribe({
       next: (store) => {
         this.loading = false;
         console.log('✅ Loja criada:', store);
@@ -294,9 +265,6 @@ export class CreateStore implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * 🔥 Redirecionar para a loja existente
-   */
   goToExistingStore(): void {
     if (this.existingStoreId) {
       this.router.navigate(['/loja', this.existingStoreId]);

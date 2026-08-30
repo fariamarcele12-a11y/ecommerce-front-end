@@ -90,9 +90,39 @@
   }
 }
 
-.form-check-input:checked {
-  background-color: #667eea;
-  border-color: #667eea;
+// 🔥 Estilos para o campo de termos
+.form-check {
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &.border-danger {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5 !important;
+  }
+
+  &.border-success {
+    border-color: #28a745 !important;
+    background-color: #f0fff4 !important;
+  }
+
+  .form-check-input {
+    cursor: pointer;
+
+    &:checked {
+      background-color: #667eea;
+      border-color: #667eea;
+    }
+  }
+
+  .form-check-label {
+    a {
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
 }
 
 .form-check-label {

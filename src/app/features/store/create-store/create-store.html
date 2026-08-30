@@ -24,7 +24,7 @@
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
         <strong>Loja já existente</strong>
         <p class="mb-2">Você já possui uma loja cadastrada. Cada usuário pode ter apenas uma loja.</p>
-        <div class="d-flex gap-2 justify-content-center">
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
           <button class="btn btn-primary rounded-pill" (click)="goToExistingStore()">
             <i class="bi bi-shop me-1"></i>
             Acessar minha loja
@@ -92,23 +92,7 @@
               </div>
             </div>
 
-            <!-- Categoria -->
-            <div class="form-group mb-3">
-              <label class="form-label fw-bold small">
-                Categoria <span class="text-danger">*</span>
-              </label>
-              <select
-                class="form-select"
-                [(ngModel)]="storeData.category"
-                name="category"
-                required
-              >
-                <option value="">Selecione uma categoria</option>
-                <option *ngFor="let cat of categories" [value]="cat">
-                  {{ cat }}
-                </option>
-              </select>
-            </div>
+            <!-- 🔥 Categoria REMOVIDA do formulário -->
 
             <!-- Descrição -->
             <div class="form-group mb-3">
@@ -310,7 +294,6 @@
                 />
               </div>
               <div class="col-md-3">
-                <label class="form-label fw-bold small">Estado</label>
                 <select class="form-select" [(ngModel)]="storeData.address.state" name="state">
                   <option value="">UF</option>
                   <option value="AC">AC</option>

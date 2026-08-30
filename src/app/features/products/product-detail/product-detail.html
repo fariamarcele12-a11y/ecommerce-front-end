@@ -89,7 +89,6 @@
 
       <div class="d-flex align-items-center gap-3 mb-3">
         <div class="d-flex align-items-center">
-          <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
           <i
             class="bi bi-star-fill text-warning me-1"
             *ngFor="let star of getStars(product.seller.rating || 0)"
@@ -101,7 +100,6 @@
           <span class="ms-2 fw-bold">{{ product.seller.rating || 0 }}</span>
         </div>
         <span class="text-muted">|</span>
-        <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
         <span class="text-muted">{{ product.seller.sales || 0 }} vendas</span>
         <span class="text-muted">|</span>
         <span class="text-muted">
@@ -195,8 +193,8 @@
         </button>
       </div>
 
-      <!-- Botão: Perguntar sobre o produto -->
-      <div class="chat-buttons mt-4">
+      <!-- 🔥 Botão "Perguntar sobre o produto" - SÓ APARECE SE NÃO FOR O DONO -->
+      <div class="chat-buttons mt-4" *ngIf="!isOwner">
         <button
           class="btn btn-outline-primary rounded-pill w-100 py-2"
           [routerLink]="['/chat']"
@@ -248,7 +246,7 @@
     </div>
   </div>
 
-  <!-- Seção do Vendedor -->
+  <!-- 🔥 SEÇÃO DO VENDEDOR - COM BOTÃO OCULTO PARA O DONO -->
   <div class="seller-section mt-5 p-4 bg-light rounded-3">
     <h5 class="fw-bold mb-3">
       <i class="bi bi-shop me-2"></i>
@@ -276,8 +274,10 @@
           </div>
         </div>
       </div>
-      <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
+
+      <!-- 🔥 BOTÃO "PERGUNTAR AO VENDEDOR" - OCULTO SE FOR O DONO -->
       <button
+        *ngIf="!isOwner"
         class="btn btn-outline-primary rounded-pill ms-auto"
         [routerLink]="['/chat']"
         [queryParams]="{

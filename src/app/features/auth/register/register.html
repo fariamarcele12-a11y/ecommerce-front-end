@@ -216,7 +216,7 @@
                 </div>
               </div>
 
-              <!-- 🔥 Endereço CORRIGIDO com operador '!' -->
+              <!-- Endereço -->
               <div class="form-group mb-3">
                 <label class="form-label fw-bold small">Endereço</label>
                 <div class="row g-2">
@@ -225,8 +225,8 @@
                       type="text"
                       class="form-control"
                       placeholder="CEP"
-                      [(ngModel)]="address!.cep"
-                      (input)="address!.cep = formatCep(address!.cep)"
+                      [(ngModel)]="address.cep"
+                      (input)="address.cep = formatCep(address.cep)"
                       (blur)="onCepBlur()"
                       name="cep"
                       maxlength="9"
@@ -237,7 +237,7 @@
                       type="text"
                       class="form-control"
                       placeholder="Rua"
-                      [(ngModel)]="address!.street"
+                      [(ngModel)]="address.street"
                       name="street"
                     />
                   </div>
@@ -246,7 +246,7 @@
                       type="text"
                       class="form-control"
                       placeholder="Número"
-                      [(ngModel)]="address!.number"
+                      [(ngModel)]="address.number"
                       name="number"
                     />
                   </div>
@@ -255,7 +255,7 @@
                       type="text"
                       class="form-control"
                       placeholder="Complemento"
-                      [(ngModel)]="address!.complement"
+                      [(ngModel)]="address.complement"
                       name="complement"
                     />
                   </div>
@@ -264,7 +264,7 @@
                       type="text"
                       class="form-control"
                       placeholder="Bairro"
-                      [(ngModel)]="address!.neighborhood"
+                      [(ngModel)]="address.neighborhood"
                       name="neighborhood"
                     />
                   </div>
@@ -273,12 +273,12 @@
                       type="text"
                       class="form-control"
                       placeholder="Cidade"
-                      [(ngModel)]="address!.city"
+                      [(ngModel)]="address.city"
                       name="city"
                     />
                   </div>
                   <div class="col-md-3">
-                    <select class="form-select" [(ngModel)]="address!.state" name="state">
+                    <select class="form-select" [(ngModel)]="address.state" name="state">
                       <option value="">UF</option>
                       <option value="AC">AC</option>
                       <option value="AL">AL</option>
@@ -320,29 +320,44 @@
                 </div>
               </div>
 
-              <!-- Termos -->
-              <div class="form-check mb-3">
-                <input
-                  type="checkbox"
-                  class="form-check-input"
-                  id="terms"
-                  [(ngModel)]="termsAccepted"
-                  name="terms"
-                  required
-                />
-                <label class="form-check-label small" for="terms">
-                  Li e aceito os
-                  <a routerLink="/termos-de-uso" class="text-primary">Termos de Uso</a>
-                  e a
-                  <a routerLink="/politica-de-privacidade" class="text-primary">Política de Privacidade</a>
-                </label>
+              <!-- 🔥 TERMOS E POLÍTICAS - CHECKBOX PERFEITAMENTE ALINHADO -->
+              <div class="mb-3 p-3 bg-light rounded-3 border"
+                   [class.border-danger]="formSubmitted && !termsAccepted"
+                   [class.border-success]="termsAccepted && formSubmitted">
+                <!-- 🔥 USANDO CONTAINER FLEX COM ALINHAMENTO CORRETO -->
+                <div class="d-flex align-items-center gap-2">
+                  <input
+                    type="checkbox"
+                    class="form-check-input"
+                    id="terms"
+                    [(ngModel)]="termsAccepted"
+                    name="terms"
+                    required
+                    style="width: 18px; height: 18px; flex-shrink: 0; margin-top: 0; position: relative; top: 0;"
+                  />
+                  <label class="form-check-label small" for="terms" style="cursor: pointer; margin-top: 0; padding-top: 0;">
+                    <strong>Li e aceito os</strong>
+                    <a routerLink="/termos-de-uso" target="_blank" class="text-primary fw-bold">
+                      Termos de Uso
+                    </a>
+                    <strong>e a</strong>
+                    <a routerLink="/politica-de-privacidade" target="_blank" class="text-primary fw-bold">
+                      Política de Privacidade
+                    </a>
+                    <span class="text-danger">*</span>
+                  </label>
+                </div>
+                <div *ngIf="formSubmitted && !termsAccepted" class="text-danger small mt-1">
+                  <i class="bi bi-exclamation-circle me-1"></i>
+                  Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.
+                </div>
               </div>
 
               <!-- Botão Cadastrar -->
               <button
                 type="submit"
                 class="btn btn-primary w-100 rounded-pill py-2 fw-bold"
-                [disabled]="loading"
+                [disabled]="loading || isSearchingCep"
               >
                 <span *ngIf="!loading">
                   <i class="bi bi-person-plus me-2"></i>

@@ -10,6 +10,7 @@ import { ProductService } from '../../../core/services/product.service';
 import { CartService } from '../../../core/services/cart.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { StoreService } from '../../../core/services/store.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -28,6 +29,8 @@ export class ProductDetail implements OnInit, OnDestroy {
   showFullDescription = false;
   Math = Math;
   sellerName: string = 'Carregando...';
+  isOwner: boolean = false;
+  currentUserId: string | null = null;
 
   private routeSub: Subscription = new Subscription();
 
@@ -38,9 +41,17 @@ export class ProductDetail implements OnInit, OnDestroy {
     private cartService: CartService,
     private alertService: AlertService,
     private storeService: StoreService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
+    // 🔥 PEGAR ID DO USUÁRIO LOGADO
+    const user = this.authService.getCurrentUser();
+    if (user) {
+      this.currentUserId = String(user.id);
+      console.log('👤 ID do usuário logado:', this.currentUserId);
+    }
+
     this.routeSub = this.route.params.subscribe((params) => {
       const id = params['id'];
       console.log('🔍 ID do produto na rota:', id);
@@ -57,9 +68,6 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Carrega produto por ID (aceita string ou number)
-   */
   loadProduct(id: string | number): void {
     this.loading = true;
     console.log(`🔍 Buscando produto com ID: ${id}`);
@@ -70,8 +78,8 @@ export class ProductDetail implements OnInit, OnDestroy {
           this.product = product;
           this.isFavorite = product.isFavorite || false;
 
-          // 🔥 Buscar o nome da loja
-          this.loadSellerName(product);
+          // 🔥 BUSCAR O SELLER ID
+          this.loadSellerInfo(product);
 
           this.loadRelatedProducts(product.category, product.id);
         } else {
@@ -89,42 +97,50 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   /**
-   * 🔥 Carrega o nome do vendedor/loja
+   * 🔥 CARREGA INFORMAÇÕES DO VENDEDOR E VERIFICA PROPRIEDADE
    */
-  loadSellerName(product: Product): void {
-    // Se o produto já tem o nome do vendedor, usar ele
-    if (product.seller?.name && product.seller.name !== 'Vendedor') {
-      this.sellerName = product.seller.name;
+  loadSellerInfo(product: Product): void {
+    console.log('🔍 Carregando informações do vendedor...');
+    console.log('📦 Produto:', product);
+    console.log('👤 Seller atual:', product.seller);
+
+    // 🔥 SE O PRODUTO JÁ TEM SELLER, USAR ELE
+    if (product.seller) {
+      const sellerId = String(product.seller.id);
+      console.log('🆔 Seller ID do produto:', sellerId);
+      console.log('👤 Current User ID:', this.currentUserId);
+
+      this.isOwner = sellerId === this.currentUserId;
+      console.log('👤 É o dono?', this.isOwner);
+      this.sellerName = product.seller.name || 'Vendedor';
       return;
     }
 
-    // Se não, buscar da loja
+    // 🔥 SE NÃO TEM SELLER, BUSCAR PELA LOJA
     if (product.storeId) {
+      console.log('🔍 Buscando loja para storeId:', product.storeId);
       this.storeService.getStoreById(product.storeId).subscribe({
         next: (store) => {
+          console.log('🏪 Loja encontrada:', store);
           if (store) {
             this.sellerName = store.storeName;
-            // Atualizar o produto com o nome da loja
-            if (this.product) {
-              this.product = {
-                ...this.product,
-                seller: {
-                  ...this.product.seller,
-                  name: store.storeName,
-                },
-              };
-            }
-          } else {
-            this.sellerName = 'Vendedor';
+
+            // 🔥 Verificar se o usuário é o dono da loja
+            const storeUserId = String(store.userId);
+            this.isOwner = storeUserId === this.currentUserId;
+            console.log('👤 É o dono da loja?', this.isOwner);
+            console.log('🆔 Store User ID:', storeUserId);
+            console.log('👤 Current User ID:', this.currentUserId);
           }
         },
         error: (error) => {
-          console.error('❌ Erro ao buscar nome da loja:', error);
+          console.error('❌ Erro ao buscar loja:', error);
           this.sellerName = 'Vendedor';
-        },
+        }
       });
     } else {
-      this.sellerName = product.seller?.name || 'Vendedor';
+      this.sellerName = 'Vendedor';
+      this.isOwner = false;
     }
   }
 
@@ -178,26 +194,14 @@ export class ProductDetail implements OnInit, OnDestroy {
     return 0;
   }
 
-  /**
-   * 🔥 Obtém o nome do vendedor
-   */
   getSellerName(): string {
-    if (this.product?.seller?.name && this.product.seller.name !== 'Vendedor') {
-      return this.product.seller.name;
-    }
     return this.sellerName || 'Vendedor';
   }
 
-  /**
-   * 🔥 Obtém a avaliação do vendedor
-   */
   getSellerRating(): number {
     return this.product?.seller?.rating || 0;
   }
 
-  /**
-   * 🔥 Obtém o número de vendas do vendedor
-   */
   getSellerSales(): number {
     return this.product?.seller?.sales || 0;
   }

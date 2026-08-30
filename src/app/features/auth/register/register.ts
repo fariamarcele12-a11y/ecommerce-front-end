@@ -149,6 +149,12 @@ export class Register {
       return false;
     }
 
+    // 🔥 VALIDAÇÃO DOS TERMOS - OBRIGATÓRIO
+    if (!this.termsAccepted) {
+      this.alertService.warning('Aceite os termos', 'Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.');
+      return false;
+    }
+
     return true;
   }
 
