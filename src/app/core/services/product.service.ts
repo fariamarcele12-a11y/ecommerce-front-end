@@ -314,11 +314,16 @@ export class ProductService {
    * Remove um produto
    */
   deleteProduct(id: number): Observable<void> {
+    console.log(`🗑️ Removendo produto ID: ${id}`);
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
+        console.log('✅ Produto removido com sucesso');
         this.invalidateCache();
       }),
-      catchError(this.handleError),
+      catchError((error) => {
+        console.error('❌ Erro ao remover produto:', error);
+        return throwError(() => new Error('Erro ao remover produto. Tente novamente.'));
+      }),
     );
   }
 

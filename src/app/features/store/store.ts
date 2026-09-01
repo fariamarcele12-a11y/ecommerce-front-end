@@ -5,10 +5,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ProductService } from '../../core/services/product.service';
+import { CategoryService } from '../../core/services/category.service'; // 🔥 ADICIONAR
 import { AlertService } from '../../core/services/alert.service';
 import { Store as StoreModel } from '../../core/models/store.model';
 import { Product } from '../../core/models/ProductModel/product.model';
-import { ProductCard } from '../../shared/components/product-card/product-card';
 
 @Component({
   selector: 'app-store',
@@ -31,6 +31,7 @@ export class Store implements OnInit {
     private storeService: StoreService,
     private authService: AuthService,
     private productService: ProductService,
+    private categoryService: CategoryService, // 🔥 ADICIONAR
     private alertService: AlertService,
   ) {}
 
@@ -72,9 +73,7 @@ export class Store implements OnInit {
 
         if (store) {
           this.store = store;
-          // 🔥 CORRIGIDO: Converter userId para string
           this.checkOwnership(String(store.userId));
-          // 🔥 CORRIGIDO: Converter store.id para string
           this.loadProducts(String(store.id));
         } else {
           console.log('❌ Loja não encontrada');
@@ -105,48 +104,98 @@ export class Store implements OnInit {
 
   checkOwnership(userId: string): void {
     const user = this.authService.getCurrentUser();
-    // 🔥 CORRIGIDO: Converter user.id para string para comparação
     this.isOwner = String(user?.id) === userId;
     console.log('👤 É o dono da loja?', this.isOwner);
   }
 
   /**
-   * 🔥 EXCLUIR PRODUTO
+   * 🔥 EXCLUIR PRODUTO - COM ATUALIZAÇÃO DA CATEGORIA
    */
-  deleteProduct(productId: number, productName: string): void {
-    this.alertService.confirm(
-      `Excluir "${productName}"?`,
-      'Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.',
-      'Sim, excluir',
-      'Cancelar'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        this.deletingProduct = true;
-        console.log(`🗑️ Excluindo produto ID: ${productId}`);
+  deleteProduct(productId: number, productName: string, categorySlug: string): void {
+    this.alertService
+      .confirm(
+        `Excluir "${productName}"?`,
+        'Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.',
+        'Sim, excluir',
+        'Cancelar',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.deletingProduct = true;
+          console.log(`🗑️ Excluindo produto ID: ${productId}`);
+          console.log(`📂 Categoria do produto: ${categorySlug}`);
 
-        this.productService.deleteProduct(productId).subscribe({
-          next: () => {
-            this.deletingProduct = false;
-            console.log('✅ Produto excluído com sucesso');
-            this.alertService.success(
-              'Produto excluído!',
-              'O produto foi removido da sua loja com sucesso.'
-            );
-            // 🔥 CORRIGIDO: Recarregar a lista de produtos
-            if (this.store?.id) {
-              this.loadProducts(String(this.store.id));
-            }
-          },
-          error: (error) => {
-            this.deletingProduct = false;
-            console.error('❌ Erro ao excluir produto:', error);
-            this.alertService.error(
-              'Erro',
-              'Não foi possível excluir o produto. Tente novamente.'
-            );
-          }
-        });
-      }
+          this.productService.deleteProduct(productId).subscribe({
+            next: () => {
+              this.deletingProduct = false;
+              console.log('✅ Produto excluído com sucesso');
+
+              // 🔥 ATUALIZAR O CONTADOR DA CATEGORIA
+              this.updateCategoryProductCount(categorySlug, -1);
+
+              this.alertService.success(
+                'Produto excluído!',
+                'O produto foi removido da sua loja com sucesso.',
+              );
+
+              // 🔥 Recarregar a lista de produtos
+              if (this.store?.id) {
+                this.loadProducts(String(this.store.id));
+              }
+            },
+            error: (error) => {
+              this.deletingProduct = false;
+              console.error('❌ Erro ao excluir produto:', error);
+              this.alertService.error(
+                'Erro',
+                'Não foi possível excluir o produto. Tente novamente.',
+              );
+            },
+          });
+        }
+      });
+  }
+
+  /**
+   * 🔥 ATUALIZA O CONTADOR DE PRODUTOS DA CATEGORIA
+   */
+  private updateCategoryProductCount(categorySlug: string, increment: number): void {
+    console.log(`🔄 Atualizando contador da categoria: ${categorySlug} (${increment})`);
+
+    if (!categorySlug) {
+      console.warn('⚠️ Categoria não informada, pulando atualização');
+      return;
+    }
+
+    this.categoryService.getCategoryBySlug(categorySlug).subscribe({
+      next: (category) => {
+        if (category) {
+          console.log(`📦 Categoria encontrada: ${category.name} (ID: ${category.id})`);
+
+          const newCount = Math.max(0, (category.productCount || 0) + increment);
+          console.log(`📊 Novo contador: ${newCount}`);
+
+          this.categoryService
+            .updateCategory(category.id, {
+              productCount: newCount,
+            })
+            .subscribe({
+              next: (updated) => {
+                console.log(
+                  `✅ Categoria ${updated.name} atualizada para ${updated.productCount} produtos`,
+                );
+              },
+              error: (error) => {
+                console.error('❌ Erro ao atualizar contador da categoria:', error);
+              },
+            });
+        } else {
+          console.warn(`⚠️ Categoria não encontrada: ${categorySlug}`);
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erro ao buscar categoria:', error);
+      },
     });
   }
 
@@ -155,7 +204,7 @@ export class Store implements OnInit {
    */
   editProduct(productId: number): void {
     if (this.store?.id) {
-      this.router.navigate(['/loja', this.store.id, 'produto', productId, 'editar']);
+      this.router.navigate([`/loja/${this.store.id}/produto/${productId}/editar`]);
     }
   }
 
@@ -189,7 +238,7 @@ export class Store implements OnInit {
     if (this.store?.id) {
       const storeId = String(this.store.id);
       console.log('🔗 Navegando para criar produto com storeId:', storeId);
-      this.router.navigate(['/loja', storeId, 'produto/novo']);
+      this.router.navigate([`/loja/${storeId}/produto/novo`]);
     } else {
       console.error('❌ ID da loja não disponível');
     }
@@ -198,8 +247,7 @@ export class Store implements OnInit {
   testNavigate(): void {
     if (this.store?.id) {
       const storeId = String(this.store.id);
-      console.log('🧪 TESTE: Navegando para /loja/' + storeId + '/produto/novo');
-      this.router.navigate(['/loja', storeId, 'produto/novo']);
+      this.router.navigate([`/loja/${storeId}/produto/novo`]);
     }
   }
 

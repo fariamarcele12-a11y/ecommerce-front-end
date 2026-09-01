@@ -223,9 +223,11 @@
             [src]="product.images[0]"
             [alt]="product.name"
             class="card-img-top"
-            style="height: 200px; object-fit: cover;"
-            (error)="product.images[0] = 'https://via.placeholder.com/300x200/667eea/ffffff?text=Produto'"
-          >
+            style="height: 200px; object-fit: cover"
+            (error)="
+              product.images[0] = 'https://via.placeholder.com/300x200/667eea/ffffff?text=Produto'
+            "
+          />
 
           <!-- 🔥 Botões de Ação do Produto (apenas para o dono) -->
           <div *ngIf="isOwner" class="position-absolute top-0 end-0 m-2 d-flex gap-1">
@@ -238,7 +240,7 @@
             </button>
             <button
               class="btn btn-sm btn-light rounded-circle shadow-sm"
-              (click)="deleteProduct(product.id, product.name)"
+              (click)="deleteProduct(product.id, product.name, product.category)"
               [disabled]="deletingProduct"
               title="Excluir produto"
             >
@@ -250,10 +252,17 @@
             <h6 class="card-title text-truncate">{{ product.name }}</h6>
             <p class="fw-bold text-primary">{{ formatPrice(product.price) }}</p>
             <div class="d-flex justify-content-between align-items-center">
-              <span class="badge" [class.bg-success]="product.stock > 0" [class.bg-danger]="product.stock === 0">
+              <span
+                class="badge"
+                [class.bg-success]="product.stock > 0"
+                [class.bg-danger]="product.stock === 0"
+              >
                 {{ product.stock > 0 ? 'Em estoque' : 'Esgotado' }}
               </span>
-              <a [routerLink]="['/produto', product.id]" class="btn btn-outline-primary btn-sm rounded-pill">
+              <a
+                [routerLink]="['/produto', product.id]"
+                class="btn btn-outline-primary btn-sm rounded-pill"
+              >
                 Ver detalhes
               </a>
             </div>

@@ -193,7 +193,7 @@ export class CreateStore implements OnInit, OnDestroy {
         'Você já possui uma loja cadastrada.'
       );
       if (this.existingStoreId) {
-        this.router.navigate(['/loja', this.existingStoreId]);
+        this.router.navigate([`/loja/${this.existingStoreId}`]);
       }
       return;
     }

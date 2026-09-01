@@ -105,7 +105,7 @@ export class ProductForm implements OnInit {
       },
       error: (error) => {
         console.error('❌ Erro ao buscar nome da loja:', error);
-      }
+      },
     });
   }
 
@@ -151,7 +151,7 @@ export class ProductForm implements OnInit {
         console.error('❌ Erro ao carregar produto:', error);
         this.alertService.error('Erro', 'Não foi possível carregar os dados do produto.');
         this.router.navigate(['/loja', this.storeId]);
-      }
+      },
     });
   }
 
@@ -197,12 +197,66 @@ export class ProductForm implements OnInit {
   private getDefaultCategories(): Category[] {
     const now = new Date().toISOString();
     return [
-      { id: 1, name: 'Eletrônicos', slug: 'eletronicos', active: true, createdAt: now, description: 'Produtos eletrônicos e tecnologia', icon: 'bi-phone', productCount: 0 },
-      { id: 2, name: 'Moda', slug: 'moda', active: true, createdAt: now, description: 'Roupas, calçados e acessórios', icon: 'bi-bag', productCount: 0 },
-      { id: 3, name: 'Casa e Decoração', slug: 'casa-decoracao', active: true, createdAt: now, description: 'Móveis, decoração e utensílios', icon: 'bi-house', productCount: 0 },
-      { id: 4, name: 'Esportes', slug: 'esportes', active: true, createdAt: now, description: 'Equipamentos e acessórios esportivos', icon: 'bi-bicycle', productCount: 0 },
-      { id: 5, name: 'Automóveis', slug: 'automoveis', active: true, createdAt: now, description: 'Carros, motos e peças', icon: 'bi-car-front', productCount: 0 },
-      { id: 6, name: 'Imóveis', slug: 'imoveis', active: true, createdAt: now, description: 'Casas, apartamentos e terrenos', icon: 'bi-building', productCount: 0 },
+      {
+        id: 1,
+        name: 'Eletrônicos',
+        slug: 'eletronicos',
+        active: true,
+        createdAt: now,
+        description: 'Produtos eletrônicos e tecnologia',
+        icon: 'bi-phone',
+        productCount: 0,
+      },
+      {
+        id: 2,
+        name: 'Moda',
+        slug: 'moda',
+        active: true,
+        createdAt: now,
+        description: 'Roupas, calçados e acessórios',
+        icon: 'bi-bag',
+        productCount: 0,
+      },
+      {
+        id: 3,
+        name: 'Casa e Decoração',
+        slug: 'casa-decoracao',
+        active: true,
+        createdAt: now,
+        description: 'Móveis, decoração e utensílios',
+        icon: 'bi-house',
+        productCount: 0,
+      },
+      {
+        id: 4,
+        name: 'Esportes',
+        slug: 'esportes',
+        active: true,
+        createdAt: now,
+        description: 'Equipamentos e acessórios esportivos',
+        icon: 'bi-bicycle',
+        productCount: 0,
+      },
+      {
+        id: 5,
+        name: 'Automóveis',
+        slug: 'automoveis',
+        active: true,
+        createdAt: now,
+        description: 'Carros, motos e peças',
+        icon: 'bi-car-front',
+        productCount: 0,
+      },
+      {
+        id: 6,
+        name: 'Imóveis',
+        slug: 'imoveis',
+        active: true,
+        createdAt: now,
+        description: 'Casas, apartamentos e terrenos',
+        icon: 'bi-building',
+        productCount: 0,
+      },
     ];
   }
 
@@ -220,6 +274,11 @@ export class ProductForm implements OnInit {
 
   /**
    * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO)
+   */
+  // src/app/features/store/product-form/product-form.ts
+
+  /**
+   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO) - COM ATUALIZAÇÃO DE CONTADOR
    */
   onSubmit(): void {
     if (!this.validateForm()) {
@@ -240,7 +299,10 @@ export class ProductForm implements OnInit {
       condition: this.product.condition,
       location: this.product.location,
       stock: this.product.stock,
-      images: images.length > 0 ? images : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'],
+      images:
+        images.length > 0
+          ? images
+          : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'],
       freeShipping: this.product.freeShipping,
       seller: {
         id: userId,
@@ -262,7 +324,7 @@ export class ProductForm implements OnInit {
           console.log('✅ Produto atualizado:', product);
           this.alertService.success(
             'Produto atualizado!',
-            'O produto foi atualizado com sucesso! 🎉'
+            'O produto foi atualizado com sucesso! 🎉',
           );
           this.router.navigate(['/loja', this.storeId]);
         },
@@ -278,9 +340,14 @@ export class ProductForm implements OnInit {
         next: (product: Product) => {
           this.loading = false;
           console.log('✅ Produto criado:', product);
+          console.log('📂 Categoria do produto:', product.category);
+
+          // 🔥 ATUALIZAR O CONTADOR DA CATEGORIA
+          this.updateCategoryProductCount(product.category);
+
           this.alertService.success(
             'Produto criado!',
-            'O produto foi adicionado à sua loja com sucesso! 🎉'
+            'O produto foi adicionado à sua loja com sucesso! 🎉',
           );
           this.router.navigate(['/loja', this.storeId]);
         },
@@ -293,13 +360,59 @@ export class ProductForm implements OnInit {
     }
   }
 
+  /**
+   * 🔥 ATUALIZA O CONTADOR DE PRODUTOS DA CATEGORIA
+   */
+  private updateCategoryProductCount(categorySlug: string): void {
+    if (!categorySlug) {
+      console.warn('⚠️ Categoria não informada, pulando atualização');
+      return;
+    }
+
+    console.log(`🔄 Atualizando contador da categoria: ${categorySlug}`);
+
+    this.categoryService.getCategoryBySlug(categorySlug).subscribe({
+      next: (category) => {
+        console.log('📦 Categoria encontrada:', category);
+
+        if (category) {
+          const newCount = (category.productCount || 0) + 1;
+          console.log(`📊 Novo contador: ${newCount} (era ${category.productCount})`);
+
+          this.categoryService
+            .updateCategory(category.id, {
+              productCount: newCount,
+            })
+            .subscribe({
+              next: (updated) => {
+                console.log(
+                  `✅ Categoria "${updated.name}" atualizada para ${updated.productCount} produtos`,
+                );
+              },
+              error: (error) => {
+                console.error('❌ Erro ao atualizar contador da categoria:', error);
+              },
+            });
+        } else {
+          console.warn(`⚠️ Categoria não encontrada: ${categorySlug}`);
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erro ao buscar categoria:', error);
+      },
+    });
+  }
+
   validateForm(): boolean {
     if (!this.product.name || this.product.name.trim().length < 3) {
       this.alertService.warning('Nome inválido', 'Digite um nome com pelo menos 3 caracteres.');
       return false;
     }
     if (!this.product.description || this.product.description.trim().length < 10) {
-      this.alertService.warning('Descrição inválida', 'Descreva o produto com pelo menos 10 caracteres.');
+      this.alertService.warning(
+        'Descrição inválida',
+        'Descreva o produto com pelo menos 10 caracteres.',
+      );
       return false;
     }
     if (!this.product.price || this.product.price <= 0) {
