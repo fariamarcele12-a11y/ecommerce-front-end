@@ -1,0 +1,410 @@
+<!-- src/app/features/profile/profile.html -->
+<div class="container py-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a routerLink="/home">Home</a></li>
+          <li class="breadcrumb-item active">Meu Perfil</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+    </div>
+  </div>
+
+  <!-- Conteúdo -->
+  <div *ngIf="!loading && user" class="row g-4">
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center p-4">
+          <!-- Avatar -->
+          <div class="avatar-wrapper mx-auto mb-3">
+            <div class="avatar-placeholder rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                 style="width: 100px; height: 100px; font-size: 40px; font-weight: bold; margin: 0 auto;">
+              {{ getInitials(user.name) }}
+            </div>
+          </div>
+
+          <h4 class="fw-bold mb-1">{{ user.name }}</h4>
+          <p class="text-muted small">{{ user.email }}</p>
+
+          <div class="d-flex justify-content-center gap-2 flex-wrap">
+            <span class="badge bg-primary">{{ getUserTypeLabel() }}</span>
+            <span *ngIf="hasStore" class="badge bg-success">
+              <i class="bi bi-shop me-1"></i> Vendedor
+            </span>
+          </div>
+
+          <hr>
+
+          <!-- Informações rápidas -->
+          <div class="text-start">
+            <div class="d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted">Membro desde</span>
+              <span class="fw-semibold">{{ formatDate(user.createdAt || '') }}</span>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted">Documento</span>
+              <span class="fw-semibold">{{ user.document || 'Não informado' }}</span>
+            </div>
+            <!-- 🔥 CORRIGIDO: Verificando store com *ngIf -->
+            <div class="d-flex justify-content-between py-2" *ngIf="hasStore && store">
+              <span class="text-muted">Loja</span>
+              <a [routerLink]="['/loja', store.id]" class="fw-semibold text-primary text-decoration-none">
+                {{ store.storeName }}
+                <i class="bi bi-arrow-right-short"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Botões de ação -->
+          <div class="d-grid gap-2 mt-3">
+            <!-- 🔥 CORRIGIDO: Verificando store com *ngIf -->
+            <a *ngIf="hasStore && store"
+               [routerLink]="['/loja', store.id]"
+               class="btn btn-outline-primary rounded-pill">
+              <i class="bi bi-shop me-2"></i> Minha Loja
+            </a>
+            <button *ngIf="!hasStore"
+                    class="btn btn-success rounded-pill"
+                    routerLink="/criar-loja">
+              <i class="bi bi-plus-circle me-2"></i> Criar Loja
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulário -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="fw-bold mb-4">
+            <i class="bi bi-pencil-square text-primary me-2"></i>
+            Editar Perfil
+          </h4>
+
+          <form (ngSubmit)="saveProfile()" #profileForm="ngForm">
+            <!-- Tipo de Documento -->
+            <div class="form-group mb-3">
+              <label class="form-label fw-bold small">Tipo de cadastro</label>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input
+                    type="radio"
+                    class="form-check-input"
+                    id="pf"
+                    [checked]="profileData.documentType === 'pf'"
+                    (change)="profileData.documentType = 'pf'"
+                    disabled
+                  />
+                  <label class="form-check-label" for="pf">
+                    <i class="bi bi-person me-1"></i>
+                    Pessoa Física
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input
+                    type="radio"
+                    class="form-check-input"
+                    id="pj"
+                    [checked]="profileData.documentType === 'pj'"
+                    (change)="profileData.documentType = 'pj'"
+                    disabled
+                  />
+                  <label class="form-check-label" for="pj">
+                    <i class="bi bi-building me-1"></i>
+                    Pessoa Jurídica
+                  </label>
+                </div>
+              </div>
+              <small class="text-muted">O tipo de cadastro não pode ser alterado.</small>
+            </div>
+
+            <!-- Nome -->
+            <div class="form-group mb-3">
+              <label class="form-label fw-bold small">
+                Nome Completo <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-person"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Seu nome completo"
+                  [(ngModel)]="profileData.name"
+                  name="name"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Campos PF -->
+            <div *ngIf="profileData.documentType === 'pf'" class="form-group mb-3">
+              <label class="form-label fw-bold small">Data de Nascimento</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-calendar"></i>
+                </span>
+                <input
+                  type="date"
+                  class="form-control"
+                  [(ngModel)]="birthDate"
+                  name="birthDate"
+                />
+              </div>
+            </div>
+
+            <!-- Campos PJ -->
+            <div *ngIf="profileData.documentType === 'pj'">
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">Razão Social</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-building"></i>
+                  </span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="Razão Social da empresa"
+                    [(ngModel)]="companyName"
+                    name="companyName"
+                  />
+                </div>
+              </div>
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">Nome Fantasia</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-shop"></i>
+                  </span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="Nome fantasia da empresa"
+                    [(ngModel)]="tradeName"
+                    name="tradeName"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div class="form-group mb-3">
+              <label class="form-label fw-bold small">
+                E-mail <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-envelope"></i>
+                </span>
+                <input
+                  type="email"
+                  class="form-control"
+                  placeholder="seu@email.com"
+                  [(ngModel)]="profileData.email"
+                  name="email"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Telefone -->
+            <div class="form-group mb-3">
+              <label class="form-label fw-bold small">
+                Telefone <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-phone"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="(00) 00000-0000"
+                  [(ngModel)]="profileData.phone"
+                  (input)="profileData.phone = formatPhone(profileData.phone)"
+                  name="phone"
+                  required
+                  maxlength="15"
+                />
+              </div>
+            </div>
+
+            <!-- Documento (apenas leitura) -->
+            <div class="form-group mb-3">
+              <label class="form-label fw-bold small">
+                {{ profileData.documentType === 'pf' ? 'CPF' : 'CNPJ' }}
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-credit-card"></i>
+                </span>
+                <input
+                  type="text"
+                  class="form-control"
+                  [value]="profileData.document"
+                  disabled
+                />
+                <span class="input-group-text bg-light text-muted">
+                  <i class="bi bi-lock"></i>
+                </span>
+              </div>
+              <small class="text-muted">O documento não pode ser alterado.</small>
+            </div>
+
+            <!-- Endereço -->
+            <h5 class="fw-bold mt-4 mb-3">
+              <i class="bi bi-geo-alt text-primary me-2"></i>
+              Endereço
+            </h5>
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-bold small">CEP</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="00000-000"
+                  [(ngModel)]="profileData.address.cep"
+                  (input)="profileData.address.cep = formatCep(profileData.address.cep)"
+                  (blur)="onCepBlur()"
+                  name="cep"
+                  maxlength="9"
+                />
+              </div>
+              <div class="col-md-8">
+                <label class="form-label fw-bold small">Rua</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Nome da rua"
+                  [(ngModel)]="profileData.address.street"
+                  name="street"
+                />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold small">Número</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="123"
+                  [(ngModel)]="profileData.address.number"
+                  name="number"
+                />
+              </div>
+              <div class="col-md-5">
+                <label class="form-label fw-bold small">Complemento</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Apto, Bloco, etc."
+                  [(ngModel)]="profileData.address.complement"
+                  name="complement"
+                />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold small">Bairro</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Bairro"
+                  [(ngModel)]="profileData.address.neighborhood"
+                  name="neighborhood"
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold small">Cidade</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Cidade"
+                  [(ngModel)]="profileData.address.city"
+                  name="city"
+                />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold small">Estado</label>
+                <select class="form-select" [(ngModel)]="profileData.address.state" name="state">
+                  <option value="">UF</option>
+                  <option value="AC">AC</option>
+                  <option value="AL">AL</option>
+                  <option value="AP">AP</option>
+                  <option value="AM">AM</option>
+                  <option value="BA">BA</option>
+                  <option value="CE">CE</option>
+                  <option value="DF">DF</option>
+                  <option value="ES">ES</option>
+                  <option value="GO">GO</option>
+                  <option value="MA">MA</option>
+                  <option value="MT">MT</option>
+                  <option value="MS">MS</option>
+                  <option value="MG">MG</option>
+                  <option value="PA">PA</option>
+                  <option value="PB">PB</option>
+                  <option value="PR">PR</option>
+                  <option value="PE">PE</option>
+                  <option value="PI">PI</option>
+                  <option value="RJ">RJ</option>
+                  <option value="RN">RN</option>
+                  <option value="RS">RS</option>
+                  <option value="RO">RO</option>
+                  <option value="RR">RR</option>
+                  <option value="SC">SC</option>
+                  <option value="SP">SP</option>
+                  <option value="SE">SE</option>
+                  <option value="TO">TO</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold small">País</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  value="Brasil"
+                  disabled
+                />
+              </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="d-flex gap-3 mt-4 pt-3 border-top">
+              <button
+                type="submit"
+                class="btn btn-primary btn-lg px-5 rounded-pill"
+                [disabled]="saving || isSearchingCep"
+              >
+                <span *ngIf="!saving">
+                  <i class="bi bi-check-lg me-2"></i>
+                  Salvar Alterações
+                </span>
+                <span *ngIf="saving">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Salvando...
+                </span>
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-lg px-4 rounded-pill"
+                routerLink="/home"
+              >
+                <i class="bi bi-x-lg me-1"></i>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

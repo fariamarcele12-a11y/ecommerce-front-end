@@ -140,6 +140,10 @@ export const routes: Routes = [
   // ============================================
   // PERFIL DO USUÁRIO
   // ============================================
+  {
+    path: 'perfil',
+    loadComponent: () => import('./features/profile/profile').then((m) => m.Profile),
+  },
 
   // ============================================
   // TERMOS E POLÍTICAS
