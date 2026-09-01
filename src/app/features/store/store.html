@@ -57,7 +57,9 @@
 
       <div class="col-md-4 text-md-end mt-3 mt-md-0">
         <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+          <!-- 🔥 Botão "Falar com a loja" - oculto para o dono -->
           <button
+            *ngIf="!isOwner"
             class="btn btn-outline-success rounded-pill px-4"
             [routerLink]="['/chat']"
             [queryParams]="{ sellerId: store.userId, sellerName: store.storeName, store: 'true' }"
@@ -124,7 +126,6 @@
       <div class="card border-0 shadow-sm">
         <div class="card-body">
           <h6 class="fw-bold mb-3"><i class="bi bi-geo-alt me-2"></i>Localização</h6>
-          <!-- 🔥 Removido o operador '?.' porque address é obrigatório -->
           <p class="text-secondary small mb-1">
             <i class="bi bi-building me-2"></i>
             {{ store.address.street }}, {{ store.address.number }}
@@ -203,7 +204,7 @@
     </div>
   </div>
 
-  <!-- Produtos da Loja -->
+  <!-- 🔥 Produtos da Loja com Botões Editar/Excluir -->
   <div>
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
@@ -216,8 +217,48 @@
     <!-- Lista de Produtos -->
     <div *ngIf="products.length > 0" class="row g-4">
       <div *ngFor="let product of products" class="col-md-4 col-sm-6">
-        <app-product-card [product]="product" (favoriteToggle)="onFavoriteToggle($event)">
-        </app-product-card>
+        <div class="card h-100 shadow-sm hover-effect position-relative">
+          <!-- 🔥 Imagem do Produto -->
+          <img
+            [src]="product.images[0]"
+            [alt]="product.name"
+            class="card-img-top"
+            style="height: 200px; object-fit: cover;"
+            (error)="product.images[0] = 'https://via.placeholder.com/300x200/667eea/ffffff?text=Produto'"
+          >
+
+          <!-- 🔥 Botões de Ação do Produto (apenas para o dono) -->
+          <div *ngIf="isOwner" class="position-absolute top-0 end-0 m-2 d-flex gap-1">
+            <button
+              class="btn btn-sm btn-light rounded-circle shadow-sm"
+              (click)="editProduct(product.id)"
+              title="Editar produto"
+            >
+              <i class="bi bi-pencil text-primary"></i>
+            </button>
+            <button
+              class="btn btn-sm btn-light rounded-circle shadow-sm"
+              (click)="deleteProduct(product.id, product.name)"
+              [disabled]="deletingProduct"
+              title="Excluir produto"
+            >
+              <i class="bi bi-trash text-danger"></i>
+            </button>
+          </div>
+
+          <div class="card-body">
+            <h6 class="card-title text-truncate">{{ product.name }}</h6>
+            <p class="fw-bold text-primary">{{ formatPrice(product.price) }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="badge" [class.bg-success]="product.stock > 0" [class.bg-danger]="product.stock === 0">
+                {{ product.stock > 0 ? 'Em estoque' : 'Esgotado' }}
+              </span>
+              <a [routerLink]="['/produto', product.id]" class="btn btn-outline-primary btn-sm rounded-pill">
+                Ver detalhes
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

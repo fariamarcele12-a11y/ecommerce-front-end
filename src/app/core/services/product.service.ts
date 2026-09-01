@@ -290,16 +290,23 @@ export class ProductService {
    * Atualiza um produto
    */
   updateProduct(id: number, product: Partial<Product>): Observable<Product> {
+    console.log(`📝 Atualizando produto ID: ${id}`);
+    console.log('📦 Dados:', product);
+
     return this.http
       .patch<Product>(`${this.apiUrl}/${id}`, {
         ...product,
         updatedAt: new Date().toISOString(),
       })
       .pipe(
-        tap(() => {
+        tap((updated) => {
+          console.log('✅ Produto atualizado:', updated);
           this.invalidateCache();
         }),
-        catchError(this.handleError),
+        catchError((error) => {
+          console.error('❌ Erro ao atualizar produto:', error);
+          return throwError(() => new Error('Erro ao atualizar produto. Tente novamente.'));
+        }),
       );
   }
 

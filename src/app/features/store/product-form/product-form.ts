@@ -7,6 +7,7 @@ import { StoreService } from '../../../core/services/store.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CategoryService } from '../../../core/services/category.service';
+import { ProductService } from '../../../core/services/product.service';
 import { Category } from '../../../core/models/category.model';
 import { Product } from '../../../core/models/ProductModel/product.model';
 
@@ -21,7 +22,7 @@ console.log('📦 ProductForm MODULE CARREGADO!');
 })
 export class ProductForm implements OnInit {
   storeId: string = '';
-  storeName: string = ''; // 🔥 Adicionado para armazenar o nome da loja
+  storeName: string = '';
   loading = false;
   isEditing = false;
   productId: number | null = null;
@@ -49,6 +50,7 @@ export class ProductForm implements OnInit {
     private authService: AuthService,
     private alertService: AlertService,
     private categoryService: CategoryService,
+    private productService: ProductService, // 🔥 ADICIONADO
   ) {
     console.log('🏗️ ProductForm CONSTRUTOR chamado!');
     console.log('🔍 StoreId recebido no construtor:', this.route.snapshot.params['storeId']);
@@ -65,6 +67,7 @@ export class ProductForm implements OnInit {
       this.isEditing = !!this.productId;
 
       console.log('📝 ProductForm - storeId da URL:', this.storeId);
+      console.log('📝 ProductForm - productId:', this.productId);
       console.log('📝 ProductForm - isEditing:', this.isEditing);
 
       if (!this.storeId) {
@@ -77,14 +80,15 @@ export class ProductForm implements OnInit {
       // 🔥 Buscar o nome da loja
       this.loadStoreName();
 
+      // 🔥 Se for edição, carregar os dados do produto
+      if (this.isEditing && this.productId) {
+        this.loadProductForEdit(this.productId);
+      }
+
       // 🔥 Verificar se o usuário é o dono da loja
       this.checkStoreOwnership();
 
       this.loadCategories();
-
-      if (this.isEditing) {
-        this.loadProduct();
-      }
     });
   }
 
@@ -101,7 +105,53 @@ export class ProductForm implements OnInit {
       },
       error: (error) => {
         console.error('❌ Erro ao buscar nome da loja:', error);
+      }
+    });
+  }
+
+  /**
+   * 🔥 CARREGA OS DADOS DO PRODUTO PARA EDIÇÃO
+   */
+  loadProductForEdit(productId: number): void {
+    this.loading = true;
+    console.log(`🔍 Buscando produto para edição: ${productId}`);
+
+    this.productService.getProductById(productId).subscribe({
+      next: (product) => {
+        console.log('📦 Produto carregado para edição:', product);
+
+        if (product) {
+          // 🔥 Preencher o formulário com os dados do produto
+          this.product = {
+            name: product.name,
+            description: product.description || '',
+            price: product.price,
+            oldPrice: product.oldPrice || 0,
+            category: product.category || '',
+            condition: product.condition || 'new',
+            location: product.location || '',
+            stock: product.stock || 1,
+            images: product.images && product.images.length > 0 ? product.images : [''],
+            freeShipping: product.freeShipping || false,
+          };
+
+          // 🔥 Atualizar as imagens
+          this.imageUrls = product.images && product.images.length > 0 ? [...product.images] : [''];
+
+          console.log('✅ Formulário preenchido:', this.product);
+        } else {
+          console.error('❌ Produto não encontrado');
+          this.alertService.error('Erro', 'Produto não encontrado.');
+          this.router.navigate(['/loja', this.storeId]);
+        }
+        this.loading = false;
       },
+      error: (error) => {
+        this.loading = false;
+        console.error('❌ Erro ao carregar produto:', error);
+        this.alertService.error('Erro', 'Não foi possível carregar os dados do produto.');
+        this.router.navigate(['/loja', this.storeId]);
+      }
     });
   }
 
@@ -147,73 +197,13 @@ export class ProductForm implements OnInit {
   private getDefaultCategories(): Category[] {
     const now = new Date().toISOString();
     return [
-      {
-        id: 1,
-        name: 'Eletrônicos',
-        slug: 'eletronicos',
-        active: true,
-        createdAt: now,
-        description: 'Produtos eletrônicos e tecnologia',
-        icon: 'bi-phone',
-        productCount: 0,
-      },
-      {
-        id: 2,
-        name: 'Moda',
-        slug: 'moda',
-        active: true,
-        createdAt: now,
-        description: 'Roupas, calçados e acessórios',
-        icon: 'bi-bag',
-        productCount: 0,
-      },
-      {
-        id: 3,
-        name: 'Casa e Decoração',
-        slug: 'casa-decoracao',
-        active: true,
-        createdAt: now,
-        description: 'Móveis, decoração e utensílios',
-        icon: 'bi-house',
-        productCount: 0,
-      },
-      {
-        id: 4,
-        name: 'Esportes',
-        slug: 'esportes',
-        active: true,
-        createdAt: now,
-        description: 'Equipamentos e acessórios esportivos',
-        icon: 'bi-bicycle',
-        productCount: 0,
-      },
-      {
-        id: 5,
-        name: 'Automóveis',
-        slug: 'automoveis',
-        active: true,
-        createdAt: now,
-        description: 'Carros, motos e peças',
-        icon: 'bi-car-front',
-        productCount: 0,
-      },
-      {
-        id: 6,
-        name: 'Imóveis',
-        slug: 'imoveis',
-        active: true,
-        createdAt: now,
-        description: 'Casas, apartamentos e terrenos',
-        icon: 'bi-building',
-        productCount: 0,
-      },
+      { id: 1, name: 'Eletrônicos', slug: 'eletronicos', active: true, createdAt: now, description: 'Produtos eletrônicos e tecnologia', icon: 'bi-phone', productCount: 0 },
+      { id: 2, name: 'Moda', slug: 'moda', active: true, createdAt: now, description: 'Roupas, calçados e acessórios', icon: 'bi-bag', productCount: 0 },
+      { id: 3, name: 'Casa e Decoração', slug: 'casa-decoracao', active: true, createdAt: now, description: 'Móveis, decoração e utensílios', icon: 'bi-house', productCount: 0 },
+      { id: 4, name: 'Esportes', slug: 'esportes', active: true, createdAt: now, description: 'Equipamentos e acessórios esportivos', icon: 'bi-bicycle', productCount: 0 },
+      { id: 5, name: 'Automóveis', slug: 'automoveis', active: true, createdAt: now, description: 'Carros, motos e peças', icon: 'bi-car-front', productCount: 0 },
+      { id: 6, name: 'Imóveis', slug: 'imoveis', active: true, createdAt: now, description: 'Casas, apartamentos e terrenos', icon: 'bi-building', productCount: 0 },
     ];
-  }
-
-  loadProduct(): void {
-    this.loading = true;
-    // Implementar busca do produto para edição
-    this.loading = false;
   }
 
   addImageField(): void {
@@ -228,74 +218,79 @@ export class ProductForm implements OnInit {
     }
   }
 
+  /**
+   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO)
+   */
   onSubmit(): void {
     if (!this.validateForm()) {
       return;
     }
 
     const images = this.imageUrls.filter((url: string) => url.trim() !== '');
-
-    // 🔥 Buscar o usuário atual
     const user = this.authService.getCurrentUser();
+    const sellerName = this.storeName || 'Vendedor';
+    const userId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : 1;
 
-    // 🔥 Buscar o nome da loja
-    this.storeService.getStoreById(this.storeId).subscribe({
-      next: (store) => {
-        const sellerName = store?.storeName || 'Vendedor';
-        const userId = user?.id
-          ? typeof user.id === 'string'
-            ? parseInt(user.id, 10)
-            : user.id
-          : 1;
-
-        const productData: Partial<Product> = {
-          name: this.product.name,
-          description: this.product.description,
-          price: this.product.price,
-          oldPrice: this.product.oldPrice || undefined,
-          category: this.product.category,
-          condition: this.product.condition,
-          location: this.product.location,
-          stock: this.product.stock,
-          images:
-            images.length > 0
-              ? images
-              : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'],
-          freeShipping: this.product.freeShipping,
-          seller: {
-            id: userId,
-            name: sellerName,
-            rating: 0,
-            sales: 0,
-          },
-        };
-
-        this.loading = true;
-        console.log('📤 Criando produto na loja:', this.storeId);
-        console.log('👤 Vendedor:', productData.seller);
-
-        this.storeService.createStoreProduct(this.storeId, productData).subscribe({
-          next: (product: Product) => {
-            this.loading = false;
-            console.log('✅ Produto criado:', product);
-            this.alertService.success(
-              'Produto criado!',
-              'O produto foi adicionado à sua loja com sucesso! 🎉',
-            );
-            this.router.navigate(['/loja', this.storeId]);
-          },
-          error: (error: any) => {
-            this.loading = false;
-            console.error('❌ Erro ao criar produto:', error);
-            this.alertService.error('Erro', 'Não foi possível criar o produto. Tente novamente.');
-          },
-        });
+    const productData: Partial<Product> = {
+      name: this.product.name,
+      description: this.product.description,
+      price: this.product.price,
+      oldPrice: this.product.oldPrice || undefined,
+      category: this.product.category,
+      condition: this.product.condition,
+      location: this.product.location,
+      stock: this.product.stock,
+      images: images.length > 0 ? images : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'],
+      freeShipping: this.product.freeShipping,
+      seller: {
+        id: userId,
+        name: sellerName,
+        rating: 0,
+        sales: 0,
       },
-      error: (error) => {
-        console.error('❌ Erro ao buscar loja:', error);
-        this.alertService.error('Erro', 'Não foi possível buscar a loja.');
-      },
-    });
+    };
+
+    this.loading = true;
+    console.log(`📤 ${this.isEditing ? 'Atualizando' : 'Criando'} produto:`);
+    console.log('📦 Dados:', productData);
+
+    if (this.isEditing && this.productId) {
+      // 🔥 EDITAR PRODUTO
+      this.productService.updateProduct(this.productId, productData).subscribe({
+        next: (product: Product) => {
+          this.loading = false;
+          console.log('✅ Produto atualizado:', product);
+          this.alertService.success(
+            'Produto atualizado!',
+            'O produto foi atualizado com sucesso! 🎉'
+          );
+          this.router.navigate(['/loja', this.storeId]);
+        },
+        error: (error: any) => {
+          this.loading = false;
+          console.error('❌ Erro ao atualizar produto:', error);
+          this.alertService.error('Erro', 'Não foi possível atualizar o produto. Tente novamente.');
+        },
+      });
+    } else {
+      // 🔥 CRIAR PRODUTO
+      this.storeService.createStoreProduct(this.storeId, productData).subscribe({
+        next: (product: Product) => {
+          this.loading = false;
+          console.log('✅ Produto criado:', product);
+          this.alertService.success(
+            'Produto criado!',
+            'O produto foi adicionado à sua loja com sucesso! 🎉'
+          );
+          this.router.navigate(['/loja', this.storeId]);
+        },
+        error: (error: any) => {
+          this.loading = false;
+          console.error('❌ Erro ao criar produto:', error);
+          this.alertService.error('Erro', 'Não foi possível criar o produto. Tente novamente.');
+        },
+      });
+    }
   }
 
   validateForm(): boolean {
@@ -304,10 +299,7 @@ export class ProductForm implements OnInit {
       return false;
     }
     if (!this.product.description || this.product.description.trim().length < 10) {
-      this.alertService.warning(
-        'Descrição inválida',
-        'Descreva o produto com pelo menos 10 caracteres.',
-      );
+      this.alertService.warning('Descrição inválida', 'Descreva o produto com pelo menos 10 caracteres.');
       return false;
     }
     if (!this.product.price || this.product.price <= 0) {

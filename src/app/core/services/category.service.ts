@@ -1,7 +1,7 @@
 // src/app/core/services/category.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError, catchError, shareReplay, tap, map } from 'rxjs';
+import { Observable, throwError, catchError, shareReplay, tap, map, of } from 'rxjs';
 import { Category, CategoryFilter } from '../models/category.model';
 
 @Injectable({
@@ -91,10 +91,12 @@ export class CategoryService {
   getCategoryBySlug(slug: string): Observable<Category | null> {
     return this.http.get<Category[]>(`${this.apiUrl}?slug=${slug}`).pipe(
       map((categories) => (categories.length ? categories[0] : null)),
-      catchError(this.handleError),
+      catchError((error) => {
+        console.error('❌ Erro ao buscar categoria por slug:', error);
+        return of(null);
+      }),
     );
   }
-
   /**
    * Busca subcategorias de uma categoria pai
    */
@@ -242,17 +244,18 @@ export class CategoryService {
    */
   checkApiHealth(): Observable<{ status: string; timestamp: string }> {
     // Para JSON Server, verificar se a raiz responde
-    return this.http
-      .get<{ status: string; timestamp: string }>(`http://localhost:3000/`)
-      .pipe(
-        map(() => ({
-          status: 'online',
-          timestamp: new Date().toISOString(),
-        })),
-        catchError((error) => {
-          console.error('❌ API local não está respondendo:', error);
-          return throwError(() => new Error('API local indisponível. Execute: json-server --watch db.json --port 3000'));
-        }),
-      );
+    return this.http.get<{ status: string; timestamp: string }>(`http://localhost:3000/`).pipe(
+      map(() => ({
+        status: 'online',
+        timestamp: new Date().toISOString(),
+      })),
+      catchError((error) => {
+        console.error('❌ API local não está respondendo:', error);
+        return throwError(
+          () =>
+            new Error('API local indisponível. Execute: json-server --watch db.json --port 3000'),
+        );
+      }),
+    );
   }
 }

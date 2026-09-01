@@ -5,14 +5,15 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ProductService } from '../../core/services/product.service';
+import { AlertService } from '../../core/services/alert.service';
 import { Store as StoreModel } from '../../core/models/store.model';
-import { ProductCard } from '../../shared/components/product-card/product-card';
 import { Product } from '../../core/models/ProductModel/product.model';
+import { ProductCard } from '../../shared/components/product-card/product-card';
 
 @Component({
   selector: 'app-store',
   standalone: true,
-  imports: [CommonModule, RouterLink, ProductCard],
+  imports: [CommonModule, RouterLink],
   templateUrl: './store.html',
   styleUrls: ['./store.scss'],
 })
@@ -22,6 +23,7 @@ export class Store implements OnInit {
   loading = true;
   isOwner = false;
   storeId: string | null = null;
+  deletingProduct = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -29,6 +31,7 @@ export class Store implements OnInit {
     private storeService: StoreService,
     private authService: AuthService,
     private productService: ProductService,
+    private alertService: AlertService,
   ) {}
 
   ngOnInit(): void {
@@ -69,8 +72,10 @@ export class Store implements OnInit {
 
         if (store) {
           this.store = store;
-          this.checkOwnership(store.userId);
-          this.loadProducts(store.id);
+          // 🔥 CORRIGIDO: Converter userId para string
+          this.checkOwnership(String(store.userId));
+          // 🔥 CORRIGIDO: Converter store.id para string
+          this.loadProducts(String(store.id));
         } else {
           console.log('❌ Loja não encontrada');
           this.router.navigate(['/home']);
@@ -85,7 +90,7 @@ export class Store implements OnInit {
     });
   }
 
-  loadProducts(storeId: number): void {
+  loadProducts(storeId: string): void {
     console.log(`🔍 Buscando produtos da loja ${storeId}`);
     this.storeService.getStoreProducts(storeId).subscribe({
       next: (products) => {
@@ -98,10 +103,60 @@ export class Store implements OnInit {
     });
   }
 
-  checkOwnership(userId: number): void {
+  checkOwnership(userId: string): void {
     const user = this.authService.getCurrentUser();
-    this.isOwner = user?.id === userId;
+    // 🔥 CORRIGIDO: Converter user.id para string para comparação
+    this.isOwner = String(user?.id) === userId;
     console.log('👤 É o dono da loja?', this.isOwner);
+  }
+
+  /**
+   * 🔥 EXCLUIR PRODUTO
+   */
+  deleteProduct(productId: number, productName: string): void {
+    this.alertService.confirm(
+      `Excluir "${productName}"?`,
+      'Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.',
+      'Sim, excluir',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.deletingProduct = true;
+        console.log(`🗑️ Excluindo produto ID: ${productId}`);
+
+        this.productService.deleteProduct(productId).subscribe({
+          next: () => {
+            this.deletingProduct = false;
+            console.log('✅ Produto excluído com sucesso');
+            this.alertService.success(
+              'Produto excluído!',
+              'O produto foi removido da sua loja com sucesso.'
+            );
+            // 🔥 CORRIGIDO: Recarregar a lista de produtos
+            if (this.store?.id) {
+              this.loadProducts(String(this.store.id));
+            }
+          },
+          error: (error) => {
+            this.deletingProduct = false;
+            console.error('❌ Erro ao excluir produto:', error);
+            this.alertService.error(
+              'Erro',
+              'Não foi possível excluir o produto. Tente novamente.'
+            );
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * 🔥 Navega para editar produto
+   */
+  editProduct(productId: number): void {
+    if (this.store?.id) {
+      this.router.navigate(['/loja', this.store.id, 'produto', productId, 'editar']);
+    }
   }
 
   /**
@@ -132,9 +187,9 @@ export class Store implements OnInit {
 
   goToCreateProduct(): void {
     if (this.store?.id) {
-      const storeId = this.store.id;
+      const storeId = String(this.store.id);
       console.log('🔗 Navegando para criar produto com storeId:', storeId);
-      this.router.navigate([`/loja/${storeId}/produto/novo`]);
+      this.router.navigate(['/loja', storeId, 'produto/novo']);
     } else {
       console.error('❌ ID da loja não disponível');
     }

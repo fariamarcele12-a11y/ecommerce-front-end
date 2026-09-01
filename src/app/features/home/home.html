@@ -1,8 +1,10 @@
+<!-- src/app/features/home/home.html -->
 <!-- Banner Principal -->
 <div class="bg-light">
   <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
     <div class="carousel-inner">
-      <div class="carousel-item active" *ngFor="let banner of banners; let i = index">
+      <!-- 🔥 CORRIGIDO: active apenas no primeiro -->
+      <div class="carousel-item" *ngFor="let banner of banners; let i = index" [class.active]="i === 0">
         <img
           [src]="banner.image"
           class="d-block w-100"
@@ -72,7 +74,7 @@
   </div>
 </section>
 
-<!-- Categorias Populares (Layout Alternativo) -->
+<!-- 🔥 Categorias Populares - DINÂMICO -->
 <section class="py-5 bg-white">
   <div class="container">
     <div class="row align-items-center mb-4">
@@ -88,60 +90,28 @@
       </div>
     </div>
 
-    <div class="row g-4">
-      <!-- Categoria 1 -->
-      <div class="col-lg-3 col-md-4 col-6">
-        <div
-          class="category-card-mini text-center p-4 border rounded-3 hover-effect"
-          routerLink="/categoria/eletronicos"
-        >
-          <div class="category-icon-wrapper bg-primary bg-opacity-10 rounded-circle mx-auto mb-3">
-            <i class="bi bi-phone fs-1 text-primary"></i>
-          </div>
-          <h6 class="fw-bold mb-1">Eletrônicos</h6>
-          <small class="text-muted">156 produtos</small>
-        </div>
+    <!-- 🔥 LOADING -->
+    <div *ngIf="loadingCategories" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Carregando categorias...</span>
       </div>
+    </div>
 
-      <!-- Categoria 2 -->
-      <div class="col-lg-3 col-md-4 col-6">
+    <!-- 🔥 CATEGORIAS DINÂMICAS -->
+    <div *ngIf="!loadingCategories" class="row g-4">
+      <div class="col-lg-3 col-md-4 col-6" *ngFor="let cat of popularCategories; let i = index">
         <div
-          class="category-card-mini text-center p-4 border rounded-3 hover-effect"
-          routerLink="/categoria/moda"
+          class="category-card-mini text-center p-4 border rounded-3 hover-effect cursor-pointer"
+          [routerLink]="['/categoria', cat.slug]"
         >
-          <div class="category-icon-wrapper bg-success bg-opacity-10 rounded-circle mx-auto mb-3">
-            <i class="bi bi-bag fs-1 text-success"></i>
+          <div class="category-icon-wrapper rounded-circle mx-auto mb-3"
+               [class]="getIconBgClass(i) + ' bg-opacity-10'">
+            <i class="bi fs-1"
+               [class]="cat.icon || 'bi-grid'"
+               [class]="getIconColor(i)"></i>
           </div>
-          <h6 class="fw-bold mb-1">Moda</h6>
-          <small class="text-muted">234 produtos</small>
-        </div>
-      </div>
-
-      <!-- Categoria 3 -->
-      <div class="col-lg-3 col-md-4 col-6">
-        <div
-          class="category-card-mini text-center p-4 border rounded-3 hover-effect"
-          routerLink="/categoria/casa-decoracao"
-        >
-          <div class="category-icon-wrapper bg-warning bg-opacity-10 rounded-circle mx-auto mb-3">
-            <i class="bi bi-house fs-1 text-warning"></i>
-          </div>
-          <h6 class="fw-bold mb-1">Casa e Decoração</h6>
-          <small class="text-muted">189 produtos</small>
-        </div>
-      </div>
-
-      <!-- Categoria 4 -->
-      <div class="col-lg-3 col-md-4 col-6">
-        <div
-          class="category-card-mini text-center p-4 border rounded-3 hover-effect"
-          routerLink="/categoria/esportes"
-        >
-          <div class="category-icon-wrapper bg-danger bg-opacity-10 rounded-circle mx-auto mb-3">
-            <i class="bi bi-bicycle fs-1 text-danger"></i>
-          </div>
-          <h6 class="fw-bold mb-1">Esportes</h6>
-          <small class="text-muted">98 produtos</small>
+          <h6 class="fw-bold mb-1">{{ cat.name }}</h6>
+          <small class="text-muted">{{ formatProductCount(cat.productCount) }}</small>
         </div>
       </div>
     </div>
