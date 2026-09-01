@@ -1,0 +1,91 @@
+<!-- src/app/features/auth/request-reset/request-reset.html -->
+<div class="auth-container">
+  <div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100">
+      <div class="col-md-6 col-lg-5">
+        <div class="card border-0 shadow-lg">
+          <div class="card-body p-5">
+            <!-- Logo -->
+            <div class="text-center mb-4">
+              <h1 class="fw-bold text-gradient-primary">MarketHub</h1>
+              <p class="text-muted">Redefinir senha</p>
+            </div>
+
+            <!-- Sucesso -->
+            <div *ngIf="success" class="text-center">
+              <div class="mb-4">
+                <i class="bi bi-envelope-check display-1 text-success"></i>
+              </div>
+              <h4 class="fw-bold">Verifique seu e-mail</h4>
+              <p class="text-muted">
+                Enviamos as instruções para redefinir sua senha para:
+                <strong>{{ email }}</strong>
+              </p>
+              <p class="text-muted small mt-3">
+                Não recebeu o e-mail? Verifique sua pasta de spam ou
+                <a (click)="submitted = false; success = false" class="text-primary cursor-pointer">
+                  tente novamente
+                </a>
+              </p>
+              <a routerLink="/login" class="btn btn-primary rounded-pill px-4 mt-3">
+                <i class="bi bi-arrow-left me-2"></i>
+                Voltar para o login
+              </a>
+            </div>
+
+            <!-- Formulário -->
+            <form *ngIf="!success" (ngSubmit)="onSubmit()" #form="ngForm">
+              <p class="text-muted small mb-4">
+                Informe seu e-mail cadastrado e enviaremos um link para redefinir sua senha.
+              </p>
+
+              <!-- Email -->
+              <div class="form-group mb-4">
+                <label class="form-label fw-bold small">E-mail</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-envelope"></i>
+                  </span>
+                  <input
+                    type="email"
+                    class="form-control"
+                    placeholder="seu@email.com"
+                    [(ngModel)]="email"
+                    name="email"
+                    required
+                    [disabled]="loading"
+                    autofocus
+                  />
+                </div>
+              </div>
+
+              <!-- Botão -->
+              <button
+                type="submit"
+                class="btn btn-primary w-100 rounded-pill py-2 fw-bold"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">
+                  <i class="bi bi-envelope me-2"></i>
+                  Enviar instruções
+                </span>
+                <span *ngIf="loading">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Enviando...
+                </span>
+              </button>
+
+              <!-- Voltar -->
+              <div class="text-center mt-3">
+                <a routerLink="/login" class="text-muted small text-decoration-none">
+                  <i class="bi bi-arrow-left me-1"></i>
+                  Voltar para o login
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

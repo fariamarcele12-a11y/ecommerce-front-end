@@ -1,0 +1,130 @@
+<!-- src/app/features/auth/confirm-reset/confirm-reset.html -->
+<div class="auth-container">
+  <div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100">
+      <div class="col-md-6 col-lg-5">
+        <div class="card border-0 shadow-lg">
+          <div class="card-body p-5">
+            <!-- Logo -->
+            <div class="text-center mb-4">
+              <h1 class="fw-bold text-gradient-primary">MarketHub</h1>
+              <p class="text-muted">Redefinir senha</p>
+            </div>
+
+            <!-- Validando Token -->
+            <div *ngIf="validating" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Validando token...</span>
+              </div>
+              <p class="text-muted mt-3">Validando token de segurança...</p>
+            </div>
+
+            <!-- Token Inválido -->
+            <div *ngIf="!validating && !tokenValid" class="text-center py-4">
+              <i class="bi bi-exclamation-triangle display-1 text-warning"></i>
+              <h4 class="fw-bold mt-3">Token inválido</h4>
+              <p class="text-muted">O token de redefinição é inválido ou expirou.</p>
+              <a routerLink="/solicitar-redefinicao" class="btn btn-primary rounded-pill mt-3">
+                Solicitar novo link
+              </a>
+            </div>
+
+            <!-- Sucesso -->
+            <div *ngIf="success" class="text-center">
+              <div class="mb-4">
+                <i class="bi bi-check-circle display-1 text-success"></i>
+              </div>
+              <h4 class="fw-bold">Senha redefinida!</h4>
+              <p class="text-muted">Sua senha foi alterada com sucesso.</p>
+              <p class="text-muted small">Redirecionando para o login...</p>
+            </div>
+
+            <!-- Formulário -->
+            <form *ngIf="!validating && tokenValid && !success" (ngSubmit)="onSubmit()" #form="ngForm">
+              <p class="text-muted small mb-4">
+                Digite sua nova senha para redefinir o acesso à sua conta.
+              </p>
+
+              <!-- Nova Senha -->
+              <div class="form-group mb-3">
+                <label class="form-label fw-bold small">Nova senha</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-lock"></i>
+                  </span>
+                  <input
+                    [type]="showPassword ? 'text' : 'password'"
+                    class="form-control"
+                    placeholder="Mínimo 6 caracteres"
+                    [(ngModel)]="newPassword"
+                    name="newPassword"
+                    required
+                    minlength="6"
+                    [disabled]="loading"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    (click)="togglePassword()"
+                  >
+                    <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Confirmar Senha -->
+              <div class="form-group mb-4">
+                <label class="form-label fw-bold small">Confirmar senha</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light">
+                    <i class="bi bi-shield-lock"></i>
+                  </span>
+                  <input
+                    [type]="showConfirmPassword ? 'text' : 'password'"
+                    class="form-control"
+                    placeholder="Digite a senha novamente"
+                    [(ngModel)]="confirmPassword"
+                    name="confirmPassword"
+                    required
+                    [disabled]="loading"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    (click)="toggleConfirmPassword()"
+                  >
+                    <i class="bi" [class.bi-eye]="!showConfirmPassword" [class.bi-eye-slash]="showConfirmPassword"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Botão -->
+              <button
+                type="submit"
+                class="btn btn-primary w-100 rounded-pill py-2 fw-bold"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">
+                  <i class="bi bi-check-lg me-2"></i>
+                  Redefinir senha
+                </span>
+                <span *ngIf="loading">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Processando...
+                </span>
+              </button>
+
+              <!-- Voltar -->
+              <div class="text-center mt-3">
+                <a routerLink="/login" class="text-muted small text-decoration-none">
+                  <i class="bi bi-arrow-left me-1"></i>
+                  Voltar para o login
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -109,6 +109,17 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register').then((m) => m.Register),
   },
 
+  {
+    path: 'solicitar-redefinicao',
+    loadComponent: () =>
+      import('./features/auth/request-reset/request-reset').then((m) => m.RequestReset),
+  },
+  {
+    path: 'redefinir-senha',
+    loadComponent: () =>
+      import('./features/auth/confirm-reset/confirm-reset').then((m) => m.ConfirmReset),
+  },
+
   // ============================================
   // GESTÃO DE LOJA
   // ============================================
