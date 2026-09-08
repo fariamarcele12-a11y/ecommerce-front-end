@@ -25,14 +25,15 @@ export class ProductForm implements OnInit {
   storeName: string = '';
   loading = false;
   isEditing = false;
-  productId: string | null = null; // 🔥 Mudado para string
+  productId: string | null = null;
 
   product = {
     name: '',
     description: '',
     price: 0,
     oldPrice: 0,
-    category: '',
+    category: '', // 🔥 Agora vai armazenar o NOME da categoria
+    categorySlug: '', // 🔥 NOVO: Armazenar o slug separadamente
     condition: 'new' as 'new' | 'used',
     location: '',
     stock: 1,
@@ -63,7 +64,7 @@ export class ProductForm implements OnInit {
 
     this.route.params.subscribe((params) => {
       this.storeId = params['storeId'];
-      this.productId = params['id'] ? String(params['id']) : null; // 🔥 Converter para string
+      this.productId = params['id'] ? String(params['id']) : null;
       this.isEditing = !!this.productId;
 
       console.log('📝 ProductForm - storeId da URL:', this.storeId);
@@ -77,24 +78,17 @@ export class ProductForm implements OnInit {
         return;
       }
 
-      // 🔥 Buscar o nome da loja
       this.loadStoreName();
 
-      // 🔥 Se for edição, carregar os dados do produto
       if (this.isEditing && this.productId) {
         this.loadProductForEdit(this.productId);
       }
 
-      // 🔥 Verificar se o usuário é o dono da loja
       this.checkStoreOwnership();
-
       this.loadCategories();
     });
   }
 
-  /**
-   * 🔥 Carrega o nome da loja
-   */
   loadStoreName(): void {
     this.storeService.getStoreById(this.storeId).subscribe({
       next: (store) => {
@@ -109,9 +103,6 @@ export class ProductForm implements OnInit {
     });
   }
 
-  /**
-   * 🔥 CARREGA OS DADOS DO PRODUTO PARA EDIÇÃO - CORRIGIDO
-   */
   loadProductForEdit(productId: string): void {
     this.loading = true;
     console.log(`🔍 Buscando produto para edição: ${productId}`);
@@ -121,13 +112,14 @@ export class ProductForm implements OnInit {
         console.log('📦 Produto carregado para edição:', product);
 
         if (product) {
-          // 🔥 Preencher o formulário com os dados do produto
+          // 🔥 CORRIGIDO: Preencher o formulário com os dados do produto
           this.product = {
             name: product.name,
             description: product.description || '',
             price: product.price,
             oldPrice: product.oldPrice || 0,
-            category: product.category || '',
+            category: product.category || '', // Nome da categoria
+            categorySlug: '', // Será preenchido abaixo
             condition: product.condition || 'new',
             location: product.location || '',
             stock: product.stock || 1,
@@ -135,7 +127,12 @@ export class ProductForm implements OnInit {
             freeShipping: product.freeShipping || false,
           };
 
-          // 🔥 Atualizar as imagens
+          // 🔥 Encontrar o slug da categoria
+          const category = this.categories.find(c => c.name === product.category);
+          if (category) {
+            this.product.categorySlug = category.slug;
+          }
+
           this.imageUrls = product.images && product.images.length > 0 ? [...product.images] : [''];
 
           console.log('✅ Formulário preenchido:', this.product);
@@ -155,9 +152,6 @@ export class ProductForm implements OnInit {
     });
   }
 
-  /**
-   * 🔥 Verifica se o usuário é o dono da loja
-   */
   checkStoreOwnership(): void {
     const user = this.authService.getCurrentUser();
     console.log('👤 Usuário atual:', user);
@@ -185,6 +179,14 @@ export class ProductForm implements OnInit {
       next: (categories: Category[]) => {
         this.categories = categories.filter((cat) => cat.active);
         console.log('📦 Categorias carregadas:', this.categories.length);
+
+        // 🔥 Se estiver editando, encontrar o slug da categoria
+        if (this.isEditing && this.product.category) {
+          const category = this.categories.find(c => c.name === this.product.category);
+          if (category) {
+            this.product.categorySlug = category.slug;
+          }
+        }
       },
       error: (error: any) => {
         console.error('❌ Erro ao carregar categorias:', error);
@@ -273,6 +275,25 @@ export class ProductForm implements OnInit {
   }
 
   /**
+   * 🔥 CORRIGIDO: Salvar o NOME da categoria em vez do slug
+   */
+  onCategorySelect(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const slug = select.value;
+
+    // 🔥 Encontrar a categoria pelo slug e pegar o nome
+    const category = this.categories.find(c => c.slug === slug);
+    if (category) {
+      this.product.category = category.name; // Salva o NOME
+      this.product.categorySlug = slug;
+      console.log(`📌 Categoria selecionada: "${category.name}" (slug: ${slug})`);
+    } else {
+      this.product.category = '';
+      this.product.categorySlug = '';
+    }
+  }
+
+  /**
    * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO) - CORRIGIDO
    */
   onSubmit(): void {
@@ -285,12 +306,16 @@ export class ProductForm implements OnInit {
     const sellerName = this.storeName || 'Vendedor';
     const userId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : 1;
 
+    // 🔥 CORRIGIDO: Usar o NOME da categoria (não o slug)
+    const categoryName = this.product.category;
+    console.log(`📌 Salvando produto na categoria: "${categoryName}"`);
+
     const productData: Partial<Product> = {
       name: this.product.name,
       description: this.product.description,
       price: this.product.price,
       oldPrice: this.product.oldPrice || undefined,
-      category: this.product.category,
+      category: categoryName, // 🔥 Salva o NOME da categoria
       condition: this.product.condition,
       location: this.product.location,
       stock: this.product.stock,
@@ -309,13 +334,14 @@ export class ProductForm implements OnInit {
     this.loading = true;
     console.log(`📤 ${this.isEditing ? 'Atualizando' : 'Criando'} produto:`);
     console.log('📦 Dados:', productData);
+    console.log('📌 Categoria sendo salva:', productData.category);
 
     if (this.isEditing && this.productId) {
-      // 🔥 EDITAR PRODUTO - CORRIGIDO: productId como string
       this.productService.updateProduct(this.productId, productData).subscribe({
         next: (product: Product) => {
           this.loading = false;
           console.log('✅ Produto atualizado:', product);
+          console.log('📌 Categoria salva:', product.category);
           this.alertService.success(
             'Produto atualizado!',
             'O produto foi atualizado com sucesso! 🎉',
@@ -329,15 +355,11 @@ export class ProductForm implements OnInit {
         },
       });
     } else {
-      // 🔥 CRIAR PRODUTO
       this.storeService.createStoreProduct(this.storeId, productData).subscribe({
         next: (product: Product) => {
           this.loading = false;
           console.log('✅ Produto criado:', product);
-          console.log('📂 Categoria do produto:', product.category);
-
-          // 🔥 ATUALIZAR O CONTADOR DA CATEGORIA
-          this.updateCategoryProductCount(product.category);
+          console.log('📌 Categoria do produto:', product.category);
 
           this.alertService.success(
             'Produto criado!',
@@ -352,49 +374,6 @@ export class ProductForm implements OnInit {
         },
       });
     }
-  }
-
-  /**
-   * 🔥 ATUALIZA O CONTADOR DE PRODUTOS DA CATEGORIA
-   */
-  private updateCategoryProductCount(categorySlug: string): void {
-    if (!categorySlug) {
-      console.warn('⚠️ Categoria não informada, pulando atualização');
-      return;
-    }
-
-    console.log(`🔄 Atualizando contador da categoria: ${categorySlug}`);
-
-    this.categoryService.getCategoryBySlug(categorySlug).subscribe({
-      next: (category) => {
-        console.log('📦 Categoria encontrada:', category);
-
-        if (category) {
-          const newCount = (category.productCount || 0) + 1;
-          console.log(`📊 Novo contador: ${newCount} (era ${category.productCount})`);
-
-          this.categoryService
-            .updateCategory(category.id, {
-              productCount: newCount,
-            })
-            .subscribe({
-              next: (updated) => {
-                console.log(
-                  `✅ Categoria "${updated.name}" atualizada para ${updated.productCount} produtos`,
-                );
-              },
-              error: (error) => {
-                console.error('❌ Erro ao atualizar contador da categoria:', error);
-              },
-            });
-        } else {
-          console.warn(`⚠️ Categoria não encontrada: ${categorySlug}`);
-        }
-      },
-      error: (error) => {
-        console.error('❌ Erro ao buscar categoria:', error);
-      },
-    });
   }
 
   validateForm(): boolean {

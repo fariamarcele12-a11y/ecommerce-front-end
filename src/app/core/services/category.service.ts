@@ -101,6 +101,7 @@ export class CategoryService {
       }),
     );
   }
+
   /**
    * Busca subcategorias de uma categoria pai
    */
@@ -159,7 +160,7 @@ export class CategoryService {
   /**
    * Atualiza uma categoria
    */
-  updateCategory(id: number, category: Partial<Category>): Observable<Category> {
+  updateCategory(id: string | number, category: Partial<Category>): Observable<Category> {
     console.log(`📝 Atualizando categoria ID: ${id}`, category);
     return this.http
       .patch<Category>(`${this.apiUrl}/${id}`, {

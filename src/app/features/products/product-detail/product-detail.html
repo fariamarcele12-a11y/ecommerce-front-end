@@ -11,7 +11,10 @@
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a routerLink="/home">Home</a></li>
       <li class="breadcrumb-item">
-        <a [routerLink]="['/categoria', product.category]">{{ product.category }}</a>
+        <!-- 🔥 CORRIGIDO: Usando getCategorySlug() -->
+        <a [routerLink]="['/categoria', getCategorySlug()]">
+          {{ product.category }}
+        </a>
       </li>
       <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
     </ol>
@@ -279,14 +282,12 @@
             <span>|</span>
             <span>{{ getSellerSales() }} vendas</span>
             <span>|</span>
-            <!-- 🔥 CORRIGIDO: Data dinâmica baseada no cadastro do vendedor -->
             <span>Membro desde {{ getSellerMemberSince() }}</span>
           </div>
         </div>
       </div>
 
       <div class="d-flex gap-2 ms-auto">
-        <!-- 🔥 Botão "Visitar Loja" - aparece para todos -->
         <button
           class="btn btn-outline-primary rounded-pill"
           (click)="goToStore()"
@@ -295,7 +296,6 @@
           <i class="bi bi-shop me-1"></i> Visitar loja
         </button>
 
-        <!-- 🔥 Botão "Perguntar" - só aparece se não for o dono -->
         <button
           *ngIf="!isOwner"
           class="btn btn-outline-success rounded-pill"
@@ -318,7 +318,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h4 class="fw-bold">Produtos Relacionados</h4>
       <a
-        [routerLink]="['/categoria', product.category]"
+        [routerLink]="['/categoria', getCategorySlug()]"
         class="btn btn-outline-primary rounded-pill btn-sm"
       >
         Ver todos

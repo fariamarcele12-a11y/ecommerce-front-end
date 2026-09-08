@@ -95,10 +95,16 @@
             </div>
 
             <div class="row g-3 mt-2">
-              <!-- Categoria -->
+              <!-- 🔥 Categoria - CORRIGIDO -->
               <div class="col-md-6">
                 <label class="form-label fw-bold small">Categoria <span class="text-danger">*</span></label>
-                <select class="form-select" [(ngModel)]="product.category" name="category" required>
+                <select
+                  class="form-select"
+                  [(ngModel)]="product.categorySlug"
+                  (change)="onCategorySelect($event)"
+                  name="category"
+                  required
+                >
                   <option value="">Selecione uma categoria</option>
                   <option *ngFor="let cat of categories" [value]="cat.slug">
                     <i *ngIf="cat.icon" [class]="'bi ' + cat.icon"></i>
@@ -108,6 +114,10 @@
                     </span>
                   </option>
                 </select>
+                <small class="text-muted">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Categoria selecionada: <strong>{{ product.category || 'Nenhuma' }}</strong>
+                </small>
               </div>
 
               <!-- Condição -->

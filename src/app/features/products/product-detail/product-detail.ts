@@ -12,6 +12,7 @@ import { AlertService } from '../../../core/services/alert.service';
 import { StoreService } from '../../../core/services/store.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
+import { CategoryService } from '../../../core/services/category.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -32,7 +33,8 @@ export class ProductDetail implements OnInit, OnDestroy {
   sellerName: string = 'Carregando...';
   isOwner: boolean = false;
   currentUserId: string | null = null;
-  sellerMemberSince: string = '2024'; // 🔥 NOVO: Data de cadastro do vendedor
+  sellerMemberSince: string = 'Carregando...';
+  categorySlug: string = '';
 
   private routeSub: Subscription = new Subscription();
 
@@ -45,6 +47,7 @@ export class ProductDetail implements OnInit, OnDestroy {
     private storeService: StoreService,
     private authService: AuthService,
     private userService: UserService,
+    private categoryService: CategoryService,
   ) {}
 
   ngOnInit(): void {
@@ -79,6 +82,10 @@ export class ProductDetail implements OnInit, OnDestroy {
         if (product) {
           this.product = product;
           this.isFavorite = product.isFavorite || false;
+
+          // 🔥 Buscar o slug da categoria
+          this.loadCategorySlug(product.category);
+
           this.loadSellerInfo(product);
           this.loadRelatedProducts(product.category, String(product.id));
           this.checkOwnership(product);
@@ -96,6 +103,41 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * 🔥 Busca o slug da categoria pelo nome
+   */
+  loadCategorySlug(categoryName: string): void {
+    console.log(`🔍 Buscando slug para categoria: "${categoryName}"`);
+
+    this.categoryService.getCategories().subscribe({
+      next: (categories) => {
+        const category = categories.find(c => c.name === categoryName);
+        if (category && category.slug) {
+          this.categorySlug = category.slug;
+          console.log(`✅ Slug encontrado: "${this.categorySlug}"`);
+        } else {
+          // Fallback: gerar slug a partir do nome
+          this.categorySlug = categoryName
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-');
+          console.log(`⚠️ Slug gerado: "${this.categorySlug}"`);
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erro ao buscar categorias:', error);
+        // Fallback: gerar slug a partir do nome
+        this.categorySlug = categoryName
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-');
+        console.log(`⚠️ Slug gerado (fallback): "${this.categorySlug}"`);
+      }
+    });
+  }
+
   loadSellerInfo(product: Product): void {
     console.log('🔍 Carregando informações do vendedor...');
     console.log('📦 Produto:', product);
@@ -110,7 +152,6 @@ export class ProductDetail implements OnInit, OnDestroy {
       console.log('👤 É o dono?', this.isOwner);
       this.sellerName = product.seller.name || 'Vendedor';
 
-      // 🔥 NOVO: Buscar data de cadastro do vendedor
       this.loadSellerMemberSince(sellerId);
       return;
     }
@@ -129,40 +170,34 @@ export class ProductDetail implements OnInit, OnDestroy {
             console.log('🆔 Store User ID:', storeUserId);
             console.log('👤 Current User ID:', this.currentUserId);
 
-            // 🔥 NOVO: Buscar data de cadastro do dono da loja
             this.loadSellerMemberSince(storeUserId);
           }
         },
         error: (error) => {
           console.error('❌ Erro ao buscar loja:', error);
           this.sellerName = 'Vendedor';
+          this.sellerMemberSince = '2024';
         },
       });
     } else {
       this.sellerName = 'Vendedor';
       this.isOwner = false;
+      this.sellerMemberSince = '2024';
     }
   }
 
-  // 🔥 NOVO: Método para carregar data de cadastro do vendedor
   loadSellerMemberSince(userId: string): void {
-    this.userService.getUserById(userId).subscribe({
-      next: (user) => {
-        if (user && user.createdAt) {
-          const date = new Date(user.createdAt);
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          this.sellerMemberSince = `${month}/${year}`;
-          console.log(`📅 Data de cadastro do vendedor: ${this.sellerMemberSince}`);
-        } else {
-          this.sellerMemberSince = '2024';
-          console.warn('⚠️ Data de cadastro não encontrada, usando valor padrão');
-        }
+    console.log(`📅 Buscando data de cadastro do usuário ${userId}...`);
+
+    this.userService.getMemberSince(userId).subscribe({
+      next: (memberSince) => {
+        this.sellerMemberSince = memberSince;
+        console.log(`📅 Data de cadastro do vendedor: ${this.sellerMemberSince}`);
       },
       error: (error) => {
-        console.error('❌ Erro ao buscar data de cadastro do vendedor:', error);
+        console.error('❌ Erro ao buscar data de cadastro:', error);
         this.sellerMemberSince = '2024';
-      },
+      }
     });
   }
 
@@ -240,14 +275,17 @@ export class ProductDetail implements OnInit, OnDestroy {
     return this.product?.seller?.sales || 0;
   }
 
-  // 🔥 NOVO: Método para obter data de cadastro formatada
   getSellerMemberSince(): string {
     return this.sellerMemberSince || '2024';
   }
 
   /**
-   * 🔥 Obtém o ID da loja do produto
+   * 🔥 Retorna o slug da categoria para navegação
    */
+  getCategorySlug(): string {
+    return this.categorySlug || this.product?.category || '';
+  }
+
   getStoreId(): string {
     if (this.product?.storeId) {
       return String(this.product.storeId);
@@ -255,9 +293,6 @@ export class ProductDetail implements OnInit, OnDestroy {
     return '';
   }
 
-  /**
-   * 🔥 Navega para a loja do vendedor
-   */
   goToStore(): void {
     const storeId = this.getStoreId();
     if (storeId) {

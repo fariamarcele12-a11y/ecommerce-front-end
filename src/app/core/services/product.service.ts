@@ -9,7 +9,6 @@ import {
   map,
   shareReplay,
   BehaviorSubject,
-  switchMap,
   of,
 } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
@@ -17,7 +16,6 @@ import { Product } from '../models/ProductModel/product.model';
 import { ProductFilters } from '../models/ProductModel/product-filters.model';
 import { IdGeneratorService } from './id-generator.service';
 
-// 🔥 EXPORTAR ProductResponse
 export interface ProductResponse {
   products: Product[];
   total: number;
@@ -32,9 +30,10 @@ export interface ProductResponse {
 export class ProductService {
   private apiUrl = 'http://localhost:3000/products';
 
-  private productsCache$: Observable<ProductResponse> | null = null; // 🔥 Mudado para ProductResponse
+  private productsCache$: Observable<ProductResponse> | null = null;
   private lastCacheTime = 0;
   private cacheDuration = 5 * 60 * 1000;
+  private lastFilters: string = ''; // 🔥 NOVO: Guardar últimos filtros
 
   private favoritesSubject = new BehaviorSubject<string[]>([]);
   public favorites$ = this.favoritesSubject.asObservable();
@@ -57,9 +56,24 @@ export class ProductService {
     }
   }
 
-  // 🔥 CORRIGIDO: Retorna ProductResponse
+  /**
+   * 🔥 CORRIGIDO: Busca produtos com suporte para forçar recarga
+   */
   getProducts(filters?: ProductFilters, useCache: boolean = true): Observable<ProductResponse> {
+    // 🔥 Gerar chave única para os filtros
+    const filtersKey = JSON.stringify(filters || {});
+    const cacheKey = `${filtersKey}`;
+
+    // 🔥 Se os filtros mudaram, invalidar cache
+    if (this.lastFilters !== cacheKey) {
+      console.log('🔄 Filtros mudaram, invalidando cache');
+      this.invalidateCache();
+      this.lastFilters = cacheKey;
+    }
+
+    // 🔥 Verificar cache APENAS se os filtros forem os mesmos
     if (useCache && this.productsCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
+      console.log('📦 Usando cache para filtros:', filters);
       return this.productsCache$;
     }
 
@@ -71,11 +85,12 @@ export class ProductService {
     if (filters) {
       if (filters.category) {
         params = params.set('category', filters.category);
+        console.log(`🔍 Filtrando por categoria: "${filters.category}"`);
       }
-      if (filters.minPrice) {
+      if (filters.minPrice !== undefined && filters.minPrice !== null) {
         params = params.set('price_gte', filters.minPrice.toString());
       }
-      if (filters.maxPrice) {
+      if (filters.maxPrice !== undefined && filters.maxPrice !== null) {
         params = params.set('price_lte', filters.maxPrice.toString());
       }
       if (filters.search) {
@@ -111,24 +126,48 @@ export class ProductService {
       }
     }
 
-    // 🔥 Garantir que page e limit estejam definidos
+    // Garantir que page e limit estejam definidos
     params = params.set('_page', page.toString());
     params = params.set('_limit', limit.toString());
 
-    const request = this.http.get<any>(this.apiUrl, { params, observe: 'response' }).pipe(
+    // 🔥 Adicionar timestamp para evitar cache do navegador
+    params = params.set('_t', Date.now().toString());
+
+    console.log('🌐 URL da requisição:', `${this.apiUrl}?${params.toString()}`);
+
+    const request = this.http.get<any>(this.apiUrl, {
+      params,
+      observe: 'response',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    }).pipe(
       map((response) => {
-        const products = response.body || [];
+        let products = response.body || [];
         const total = parseInt(response.headers.get('X-Total-Count') || '0', 10) || products.length;
-        const totalPages = Math.ceil(total / limit) || 1;
+
+        // 🔥 Filtrar manualmente se necessário (garantia extra)
+        if (filters?.category) {
+          const categoryName = filters.category;
+          products = products.filter((p: Product) => p.category === categoryName);
+          console.log(`🔍 Filtro manual aplicado: "${categoryName}" -> ${products.length} produtos`);
+        }
 
         const favorites = this.favoritesSubject.value;
         products.forEach((product: Product) => {
           product.isFavorite = favorites.includes(String(product.id));
         });
 
+        const totalPages = Math.ceil(total / limit) || 1;
+
+        console.log(`📦 ${products.length} produtos retornados (Total: ${total})`);
+        console.log('📋 Categorias encontradas:', [...new Set(products.map((p: Product) => p.category))]);
+
         return {
           products,
-          total,
+          total: total,
           page,
           limit,
           totalPages,
@@ -137,7 +176,7 @@ export class ProductService {
       tap((response) => {
         this.lastCacheTime = Date.now();
         console.log(
-          `📦 ${response.products.length} produtos carregados (Total: ${response.total})`,
+          `✅ ${response.products.length} produtos carregados (Total: ${response.total})`,
         );
       }),
       shareReplay(1),
@@ -148,7 +187,6 @@ export class ProductService {
     return request;
   }
 
-  // 🔥 CORRIGIDO: id como string
   getProductById(id: string): Observable<Product> {
     return this.http.get<Product>(`${this.apiUrl}/${id}`).pipe(
       map((product: Product) => {
@@ -160,7 +198,6 @@ export class ProductService {
     );
   }
 
-  // 🔥 CORRIGIDO: productId como string
   getRelatedProducts(
     category: string,
     productId: string,
@@ -229,12 +266,11 @@ export class ProductService {
         ? product.images
         : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'];
 
-    // 🔥 Gerar ID único para o produto
     const productId = this.idGenerator.generateProductId();
     console.log('🔑 ID único gerado para o produto:', productId);
 
     const newProduct: any = {
-      id: productId, // 🔥 ID único
+      id: productId,
       name: product.name || '',
       description: product.description || '',
       price: Number(product.price) || 0,
@@ -272,7 +308,6 @@ export class ProductService {
     );
   }
 
-  // 🔥 CORRIGIDO: id como string
   updateProduct(id: string, product: Partial<Product>): Observable<Product> {
     return this.http
       .patch<Product>(`${this.apiUrl}/${id}`, {
@@ -287,7 +322,6 @@ export class ProductService {
       );
   }
 
-  // 🔥 CORRIGIDO: id como string
   deleteProduct(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
@@ -297,7 +331,6 @@ export class ProductService {
     );
   }
 
-  // 🔥 CORRIGIDO: productId como string
   toggleFavorite(productId: string): Observable<Product> {
     const currentFavorites = this.favoritesSubject.value;
     const newFavoriteStatus = !currentFavorites.includes(productId);
@@ -381,6 +414,7 @@ export class ProductService {
   invalidateCache(): void {
     this.productsCache$ = null;
     this.lastCacheTime = 0;
+    this.lastFilters = ''; // 🔥 Resetar último filtro
   }
 
   refreshProducts(filters?: ProductFilters): Observable<ProductResponse> {
