@@ -1,0 +1,158 @@
+<!-- src/app/shared/components/cookie-consent/cookie-consent.html -->
+
+<!-- Banner de Cookies -->
+<div *ngIf="showBanner" class="cookie-banner">
+  <div class="cookie-banner-content">
+    <div class="cookie-banner-text">
+      <h5 class="fw-bold mb-2">
+        <i class="bi bi-cookie me-2"></i>
+        Nós usamos cookies!
+      </h5>
+      <p class="mb-0">
+        Utilizamos cookies para melhorar sua experiência,
+        personalizar conteúdo e analisar nosso tráfego.
+        Ao clicar em "Aceitar todos", você concorda com o uso de todos os cookies.
+        Você pode gerenciar suas preferências clicando em
+        <a href="#" (click)="$event.preventDefault(); openPreferences()" class="preferences-link">
+          Gerenciar cookies
+        </a>.
+      </p>
+    </div>
+    <div class="cookie-banner-actions">
+      <button class="btn btn-outline-secondary btn-sm" (click)="rejectAll()">
+        <i class="bi bi-x-circle me-1"></i>
+        Recusar
+      </button>
+      <button class="btn btn-outline-primary btn-sm" (click)="openPreferences()">
+        <i class="bi bi-sliders me-1"></i>
+        Preferências
+      </button>
+      <button class="btn btn-primary btn-sm" (click)="acceptAll()">
+        <i class="bi bi-check-circle me-1"></i>
+        Aceitar todos
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Preferências -->
+<div *ngIf="showPreferences" class="cookie-preferences-overlay" (click)="closePreferences()">
+  <div class="cookie-preferences-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h5 class="modal-title fw-bold">
+        <i class="bi bi-cookie me-2"></i>
+        Preferências de Cookies
+      </h5>
+      <button type="button" class="btn-close" (click)="closePreferences()"></button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted">
+        Selecione quais tipos de cookies você permite.
+        Os cookies necessários são essenciais para o funcionamento do site.
+      </p>
+
+      <div class="cookie-option">
+        <div class="cookie-option-header">
+          <div class="cookie-option-info">
+            <h6 class="mb-1">
+              <i class="bi bi-shield-lock me-2 text-success"></i>
+              Cookies Necessários
+            </h6>
+            <p class="text-muted small mb-0">
+              Essenciais para o funcionamento do site. Não podem ser desativados.
+            </p>
+          </div>
+          <div class="cookie-option-toggle">
+            <span class="badge bg-success">Sempre ativo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cookie-option">
+        <div class="cookie-option-header">
+          <div class="cookie-option-info">
+            <h6 class="mb-1">
+              <i class="bi bi-sliders me-2 text-primary"></i>
+              Cookies de Preferências
+            </h6>
+            <p class="text-muted small mb-0">
+              Lembram suas preferências, como idioma e região.
+            </p>
+          </div>
+          <div class="cookie-option-toggle">
+            <div class="form-check form-switch">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="preferencesToggle"
+                [(ngModel)]="consent.preferences"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cookie-option">
+        <div class="cookie-option-header">
+          <div class="cookie-option-info">
+            <h6 class="mb-1">
+              <i class="bi bi-graph-up me-2 text-warning"></i>
+              Cookies de Análise
+            </h6>
+            <p class="text-muted small mb-0">
+              Nos ajudam a entender como você interage com o site.
+            </p>
+          </div>
+          <div class="cookie-option-toggle">
+            <div class="form-check form-switch">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="analyticsToggle"
+                [(ngModel)]="consent.analytics"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cookie-option">
+        <div class="cookie-option-header">
+          <div class="cookie-option-info">
+            <h6 class="mb-1">
+              <i class="bi bi-megaphone me-2 text-danger"></i>
+              Cookies de Marketing
+            </h6>
+            <p class="text-muted small mb-0">
+              Usados para exibir anúncios relevantes para você.
+            </p>
+          </div>
+          <div class="cookie-option-toggle">
+            <div class="form-check form-switch">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="marketingToggle"
+                [(ngModel)]="consent.marketing"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline-secondary" (click)="rejectAll()">
+        <i class="bi bi-x-circle me-1"></i>
+        Recusar todos
+      </button>
+      <button class="btn btn-outline-primary" (click)="savePreferences()">
+        <i class="bi bi-save me-1"></i>
+        Salvar preferências
+      </button>
+      <button class="btn btn-primary" (click)="acceptAll()">
+        <i class="bi bi-check-circle me-1"></i>
+        Aceitar todos
+      </button>
+    </div>
+  </div>
+</div>
