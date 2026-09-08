@@ -22,7 +22,7 @@ export class Favorites implements OnInit, OnDestroy {
   constructor(
     private productService: ProductService,
     private alertService: AlertService,
-     private router: Router,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -56,7 +56,7 @@ export class Favorites implements OnInit, OnDestroy {
     );
   }
 
-  removeFavorite(productId: number): void {
+  removeFavorite(productId: string): void {
     this.productService.toggleFavorite(productId).subscribe({
       next: () => {
         this.products = this.products.filter((p) => p.id !== productId);
@@ -68,14 +68,22 @@ export class Favorites implements OnInit, OnDestroy {
     });
   }
 
-  onFavoriteToggle(productId: number): void {
-    const product = this.products.find((p) => p.id === productId);
-    if (product) {
-      product.isFavorite = !product.isFavorite;
-      if (!product.isFavorite) {
-        this.removeFavorite(productId);
-      }
-    }
+  onFavoriteToggle(productId: string): void {
+    this.productService.toggleFavorite(productId).subscribe({
+      next: () => {
+        this.products = this.products.filter((p) => String(p.id) !== productId);
+        if (this.products.length === 0) {
+          this.loading = false;
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erro ao remover favorito:', error);
+      },
+    });
+  }
+
+  findProduct(productId: string): Product | undefined {
+    return this.products.find((p) => String(p.id) === productId);
   }
 
   exploreProducts(): void {

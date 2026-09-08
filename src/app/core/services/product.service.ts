@@ -1,5 +1,5 @@
 // src/app/core/services/product.service.ts
-import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import {
   Observable,
@@ -15,7 +15,9 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
 import { ProductFilters } from '../models/ProductModel/product-filters.model';
+import { IdGeneratorService } from './id-generator.service';
 
+// 🔥 EXPORTAR ProductResponse
 export interface ProductResponse {
   products: Product[];
   total: number;
@@ -28,38 +30,36 @@ export interface ProductResponse {
   providedIn: 'root',
 })
 export class ProductService {
-  // 🔥 URL da API local apenas
   private apiUrl = 'http://localhost:3000/products';
 
-  // Cache
-  private productsCache$: Observable<ProductResponse> | null = null;
+  private productsCache$: Observable<ProductResponse> | null = null; // 🔥 Mudado para ProductResponse
   private lastCacheTime = 0;
-  private readonly cacheDuration = 5 * 60 * 1000; // 5 minutos
+  private cacheDuration = 5 * 60 * 1000;
 
-  // Favoritos
-  private favoritesSubject = new BehaviorSubject<number[]>([]);
+  private favoritesSubject = new BehaviorSubject<string[]>([]);
   public favorites$ = this.favoritesSubject.asObservable();
 
-  private readonly isBrowser: boolean;
-  private readonly http = inject(HttpClient);
+  private isBrowser: boolean;
+  private readonly http: HttpClient;
+  private readonly idGenerator: IdGeneratorService;
 
-  constructor() {
-    const platformId = inject(PLATFORM_ID);
-    this.isBrowser = isPlatformBrowser(platformId);
+  constructor(
+    @Inject(PLATFORM_ID) private platformId: Object,
+    http: HttpClient,
+    idGenerator: IdGeneratorService,
+  ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
+    this.http = http;
+    this.idGenerator = idGenerator;
 
     if (this.isBrowser) {
       this.loadFavoritesFromStorage();
     }
   }
 
-  /**
-   * Busca produtos com filtros e paginação
-   */
-  getProducts(filters?: ProductFilters, useCache = true): Observable<ProductResponse> {
-    console.log('🔍 getProducts chamado com filtros:', filters);
-
+  // 🔥 CORRIGIDO: Retorna ProductResponse
+  getProducts(filters?: ProductFilters, useCache: boolean = true): Observable<ProductResponse> {
     if (useCache && this.productsCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
-      console.log('💾 Usando cache');
       return this.productsCache$;
     }
 
@@ -68,68 +68,63 @@ export class ProductService {
     const page = filters?.page || 1;
     const limit = filters?.limit || 12;
 
-    console.log(`📄 Buscando página ${page} com limite ${limit}`);
-
     if (filters) {
-      if (filters.sellerId) {
-        params = params.set('seller.id', filters.sellerId.toString());
-        console.log(`🔍 Filtrando por vendedor ID: ${filters.sellerId}`);
+      if (filters.category) {
+        params = params.set('category', filters.category);
       }
-
-      if (filters.category) params = params.set('category', filters.category);
-      if (filters.minPrice && filters.minPrice > 0)
+      if (filters.minPrice) {
         params = params.set('price_gte', filters.minPrice.toString());
-      if (filters.maxPrice && filters.maxPrice < 10000)
+      }
+      if (filters.maxPrice) {
         params = params.set('price_lte', filters.maxPrice.toString());
-      if (filters.search) params = params.set('q', filters.search);
-      if (filters.condition) params = params.set('condition', filters.condition);
-      if (filters.location) params = params.set('location', filters.location);
-      if (filters.hasDiscount) params = params.set('discount_ne', '0');
-      if (filters.freeShipping) params = params.set('freeShipping', 'true');
-      if (filters.inStock) params = params.set('stock_gt', '0');
-
+      }
+      if (filters.search) {
+        params = params.set('q', filters.search);
+      }
+      if (filters.condition) {
+        params = params.set('condition', filters.condition);
+      }
+      if (filters.location) {
+        params = params.set('location', filters.location);
+      }
       if (filters.sortBy === 'price_asc') {
-        params = params.set('_sort', 'price').set('_order', 'asc');
+        params = params.set('_sort', 'price');
+        params = params.set('_order', 'asc');
       } else if (filters.sortBy === 'price_desc') {
-        params = params.set('_sort', 'price').set('_order', 'desc');
+        params = params.set('_sort', 'price');
+        params = params.set('_order', 'desc');
       } else if (filters.sortBy === 'newest') {
-        params = params.set('_sort', 'createdAt').set('_order', 'desc');
+        params = params.set('_sort', 'createdAt');
+        params = params.set('_order', 'desc');
       } else if (filters.sortBy === 'popular') {
-        params = params.set('_sort', 'seller.sales').set('_order', 'desc');
+        params = params.set('_sort', 'seller.sales');
+        params = params.set('_order', 'desc');
+      }
+      if (filters.limit) {
+        params = params.set('_limit', filters.limit.toString());
+      }
+      if (filters.page) {
+        params = params.set('_page', filters.page.toString());
+        if (filters.limit) {
+          params = params.set('_limit', filters.limit.toString());
+        }
       }
     }
 
+    // 🔥 Garantir que page e limit estejam definidos
     params = params.set('_page', page.toString());
     params = params.set('_limit', limit.toString());
 
-    const fullUrl = `${this.apiUrl}?${params.toString()}`;
-    console.log('🔍 URL da requisição:', fullUrl);
-
-    return this.http.get<any>(this.apiUrl, { params, observe: 'response' }).pipe(
+    const request = this.http.get<any>(this.apiUrl, { params, observe: 'response' }).pipe(
       map((response) => {
         const products = response.body || [];
-
-        console.log(`📦 Produtos recebidos: ${products.length}`);
-        if (products.length > 0) {
-          console.log('📦 Primeiro produto:', products[0]);
-        }
-
-        let total = parseInt(response.headers.get('X-Total-Count') || '0', 10);
-
-        if (total === 0 && products.length > 0) {
-          total = products.length;
-          console.warn('⚠️ Header X-Total-Count não encontrado, usando comprimento do array');
-        }
-
+        const total = parseInt(response.headers.get('X-Total-Count') || '0', 10) || products.length;
         const totalPages = Math.ceil(total / limit) || 1;
 
         const favorites = this.favoritesSubject.value;
         products.forEach((product: Product) => {
-          product.isFavorite = favorites.includes(product.id);
+          product.isFavorite = favorites.includes(String(product.id));
         });
-
-        console.log(`📦 ${products.length} produtos nesta página (Total: ${total})`);
-        console.log(`📄 Página ${page} de ${totalPages}`);
 
         return {
           products,
@@ -137,53 +132,48 @@ export class ProductService {
           page,
           limit,
           totalPages,
-        };
+        } as ProductResponse;
       }),
-      tap(() => {
+      tap((response) => {
         this.lastCacheTime = Date.now();
+        console.log(
+          `📦 ${response.products.length} produtos carregados (Total: ${response.total})`,
+        );
       }),
       shareReplay(1),
       catchError(this.handleError),
     );
+
+    this.productsCache$ = request;
+    return request;
   }
 
-  /**
-   * 🔥 Busca produto por ID (aceita string ou number)
-   */
-  // src/app/core/services/product.service.ts
-
-  /**
-   * 🔥 Busca produto por ID (aceita string ou number)
-   */
-  getProductById(id: string | number): Observable<Product> {
-    // 🔥 NÃO CONVERTER! Passar o ID como está
-    console.log(`🔍 Buscando produto por ID: ${id}`);
-
+  // 🔥 CORRIGIDO: id como string
+  getProductById(id: string): Observable<Product> {
     return this.http.get<Product>(`${this.apiUrl}/${id}`).pipe(
-      map((product) => {
+      map((product: Product) => {
         const favorites = this.favoritesSubject.value;
-        product.isFavorite = favorites.includes(product.id);
+        product.isFavorite = favorites.includes(String(product.id));
         return product;
       }),
       catchError(this.handleError),
     );
   }
 
-  /**
-   * Busca produtos relacionados
-   */
-  getRelatedProducts(category: string, productId: number, limit = 4): Observable<Product[]> {
+  // 🔥 CORRIGIDO: productId como string
+  getRelatedProducts(
+    category: string,
+    productId: string,
+    limit: number = 4,
+  ): Observable<Product[]> {
     const params = new HttpParams()
       .set('category', category)
-      .set('id_ne', productId.toString())
+      .set('id_ne', productId)
       .set('_limit', limit.toString());
 
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca produtos por categoria
-   */
   getProductsByCategory(category: string, limit?: number): Observable<Product[]> {
     let params = new HttpParams().set('category', category);
     if (limit) {
@@ -193,10 +183,7 @@ export class ProductService {
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca produtos em destaque (mais vendidos)
-   */
-  getFeaturedProducts(limit = 8): Observable<Product[]> {
+  getFeaturedProducts(limit: number = 8): Observable<Product[]> {
     const params = new HttpParams()
       .set('_sort', 'seller.sales')
       .set('_order', 'desc')
@@ -205,18 +192,12 @@ export class ProductService {
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca produtos com desconto
-   */
-  getProductsOnSale(limit = 8): Observable<Product[]> {
+  getProductsOnSale(limit: number = 8): Observable<Product[]> {
     const params = new HttpParams().set('discount_ne', '0').set('_limit', limit.toString());
 
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca produtos por faixa de preço
-   */
   getProductsByPriceRange(
     minPrice: number,
     maxPrice: number,
@@ -233,9 +214,6 @@ export class ProductService {
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca produtos por termo de busca
-   */
   searchProducts(searchTerm: string, limit?: number): Observable<Product[]> {
     let params = new HttpParams().set('q', searchTerm);
     if (limit) {
@@ -245,16 +223,18 @@ export class ProductService {
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
-  /**
-   * Cria um novo produto
-   */
   createProduct(product: Partial<Product>): Observable<Product> {
     const images =
       product.images && Array.isArray(product.images) && product.images.length > 0
         ? product.images
         : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'];
 
+    // 🔥 Gerar ID único para o produto
+    const productId = this.idGenerator.generateProductId();
+    console.log('🔑 ID único gerado para o produto:', productId);
+
     const newProduct: any = {
+      id: productId, // 🔥 ID único
       name: product.name || '',
       description: product.description || '',
       price: Number(product.price) || 0,
@@ -263,17 +243,23 @@ export class ProductService {
       location: product.location || '',
       stock: Number(product.stock) || 1,
       images: images,
+      storeId: product.storeId || '',
+      createdAt: new Date().toISOString(),
     };
 
     if (product.oldPrice && product.oldPrice > 0) {
       newProduct.oldPrice = Number(product.oldPrice);
     }
 
+    if (product.seller) {
+      newProduct.seller = product.seller;
+    }
+
     console.log('📦 Enviando para API:', JSON.stringify(newProduct, null, 2));
 
     return this.http.post<Product>(this.apiUrl, newProduct).pipe(
       tap((response) => {
-        console.log('✅ Produto criado:', response);
+        console.log('✅ Produto criado com ID:', response.id);
         this.invalidateCache();
       }),
       catchError((error) => {
@@ -286,55 +272,35 @@ export class ProductService {
     );
   }
 
-  /**
-   * Atualiza um produto
-   */
-  updateProduct(id: number, product: Partial<Product>): Observable<Product> {
-    console.log(`📝 Atualizando produto ID: ${id}`);
-    console.log('📦 Dados:', product);
-
+  // 🔥 CORRIGIDO: id como string
+  updateProduct(id: string, product: Partial<Product>): Observable<Product> {
     return this.http
       .patch<Product>(`${this.apiUrl}/${id}`, {
         ...product,
         updatedAt: new Date().toISOString(),
       })
       .pipe(
-        tap((updated) => {
-          console.log('✅ Produto atualizado:', updated);
+        tap(() => {
           this.invalidateCache();
         }),
-        catchError((error) => {
-          console.error('❌ Erro ao atualizar produto:', error);
-          return throwError(() => new Error('Erro ao atualizar produto. Tente novamente.'));
-        }),
+        catchError(this.handleError),
       );
   }
 
-  /**
-   * Remove um produto
-   */
-  deleteProduct(id: number): Observable<void> {
-    console.log(`🗑️ Removendo produto ID: ${id}`);
+  // 🔥 CORRIGIDO: id como string
+  deleteProduct(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
-        console.log('✅ Produto removido com sucesso');
         this.invalidateCache();
       }),
-      catchError((error) => {
-        console.error('❌ Erro ao remover produto:', error);
-        return throwError(() => new Error('Erro ao remover produto. Tente novamente.'));
-      }),
+      catchError(this.handleError),
     );
   }
 
-  /**
-   * Alterna o status de favorito de um produto
-   */
-  toggleFavorite(productId: number): Observable<Product> {
+  // 🔥 CORRIGIDO: productId como string
+  toggleFavorite(productId: string): Observable<Product> {
     const currentFavorites = this.favoritesSubject.value;
     const newFavoriteStatus = !currentFavorites.includes(productId);
-
-    console.log(`🔄 Toggle favorito: produto ${productId} -> ${newFavoriteStatus}`);
 
     this.updateFavorites(productId, newFavoriteStatus);
     this.invalidateCache();
@@ -344,8 +310,7 @@ export class ProductService {
         isFavorite: newFavoriteStatus,
       })
       .pipe(
-        tap((updatedProduct) => {
-          console.log('✅ Favorito sincronizado com servidor:', updatedProduct);
+        tap(() => {
           this.updateFavorites(productId, newFavoriteStatus);
         }),
         catchError((error) => {
@@ -360,40 +325,23 @@ export class ProductService {
       );
   }
 
-  /**
-   * Busca produtos favoritos
-   */
   getFavoriteProducts(): Observable<Product[]> {
     const favoriteIds = this.favoritesSubject.value;
     if (favoriteIds.length === 0) {
-      return new Observable((observer) => {
-        observer.next([]);
-        observer.complete();
-      });
+      return of([]);
     }
 
     let params = new HttpParams();
     favoriteIds.forEach((id) => {
-      params = params.append('id', id.toString());
+      params = params.append('id', id);
     });
 
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      map((products) => {
-        products.forEach((product) => {
-          product.isFavorite = true;
-        });
-        return products;
-      }),
-      catchError(this.handleError),
-    );
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
-  /**
-   * Atualiza a lista de favoritos
-   */
-  private updateFavorites(productId: number, isFavorite: boolean): void {
+  private updateFavorites(productId: string, isFavorite: boolean): void {
     const currentFavorites = this.favoritesSubject.value;
-    let newFavorites: number[];
+    let newFavorites: string[];
 
     if (isFavorite) {
       if (!currentFavorites.includes(productId)) {
@@ -416,9 +364,6 @@ export class ProductService {
     }
   }
 
-  /**
-   * Carrega favoritos do localStorage
-   */
   private loadFavoritesFromStorage(): void {
     if (!this.isBrowser) return;
 
@@ -433,26 +378,16 @@ export class ProductService {
     }
   }
 
-  /**
-   * Invalida o cache
-   */
   invalidateCache(): void {
     this.productsCache$ = null;
     this.lastCacheTime = 0;
-    console.log('🗑️ Cache de produtos invalidado');
   }
 
-  /**
-   * Força a atualização do cache
-   */
   refreshProducts(filters?: ProductFilters): Observable<ProductResponse> {
     this.invalidateCache();
     return this.getProducts(filters, false);
   }
 
-  /**
-   * Tratamento de erros
-   */
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'Ocorreu um erro ao processar sua requisição.';
 
@@ -461,8 +396,7 @@ export class ProductService {
     } else {
       switch (error.status) {
         case 0:
-          errorMessage =
-            'Não foi possível conectar ao servidor local. Verifique se o JSON Server está rodando.';
+          errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão.';
           break;
         case 404:
           errorMessage = 'Produto não encontrado.';
@@ -480,24 +414,5 @@ export class ProductService {
 
     console.error('❌ Erro no ProductService:', errorMessage);
     return throwError(() => new Error(errorMessage));
-  }
-
-  /**
-   * 🔥 Verifica o status da API local
-   */
-  checkApiHealth(): Observable<{ status: string; timestamp: string }> {
-    return this.http.get<{ status: string; timestamp: string }>(`http://localhost:3000/`).pipe(
-      map(() => ({
-        status: 'online',
-        timestamp: new Date().toISOString(),
-      })),
-      catchError((error) => {
-        console.error('❌ API local não está respondendo:', error);
-        return throwError(
-          () =>
-            new Error('API local indisponível. Execute: json-server --watch db.json --port 3000'),
-        );
-      }),
-    );
   }
 }

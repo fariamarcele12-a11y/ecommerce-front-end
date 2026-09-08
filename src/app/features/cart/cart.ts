@@ -89,14 +89,21 @@ export class Cart implements OnInit, OnDestroy {
     this.total = summary.total;
   }
 
-  updateQuantity(productId: number, quantity: number): void {
+  // 🔥 Método auxiliar para obter ID como string
+  getProductId(item: CartItem): string {
+    return String(item.product.id);
+  }
+
+  // 🔥 CORRIGIDO: productId como string
+  updateQuantity(productId: string, quantity: number): void {
     if (quantity >= 0) {
       this.cartService.updateQuantity(productId, quantity);
     }
   }
 
-  removeItem(productId: number): void {
-    const product = this.cartItems.find(item => item.product.id === productId);
+  // 🔥 CORRIGIDO: productId como string
+  removeItem(productId: string): void {
+    const product = this.cartItems.find(item => String(item.product.id) === productId);
     const productName = product?.product.name || 'Produto';
 
     this.alertService.confirm(

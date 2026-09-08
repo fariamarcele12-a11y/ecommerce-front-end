@@ -1,3 +1,4 @@
+// src/app/features/search/search-results/search-results.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -48,7 +49,6 @@ export class SearchResults implements OnInit, OnDestroy {
     this.routeSub = this.route.queryParams.subscribe((params) => {
       console.log('📋 Query params recebidos:', params);
 
-      // 🔥 RESETAR filtros corretamente
       this.filters = {
         sortBy: 'newest',
         limit: this.itemsPerPage,
@@ -85,7 +85,6 @@ export class SearchResults implements OnInit, OnDestroy {
   loadProducts(): void {
     this.loading = true;
 
-    // 🔥 Garantir que page e limit estão corretos
     this.filters.page = this.currentPage;
     this.filters.limit = this.itemsPerPage;
 
@@ -96,6 +95,7 @@ export class SearchResults implements OnInit, OnDestroy {
       this.filterSub.unsubscribe();
     }
 
+    // 🔥 CORRIGIDO: ProductResponse importado
     this.filterSub = this.productService.getProducts(this.filters, false).subscribe({
       next: (response: ProductResponse) => {
         console.log('📦 Resposta recebida:', response);
@@ -112,7 +112,6 @@ export class SearchResults implements OnInit, OnDestroy {
         );
         console.log(`📄 Página ${this.currentPage} de ${this.totalPages}`);
 
-        // 🔥 SE A PÁGINA ATUAL FOR MAIOR QUE O TOTAL, REDIRECIONAR PARA A ÚLTIMA PÁGINA
         if (this.currentPage > this.totalPages && this.totalPages > 0) {
           console.warn(
             `⚠️ Página ${this.currentPage} não existe. Redirecionando para página ${this.totalPages}`,
@@ -120,7 +119,7 @@ export class SearchResults implements OnInit, OnDestroy {
           this.currentPage = this.totalPages;
           this.filters.page = this.totalPages;
           this.updateUrlParams();
-          this.loadProducts(); // Recarregar com a página correta
+          this.loadProducts();
         }
       },
       error: (error) => {
@@ -137,7 +136,6 @@ export class SearchResults implements OnInit, OnDestroy {
   onFiltersChange(newFilters: ProductFilters): void {
     console.log('🔄 Filtros alterados recebidos:', newFilters);
 
-    // 🔥 Resetar para página 1 ao mudar filtros
     this.currentPage = 1;
     this.filters = {
       ...this.filters,

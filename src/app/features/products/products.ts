@@ -1,3 +1,4 @@
+// src/app/features/products/products.ts
 import { Component, OnInit, OnChanges, Input, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProductService, ProductResponse } from '../../core/services/product.service';
@@ -61,7 +62,7 @@ export class Products implements OnInit, OnChanges {
         this.loading = false;
         console.log(`✅ ${this.products.length} produtos carregados (Total: ${this.totalProducts})`);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('❌ Erro ao carregar produtos:', error);
         this.loading = false;
         this.products = [];
@@ -71,9 +72,10 @@ export class Products implements OnInit, OnChanges {
     });
   }
 
-  onFavoriteToggle(productId: number): void {
+  // 🔥 CORRIGIDO: productId como string
+  onFavoriteToggle(productId: string): void {
     this.productService.toggleFavorite(productId);
-    const product = this.products.find(p => p.id === productId);
+    const product = this.products.find(p => String(p.id) === productId);
     if (product) {
       product.isFavorite = !product.isFavorite;
     }

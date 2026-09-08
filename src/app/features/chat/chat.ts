@@ -8,6 +8,7 @@ import { ChatService } from '../../core/services/chat.service';
 import { AlertService } from '../../core/services/alert.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ChatConversation, Message } from '../../core/models/message.model';
+import { IdGeneratorService } from '../../core/services/id-generator.service';
 
 @Component({
   selector: 'app-chat',
@@ -28,9 +29,9 @@ export class Chat implements OnInit, OnDestroy {
   userName: string = '';
   isSeller = false;
 
-  // Parâmetros recebidos da URL
-  private productIdParam: number | null = null;
-  private sellerIdParam: number | null = null;
+  // 🔥 CORRIGIDO: Parâmetros como string
+  private productIdParam: string | null = null;
+  private sellerIdParam: string | null = null;
   private productNameParam: string | null = null;
   private sellerNameParam: string | null = null;
   private isStoreChat: boolean = false;
@@ -43,11 +44,11 @@ export class Chat implements OnInit, OnDestroy {
     private router: Router,
     private chatService: ChatService,
     private alertService: AlertService,
-    private authService: AuthService
+    private authService: AuthService,
+    private idGenerator: IdGeneratorService
   ) {}
 
   ngOnInit(): void {
-    // 🔥 Buscar usuário logado
     const user = this.authService.getCurrentUser();
     if (!user) {
       this.alertService.warning('Login necessário', 'Faça login para acessar o chat.');
@@ -59,8 +60,9 @@ export class Chat implements OnInit, OnDestroy {
     this.userName = user.name || 'Usuário';
 
     this.routeSub = this.route.queryParams.subscribe(params => {
-      this.productIdParam = params['productId'] ? +params['productId'] : null;
-      this.sellerIdParam = params['sellerId'] ? +params['sellerId'] : null;
+      // 🔥 CORRIGIDO: Manter como string
+      this.productIdParam = params['productId'] || null;
+      this.sellerIdParam = params['sellerId'] || null;
       this.productNameParam = params['productName'] || null;
       this.sellerNameParam = params['sellerName'] || null;
       this.isStoreChat = params['store'] === 'true';
@@ -109,7 +111,8 @@ export class Chat implements OnInit, OnDestroy {
     });
   }
 
-  loadProductChat(productId: number, sellerId: number): void {
+  // 🔥 CORRIGIDO: productId como string, sellerId como string
+  loadProductChat(productId: string, sellerId: string): void {
     this.loading = true;
     this.chatService.getProductChat(productId, this.userId, sellerId).subscribe({
       next: (messages: Message[]) => {
@@ -159,12 +162,13 @@ export class Chat implements OnInit, OnDestroy {
     });
   }
 
-  loadStoreChat(sellerId: number): void {
+  // 🔥 CORRIGIDO: sellerId como string
+  loadStoreChat(sellerId: string): void {
     this.loading = true;
     const sellerName = this.sellerNameParam || 'Vendedor';
 
     this.selectedConversation = {
-      productId: 0,
+      productId: '',
       productName: 'Conversa com a Loja',
       productImage: 'https://via.placeholder.com/100x100/667eea/ffffff?text=Loja',
       sellerId: sellerId,
@@ -186,14 +190,12 @@ export class Chat implements OnInit, OnDestroy {
     this.selectedConversation = conversation;
     this.messages = conversation.messages || [];
 
-    // 🔥 Marcar como lida
     this.chatService.markConversationAsRead(
       conversation.productId,
       this.userId,
       conversation.sellerId
     ).subscribe({
       next: () => {
-        // Atualizar contador de não lidas
         if (this.selectedConversation) {
           this.selectedConversation.unreadCount = 0;
         }
@@ -206,23 +208,24 @@ export class Chat implements OnInit, OnDestroy {
     this.scrollToBottom();
   }
 
+  // 🔥 CORRIGIDO: sendMessage com IDs como string
   sendMessage(): void {
     if (!this.newMessage.trim() || !this.selectedConversation) return;
 
     const message: Partial<Message> = {
-      productId: this.selectedConversation.productId || 0,
+      productId: String(this.selectedConversation.productId || ''),
       productName: this.selectedConversation.productName || 'Conversa com a Loja',
-      sellerId: this.selectedConversation.sellerId,
-      sellerName: this.selectedConversation.sellerName,
+      sellerId: String(this.selectedConversation.sellerId || ''),
+      sellerName: this.selectedConversation.sellerName || '',
       userId: this.userId,
       userName: this.userName,
       content: this.newMessage.trim(),
       isFromSeller: this.isSeller
     };
 
-    // 🔥 Mensagem temporária (otimista)
+    // 🔥 CORRIGIDO: id como string
     const tempMessage: Message = {
-      id: Date.now(),
+      id: 'temp-' + Date.now(),
       productId: message.productId!,
       productName: message.productName || '',
       sellerId: message.sellerId!,
@@ -239,14 +242,12 @@ export class Chat implements OnInit, OnDestroy {
     this.newMessage = '';
     this.scrollToBottom();
 
-    // 🔥 Enviar para o servidor
     this.chatService.sendMessage(message).subscribe({
       next: (sentMessage: Message) => {
         const index = this.messages.findIndex(m => m.id === tempMessage.id);
         if (index !== -1) {
           this.messages[index] = sentMessage;
         }
-        // 🔥 Atualizar lista de conversas
         this.loadConversations();
       },
       error: (error: Error) => {
@@ -293,27 +294,20 @@ export class Chat implements OnInit, OnDestroy {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   }
 
+  // 🔥 CORRIGIDO: isProductChat
   isProductChat(): boolean {
-    return this.selectedConversation?.productId !== 0 && !this.selectedConversation?.isStoreChat;
+    return !!this.selectedConversation?.productId && !this.selectedConversation?.isStoreChat;
   }
 
   isStoreChatType(): boolean {
     return this.selectedConversation?.isStoreChat === true;
   }
 
-  /**
-   * 🔥 Obtém o ID do produto da conversa selecionada
-   */
-  getProductId(): number {
-    const id = this.selectedConversation?.productId;
-    return typeof id === 'string' ? parseInt(id, 10) : (id || 0);
+  getProductId(): string {
+    return String(this.selectedConversation?.productId || '');
   }
 
-  /**
-   * 🔥 Obtém o ID do vendedor da conversa selecionada
-   */
-  getSellerId(): number {
-    const id = this.selectedConversation?.sellerId;
-    return typeof id === 'string' ? parseInt(id, 10) : (id || 0);
+  getSellerId(): string {
+    return String(this.selectedConversation?.sellerId || '');
   }
 }

@@ -45,7 +45,6 @@ export class ProductDetail implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // 🔥 PEGAR ID DO USUÁRIO LOGADO
     const user = this.authService.getCurrentUser();
     if (user) {
       this.currentUserId = String(user.id);
@@ -57,7 +56,7 @@ export class ProductDetail implements OnInit, OnDestroy {
       console.log('🔍 ID do produto na rota:', id);
 
       if (id) {
-        this.loadProduct(id);
+        this.loadProduct(String(id));
       }
     });
   }
@@ -68,27 +67,27 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
+  // 🔥 CORRIGIDO: id como string
   loadProduct(id: string | number): void {
     this.loading = true;
-    console.log(`🔍 Buscando produto com ID: ${id}`);
+    const productId = String(id);
+    console.log(`🔍 Buscando produto com ID: ${productId}`);
 
-    this.productService.getProductById(id).subscribe({
-      next: (product) => {
+    this.productService.getProductById(productId).subscribe({
+      next: (product: Product) => {
         if (product) {
           this.product = product;
           this.isFavorite = product.isFavorite || false;
-
-          // 🔥 BUSCAR O SELLER ID
           this.loadSellerInfo(product);
-
-          this.loadRelatedProducts(product.category, product.id);
+          this.loadRelatedProducts(product.category, String(product.id));
+          this.checkOwnership(product);
         } else {
           console.log('❌ Produto não encontrado');
           this.router.navigate(['/home']);
         }
         this.loading = false;
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('❌ Erro ao carregar produto:', error);
         this.loading = false;
         this.router.navigate(['/home']);
@@ -96,15 +95,11 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * 🔥 CARREGA INFORMAÇÕES DO VENDEDOR E VERIFICA PROPRIEDADE
-   */
   loadSellerInfo(product: Product): void {
     console.log('🔍 Carregando informações do vendedor...');
     console.log('📦 Produto:', product);
     console.log('👤 Seller atual:', product.seller);
 
-    // 🔥 SE O PRODUTO JÁ TEM SELLER, USAR ELE
     if (product.seller) {
       const sellerId = String(product.seller.id);
       console.log('🆔 Seller ID do produto:', sellerId);
@@ -116,7 +111,6 @@ export class ProductDetail implements OnInit, OnDestroy {
       return;
     }
 
-    // 🔥 SE NÃO TEM SELLER, BUSCAR PELA LOJA
     if (product.storeId) {
       console.log('🔍 Buscando loja para storeId:', product.storeId);
       this.storeService.getStoreById(product.storeId).subscribe({
@@ -125,7 +119,6 @@ export class ProductDetail implements OnInit, OnDestroy {
           if (store) {
             this.sellerName = store.storeName;
 
-            // 🔥 Verificar se o usuário é o dono da loja
             const storeUserId = String(store.userId);
             this.isOwner = storeUserId === this.currentUserId;
             console.log('👤 É o dono da loja?', this.isOwner);
@@ -136,7 +129,7 @@ export class ProductDetail implements OnInit, OnDestroy {
         error: (error) => {
           console.error('❌ Erro ao buscar loja:', error);
           this.sellerName = 'Vendedor';
-        }
+        },
       });
     } else {
       this.sellerName = 'Vendedor';
@@ -144,12 +137,25 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
-  loadRelatedProducts(category: string, productId: number): void {
+  checkOwnership(product: Product): void {
+    const user = this.authService.getCurrentUser();
+    if (user && product.seller) {
+      const userId = String(user.id);
+      const sellerId = String(product.seller.id);
+      this.isOwner = userId === sellerId;
+      console.log('👤 É o dono do produto?', this.isOwner);
+    } else {
+      this.isOwner = false;
+    }
+  }
+
+  // 🔥 CORRIGIDO: productId como string
+  loadRelatedProducts(category: string, productId: string): void {
     this.productService.getRelatedProducts(category, productId).subscribe({
-      next: (products) => {
+      next: (products: Product[]) => {
         this.relatedProducts = products;
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('❌ Erro ao carregar produtos relacionados:', error);
       },
     });
@@ -211,9 +217,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   addToCart(): void {
     if (this.product) {
       const maxQuantity = Math.min(this.quantity, this.product.stock);
-
       this.cartService.addToCart(this.product, maxQuantity);
-
       this.alertService.success(
         'Produto adicionado!',
         `${this.product.name} (${maxQuantity}x) foi adicionado ao carrinho.`,
@@ -225,7 +229,6 @@ export class ProductDetail implements OnInit, OnDestroy {
   buyNow(): void {
     if (this.product) {
       const maxQuantity = Math.min(this.quantity, this.product.stock);
-
       this.alertService
         .confirm(
           'Comprar agora?',
@@ -242,11 +245,11 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
+  // 🔥 CORRIGIDO: product.id é string
   toggleFavorite(): void {
     if (this.product) {
       this.isFavorite = !this.isFavorite;
-
-      this.productService.toggleFavorite(this.product.id).subscribe({
+      this.productService.toggleFavorite(String(this.product.id)).subscribe({
         next: () => {
           if (this.isFavorite) {
             this.alertService.toast('Adicionado aos favoritos! ❤️', 'success', 2000);
@@ -285,8 +288,6 @@ export class ProductDetail implements OnInit, OnDestroy {
       this.quantity--;
     }
   }
-
-  // ===== MÉTODOS UTILITÁRIOS =====
 
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {

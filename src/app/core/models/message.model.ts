@@ -5,10 +5,10 @@
  */
 export interface Message {
   /** ID único da mensagem (gerado pelo servidor) */
-  id: number | string;
+  id: string; // 🔥 Mudado para string
 
   /** ID do produto relacionado à conversa */
-  productId: number | string;
+  productId: string; // 🔥 Mudado para string
 
   /** Nome do produto para exibição */
   productName: string;
@@ -17,13 +17,13 @@ export interface Message {
   productImage?: string;
 
   /** ID do vendedor (dono do produto) */
-  sellerId: number | string;
+  sellerId: string | number;
 
   /** Nome do vendedor para exibição */
   sellerName: string;
 
   /** ID do usuário que enviou a mensagem */
-  userId: number | string;
+  userId: string | number;
 
   /** Nome do usuário para exibição */
   userName: string;
@@ -44,7 +44,7 @@ export interface Message {
   readAt?: Date | string;
 
   /** ID da conversa (opcional, para agrupamento) */
-  conversationId?: number | string;
+  conversationId?: string;
 }
 
 /**
@@ -52,7 +52,7 @@ export interface Message {
  */
 export interface ChatConversation {
   /** ID do produto da conversa */
-  productId: number | string;
+  productId: string; // 🔥 Mudado para string
 
   /** Nome do produto para exibição */
   productName: string;
@@ -61,7 +61,7 @@ export interface ChatConversation {
   productImage: string;
 
   /** ID do vendedor */
-  sellerId: number | string;
+  sellerId: string | number;
 
   /** Nome do vendedor para exibição */
   sellerName: string;
@@ -93,19 +93,19 @@ export interface ChatConversation {
  */
 export interface SendMessageRequest {
   /** ID do produto */
-  productId: number | string;
+  productId: string;
 
   /** Nome do produto */
   productName: string;
 
   /** ID do vendedor */
-  sellerId: number | string;
+  sellerId: string | number;
 
   /** Nome do vendedor */
   sellerName: string;
 
   /** ID do usuário */
-  userId: number | string;
+  userId: string | number;
 
   /** Nome do usuário */
   userName: string;
@@ -141,12 +141,12 @@ export type ConversationStatus = 'active' | 'archived' | 'blocked';
  */
 export function createEmptyMessage(): Message {
   return {
-    id: 0,
-    productId: 0,
+    id: '',
+    productId: '',
     productName: '',
-    sellerId: 0,
+    sellerId: '',
     sellerName: '',
-    userId: 0,
+    userId: '',
     userName: '',
     content: '',
     createdAt: new Date(),
@@ -160,10 +160,10 @@ export function createEmptyMessage(): Message {
  */
 export function createEmptyConversation(): ChatConversation {
   return {
-    productId: 0,
+    productId: '',
     productName: '',
     productImage: 'https://via.placeholder.com/100x100/667eea/ffffff?text=Chat',
-    sellerId: 0,
+    sellerId: '',
     sellerName: '',
     lastMessage: '',
     lastMessageDate: new Date(),

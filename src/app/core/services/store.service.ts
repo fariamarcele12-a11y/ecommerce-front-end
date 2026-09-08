@@ -7,6 +7,7 @@ import { Store, StoreForm } from '../models/store.model';
 import { User } from '../models/user.model';
 import { Product } from '../models/ProductModel/product.model';
 import { AuthService } from './auth.service';
+import { IdGeneratorService } from './id-generator.service';
 
 @Injectable({
   providedIn: 'root',
@@ -23,6 +24,8 @@ export class StoreService {
   private isBrowser: boolean;
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
+  private readonly idGenerator = inject(IdGeneratorService);
+
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -158,29 +161,33 @@ export class StoreService {
     const id = String(storeId);
     console.log(`📝 Criando produto na loja ${id}:`, productData);
 
-    // 🔥 Buscar a loja para obter o nome do vendedor
     return this.getStoreById(id).pipe(
       switchMap((store) => {
         const sellerName = store?.storeName || 'Vendedor';
 
-        const newProduct = {
+        // 🔥 Gerar ID único para o produto
+        const productId = this.idGenerator.generateProductId();
+        console.log('🔑 ID único gerado para o produto:', productId);
+
+        const newProduct: any = {
+          id: productId, // 🔥 ID único
           ...productData,
           storeId: id,
           createdAt: new Date().toISOString(),
           isFavorite: false,
           seller: {
             id: productData.seller?.id || 1,
-            name: sellerName, // 🔥 Usar o nome da loja
+            name: sellerName,
             rating: productData.seller?.rating || 0,
             sales: productData.seller?.sales || 0,
           },
         };
 
-        console.log('📦 Produto com seller:', newProduct);
+        console.log('📦 Produto com ID único:', newProduct.id);
 
         return this.http.post<Product>(this.productsApiUrl, newProduct).pipe(
           tap((product) => {
-            console.log('✅ Produto criado com sucesso:', product);
+            console.log('✅ Produto criado com sucesso com ID:', product.id);
           }),
           catchError((error) => {
             console.error('❌ Erro ao criar produto na loja:', error);

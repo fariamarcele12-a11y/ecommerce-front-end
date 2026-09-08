@@ -1,9 +1,9 @@
 // src/app/core/services/cart.service.ts
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError, catchError, of, tap, switchMap, forkJoin, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
-import { HttpClient } from '@angular/common/http';
 
 export interface CartItem {
   product: Product;
@@ -23,7 +23,7 @@ export interface CartSummary {
 export interface ServerCart {
   id: number;
   items: {
-    productId: number;
+    productId: string; // 🔥 string
     quantity: number;
   }[];
 }
@@ -33,7 +33,6 @@ type Coupon = Record<string, number>;
 @Injectable({
   providedIn: 'root',
 })
-// 🔥 CORRIGIDO: Nome da classe deve ser CartService
 export class CartService {
   private apiUrl = 'http://localhost:3000/cart';
 
@@ -116,13 +115,15 @@ export class CartService {
     this.saveToStorageAndServer(currentItems);
   }
 
-  removeFromCart(productId: number): void {
+  // 🔥 CORRIGIDO: productId como string
+  removeFromCart(productId: string): void {
     const currentItems = this.cartItems.value.filter((item) => item.product.id !== productId);
     this.updateCart(currentItems);
     this.saveToStorageAndServer(currentItems);
   }
 
-  updateQuantity(productId: number, quantity: number): void {
+  // 🔥 CORRIGIDO: productId como string
+  updateQuantity(productId: string, quantity: number): void {
     const currentItems = this.cartItems.value;
     const item = currentItems.find((item) => item.product.id === productId);
 
@@ -270,11 +271,13 @@ export class CartService {
     return this.cartItems.value.length;
   }
 
-  isProductInCart(productId: number): boolean {
+  // 🔥 CORRIGIDO: productId como string
+  isProductInCart(productId: string): boolean {
     return this.cartItems.value.some((item) => item.product.id === productId);
   }
 
-  getProductQuantity(productId: number): number {
+  // 🔥 CORRIGIDO: productId como string
+  getProductQuantity(productId: string): number {
     const item = this.cartItems.value.find((item) => item.product.id === productId);
     return item ? item.quantity : 0;
   }
@@ -370,7 +373,7 @@ export class CartService {
     }
   }
 
-  private loadProductsForCart(cartData: { productId: number; quantity: number }[]): void {
+  private loadProductsForCart(cartData: { productId: string; quantity: number }[]): void {
     const productIds = cartData.map((item) => item.productId);
     console.log('🛒 Carrinho carregado do localStorage:', { productIds });
   }

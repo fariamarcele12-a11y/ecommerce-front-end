@@ -13,7 +13,7 @@ import { Product } from '../../../core/models/ProductModel/product.model';
 })
 export class ProductCard {
   @Input() product!: Product;
-  @Output() favoriteToggle = new EventEmitter<number>();
+  @Output() favoriteToggle = new EventEmitter<string>(); // 🔥 string
 
   /**
    * Formata o preço para moeda brasileira
@@ -31,7 +31,8 @@ export class ProductCard {
   onFavoriteClick(event: Event): void {
     event.preventDefault();
     event.stopPropagation();
-    this.favoriteToggle.emit(this.product.id);
+    // 🔥 CORRIGIDO: product.id é string
+    this.favoriteToggle.emit(String(this.product.id));
   }
 
   /**

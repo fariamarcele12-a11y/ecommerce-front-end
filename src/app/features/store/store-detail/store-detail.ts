@@ -1,3 +1,4 @@
+// src/app/features/store/store-detail/store-detail.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -28,18 +29,22 @@ export class StoreDetailComponent implements OnInit {
   ngOnInit(): void {
     const storeId = this.route.snapshot.params['id'];
     if (storeId) {
-      this.loadStore(+storeId);
+      // 🔥 CORRIGIDO: storeId como string
+      this.loadStore(String(storeId));
     }
   }
 
-  loadStore(storeId: number): void {
+  // 🔥 CORRIGIDO: storeId como string
+  loadStore(storeId: string): void {
     this.loading = true;
     this.storeService.getStoreById(storeId).subscribe({
       next: (store) => {
         this.store = store;
         if (store) {
-          this.loadProducts(store.id);
-          this.checkOwnership(store.userId);
+          // 🔥 CORRIGIDO: store.id como string
+          this.loadProducts(String(store.id));
+          // 🔥 CORRIGIDO: store.userId como string
+          this.checkOwnership(String(store.userId));
         }
         this.loading = false;
       },
@@ -50,7 +55,8 @@ export class StoreDetailComponent implements OnInit {
     });
   }
 
-  loadProducts(storeId: number): void {
+  // 🔥 CORRIGIDO: storeId como string
+  loadProducts(storeId: string): void {
     this.storeService.getStoreProducts(storeId).subscribe({
       next: (products) => {
         this.products = products;
@@ -61,9 +67,10 @@ export class StoreDetailComponent implements OnInit {
     });
   }
 
-  checkOwnership(userId: number): void {
+  // 🔥 CORRIGIDO: userId como string
+  checkOwnership(userId: string): void {
     this.authService.currentUser$.subscribe(user => {
-      this.isOwner = user?.id === userId;
+      this.isOwner = String(user?.id) === userId;
     });
   }
 

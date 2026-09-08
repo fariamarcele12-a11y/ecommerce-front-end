@@ -111,7 +111,7 @@ export class Store implements OnInit {
   /**
    * 🔥 EXCLUIR PRODUTO - COM ATUALIZAÇÃO DA CATEGORIA
    */
-  deleteProduct(productId: number, productName: string, categorySlug: string): void {
+  deleteProduct(productId: string, productName: string, categorySlug: string): void {
     this.alertService
       .confirm(
         `Excluir "${productName}"?`,
@@ -123,22 +123,16 @@ export class Store implements OnInit {
         if (result.isConfirmed) {
           this.deletingProduct = true;
           console.log(`🗑️ Excluindo produto ID: ${productId}`);
-          console.log(`📂 Categoria do produto: ${categorySlug}`);
 
           this.productService.deleteProduct(productId).subscribe({
             next: () => {
               this.deletingProduct = false;
               console.log('✅ Produto excluído com sucesso');
-
-              // 🔥 ATUALIZAR O CONTADOR DA CATEGORIA
               this.updateCategoryProductCount(categorySlug, -1);
-
               this.alertService.success(
                 'Produto excluído!',
                 'O produto foi removido da sua loja com sucesso.',
               );
-
-              // 🔥 Recarregar a lista de produtos
               if (this.store?.id) {
                 this.loadProducts(String(this.store.id));
               }
@@ -155,7 +149,6 @@ export class Store implements OnInit {
         }
       });
   }
-
   /**
    * 🔥 ATUALIZA O CONTADOR DE PRODUTOS DA CATEGORIA
    */
@@ -202,10 +195,34 @@ export class Store implements OnInit {
   /**
    * 🔥 Navega para editar produto
    */
-  editProduct(productId: number): void {
-    if (this.store?.id) {
-      this.router.navigate([`/loja/${this.store.id}/produto/${productId}/editar`]);
+  editProduct(productId: string): void {
+    if (!this.store?.id) {
+      console.error('❌ ID da loja não disponível');
+      this.alertService?.error('Erro', 'ID da loja não disponível.');
+      return;
     }
+
+    if (!productId) {
+      console.error('❌ ID do produto não disponível');
+      this.alertService?.error('Erro', 'ID do produto não disponível.');
+      return;
+    }
+
+    const storeId = String(this.store.id);
+    console.log(`🔗 Navegando para editar produto ${productId} da loja ${storeId}`);
+
+    this.router
+      .navigate([`/loja/${storeId}/produto/${productId}/editar`])
+      .then((success) => {
+        if (success) {
+          console.log(`✅ Navegação para edição do produto ${productId} bem-sucedida`);
+        } else {
+          console.error(`❌ Navegação para edição do produto ${productId} falhou`);
+        }
+      })
+      .catch((error) => {
+        console.error(`❌ Erro na navegação:`, error);
+      });
   }
 
   /**
@@ -264,10 +281,10 @@ export class Store implements OnInit {
   /**
    * 🔥 Alterna favorito do produto
    */
-  onFavoriteToggle(productId: number): void {
+  onFavoriteToggle(productId: string): void {
     console.log('⭐ Toggle favorito para produto:', productId);
     this.productService.toggleFavorite(productId);
-    const product = this.products.find((p) => p.id === productId);
+    const product = this.products.find((p) => String(p.id) === productId);
     if (product) {
       product.isFavorite = !product.isFavorite;
     }

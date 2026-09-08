@@ -1,6 +1,6 @@
 // src/app/core/models/user.model.ts
 export interface User {
-  id: string | number; // 🔥 Aceitar string ou number (JSON Server usa string)
+  id: string | number;
   name: string;
   email: string;
   password?: string;
@@ -18,7 +18,7 @@ export interface User {
     country: string;
   };
   hasStore?: boolean;
-  storeId?: string | number | null; // 🔥 Aceitar string, number ou null
+  storeId?: string | null; // 🔥 Mudado para string
   companyName?: string;
   tradeName?: string;
   birthDate?: string;
@@ -29,6 +29,7 @@ export interface User {
 export interface LoginCredentials {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface RegisterCredentials {
@@ -52,6 +53,7 @@ export interface RegisterCredentials {
   companyName?: string;
   tradeName?: string;
   birthDate?: string;
+  termsAccepted?: boolean;
 }
 
 export interface AuthResponse {
@@ -59,4 +61,5 @@ export interface AuthResponse {
   message: string;
   user?: User;
   token?: string;
+  expiresIn?: number;
 }

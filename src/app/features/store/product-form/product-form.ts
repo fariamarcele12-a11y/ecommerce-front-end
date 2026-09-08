@@ -25,7 +25,7 @@ export class ProductForm implements OnInit {
   storeName: string = '';
   loading = false;
   isEditing = false;
-  productId: number | null = null;
+  productId: string | null = null; // 🔥 Mudado para string
 
   product = {
     name: '',
@@ -50,7 +50,7 @@ export class ProductForm implements OnInit {
     private authService: AuthService,
     private alertService: AlertService,
     private categoryService: CategoryService,
-    private productService: ProductService, // 🔥 ADICIONADO
+    private productService: ProductService,
   ) {
     console.log('🏗️ ProductForm CONSTRUTOR chamado!');
     console.log('🔍 StoreId recebido no construtor:', this.route.snapshot.params['storeId']);
@@ -63,7 +63,7 @@ export class ProductForm implements OnInit {
 
     this.route.params.subscribe((params) => {
       this.storeId = params['storeId'];
-      this.productId = params['id'] ? +params['id'] : null;
+      this.productId = params['id'] ? String(params['id']) : null; // 🔥 Converter para string
       this.isEditing = !!this.productId;
 
       console.log('📝 ProductForm - storeId da URL:', this.storeId);
@@ -110,9 +110,9 @@ export class ProductForm implements OnInit {
   }
 
   /**
-   * 🔥 CARREGA OS DADOS DO PRODUTO PARA EDIÇÃO
+   * 🔥 CARREGA OS DADOS DO PRODUTO PARA EDIÇÃO - CORRIGIDO
    */
-  loadProductForEdit(productId: number): void {
+  loadProductForEdit(productId: string): void {
     this.loading = true;
     console.log(`🔍 Buscando produto para edição: ${productId}`);
 
@@ -273,12 +273,7 @@ export class ProductForm implements OnInit {
   }
 
   /**
-   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO)
-   */
-  // src/app/features/store/product-form/product-form.ts
-
-  /**
-   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO) - COM ATUALIZAÇÃO DE CONTADOR
+   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO) - CORRIGIDO
    */
   onSubmit(): void {
     if (!this.validateForm()) {
@@ -299,10 +294,9 @@ export class ProductForm implements OnInit {
       condition: this.product.condition,
       location: this.product.location,
       stock: this.product.stock,
-      images:
-        images.length > 0
-          ? images
-          : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'],
+      images: images.length > 0
+        ? images
+        : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'],
       freeShipping: this.product.freeShipping,
       seller: {
         id: userId,
@@ -317,7 +311,7 @@ export class ProductForm implements OnInit {
     console.log('📦 Dados:', productData);
 
     if (this.isEditing && this.productId) {
-      // 🔥 EDITAR PRODUTO
+      // 🔥 EDITAR PRODUTO - CORRIGIDO: productId como string
       this.productService.updateProduct(this.productId, productData).subscribe({
         next: (product: Product) => {
           this.loading = false;
