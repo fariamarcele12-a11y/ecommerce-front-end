@@ -12,9 +12,10 @@
 
     <!-- Badge de Desconto -->
     <span
-      class="position-absolute top-0 start-0 m-2 badge bg-danger"
+      class="position-absolute top-0 start-0 m-2 badge bg-danger discount-badge"
       *ngIf="getDiscountPercentage() > 0"
     >
+      <i class="bi bi-tag-fill me-1"></i>
       -{{ getDiscountPercentage() }}%
     </span>
 
@@ -57,14 +58,40 @@
       {{ product.name }}
     </h5>
 
-    <!-- Preços -->
+    <!-- 🔥 Preços com efeito de desconto -->
     <div class="mt-2">
-      <span class="text-muted text-decoration-line-through small" *ngIf="product.oldPrice">
+      <!-- Preço Antigo (riscado) - aparece quando há oferta -->
+      <span
+        *ngIf="product.oldPrice && product.oldPrice > product.price"
+        class="text-muted text-decoration-line-through old-price"
+      >
         {{ formatPrice(product.oldPrice) }}
       </span>
-      <div class="fw-bold text-primary fs-5">
-        {{ formatPrice(product.price) }}
+
+      <!-- Preço Atual -->
+      <div class="d-flex align-items-center gap-2">
+        <span class="fw-bold text-primary fs-5" [class.text-danger]="isOnSale()">
+          {{ formatPrice(product.price) }}
+        </span>
+
+        <!-- Badge de Oferta -->
+        <span
+          *ngIf="isOnSale()"
+          class="badge bg-success sale-badge"
+        >
+          <i class="bi bi-zap me-1"></i>
+          Oferta
+        </span>
       </div>
+
+      <!-- 🔥 Badge de desconto no preço (versão compacta) -->
+      <span
+        *ngIf="getDiscountPercentage() > 0"
+        class="badge bg-danger discount-badge-small mt-1"
+      >
+        <i class="bi bi-tag me-1"></i>
+        {{ getDiscountPercentage() }}% OFF
+      </span>
     </div>
 
     <!-- Vendedor -->
@@ -94,7 +121,7 @@
   </div>
 
   <div class="card-footer bg-white border-0 pb-3">
-    <!-- 🔥 Link para detalhe do produto com ID -->
+    <!-- Link para detalhe do produto -->
     <a
       [routerLink]="[`/produto/${product.id}`]"
       class="btn w-100 rounded-pill"
@@ -103,6 +130,7 @@
       [class.disabled]="!isInStock()"
     >
       <span *ngIf="isInStock()">
+        <i class="bi bi-eye me-1"></i>
         Ver detalhes
         <i class="bi bi-arrow-right-short"></i>
       </span>

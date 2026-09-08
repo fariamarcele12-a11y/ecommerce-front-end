@@ -48,7 +48,7 @@
             <div class="row g-3">
               <!-- Preço -->
               <div class="col-md-4">
-                <label class="form-label fw-bold small">Preço <span class="text-danger">*</span></label>
+                <label class="form-label fw-bold small">Preço Atual <span class="text-danger">*</span></label>
                 <div class="input-group">
                   <span class="input-group-text">R$</span>
                   <input
@@ -58,14 +58,20 @@
                     [(ngModel)]="product.price"
                     name="price"
                     step="0.01"
+                    min="0"
                     required
                   />
                 </div>
               </div>
 
-              <!-- Preço Antigo -->
+              <!-- Preço Antigo (Oferta) -->
               <div class="col-md-4">
-                <label class="form-label fw-bold small">Preço Antigo</label>
+                <label class="form-label fw-bold small">
+                  Preço Antigo
+                  <span class="badge bg-warning text-dark ms-1" *ngIf="isOnSale()">
+                    <i class="bi bi-tag me-1"></i>Oferta!
+                  </span>
+                </label>
                 <div class="input-group">
                   <span class="input-group-text">R$</span>
                   <input
@@ -75,8 +81,13 @@
                     [(ngModel)]="product.oldPrice"
                     name="oldPrice"
                     step="0.01"
+                    min="0"
                   />
                 </div>
+                <small class="text-muted" *ngIf="!product.oldPrice || product.oldPrice === 0">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Deixe em branco se não houver oferta
+                </small>
               </div>
 
               <!-- Estoque -->
@@ -94,8 +105,46 @@
               </div>
             </div>
 
+            <!-- 🔥 Preview do Preço com Desconto -->
+            <div class="row mt-3" *ngIf="product.price > 0">
+              <div class="col-12">
+                <div class="price-preview p-3 rounded-3" [class.bg-light]="!isOnSale()" [class.bg-success-subtle]="isOnSale()">
+                  <div class="d-flex align-items-center justify-content-between flex-wrap">
+                    <div>
+                      <span class="text-muted small">📊 Preview do preço:</span>
+                      <div class="d-flex align-items-center gap-3 mt-1">
+                        <!-- Preço com desconto -->
+                        <span class="h4 fw-bold text-success mb-0">
+                          {{ formatPrice(product.price) }}
+                        </span>
+
+                        <!-- Preço antigo riscado (se houver oferta) -->
+                        <span *ngIf="isOnSale()" class="text-muted text-decoration-line-through">
+                          {{ formatPrice(product.oldPrice) }}
+                        </span>
+
+                        <!-- Badge de desconto -->
+                        <span *ngIf="isOnSale()" class="badge bg-danger rounded-pill fs-6 px-3 py-2">
+                          <i class="bi bi-tag-fill me-1"></i>
+                          -{{ getDiscountPercentage() }}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Economia -->
+                    <div *ngIf="isOnSale()" class="text-end">
+                      <span class="text-success fw-bold">
+                        <i class="bi bi-wallet2 me-1"></i>
+                        Economia: {{ formatPrice(product.oldPrice - product.price) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="row g-3 mt-2">
-              <!-- 🔥 Categoria - CORRIGIDO -->
+              <!-- Categoria -->
               <div class="col-md-6">
                 <label class="form-label fw-bold small">Categoria <span class="text-danger">*</span></label>
                 <select

@@ -13,7 +13,7 @@ import { Product } from '../../../core/models/ProductModel/product.model';
 })
 export class ProductCard {
   @Input() product!: Product;
-  @Output() favoriteToggle = new EventEmitter<string>(); // 🔥 string
+  @Output() favoriteToggle = new EventEmitter<string>();
 
   /**
    * Formata o preço para moeda brasileira
@@ -31,7 +31,6 @@ export class ProductCard {
   onFavoriteClick(event: Event): void {
     event.preventDefault();
     event.stopPropagation();
-    // 🔥 CORRIGIDO: product.id é string
     this.favoriteToggle.emit(String(this.product.id));
   }
 
@@ -45,6 +44,13 @@ export class ProductCard {
       );
     }
     return 0;
+  }
+
+  /**
+   * 🔥 Verifica se o produto está em oferta
+   */
+  isOnSale(): boolean {
+    return !!(this.product.oldPrice && this.product.oldPrice > this.product.price);
   }
 
   /**
@@ -111,21 +117,21 @@ export class ProductCard {
   }
 
   /**
-   * 🔥 Obtém o nome do vendedor com fallback
+   * Obtém o nome do vendedor com fallback
    */
   getSellerName(): string {
     return this.product.seller?.name || 'Vendedor';
   }
 
   /**
-   * 🔥 Obtém a avaliação do vendedor com fallback
+   * Obtém a avaliação do vendedor com fallback
    */
   getSellerRating(): number {
     return this.product.seller?.rating || 0;
   }
 
   /**
-   * 🔥 Obtém o número de vendas do vendedor com fallback
+   * Obtém o número de vendas do vendedor com fallback
    */
   getSellerSales(): number {
     return this.product.seller?.sales || 0;

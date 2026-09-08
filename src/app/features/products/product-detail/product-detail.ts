@@ -83,9 +83,7 @@ export class ProductDetail implements OnInit, OnDestroy {
           this.product = product;
           this.isFavorite = product.isFavorite || false;
 
-          // 🔥 Buscar o slug da categoria
           this.loadCategorySlug(product.category);
-
           this.loadSellerInfo(product);
           this.loadRelatedProducts(product.category, String(product.id));
           this.checkOwnership(product);
@@ -104,7 +102,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   /**
-   * 🔥 Busca o slug da categoria pelo nome
+   * Busca o slug da categoria pelo nome
    */
   loadCategorySlug(categoryName: string): void {
     console.log(`🔍 Buscando slug para categoria: "${categoryName}"`);
@@ -116,7 +114,6 @@ export class ProductDetail implements OnInit, OnDestroy {
           this.categorySlug = category.slug;
           console.log(`✅ Slug encontrado: "${this.categorySlug}"`);
         } else {
-          // Fallback: gerar slug a partir do nome
           this.categorySlug = categoryName
             .toLowerCase()
             .normalize('NFD')
@@ -127,7 +124,6 @@ export class ProductDetail implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('❌ Erro ao buscar categorias:', error);
-        // Fallback: gerar slug a partir do nome
         this.categorySlug = categoryName
           .toLowerCase()
           .normalize('NFD')
@@ -263,6 +259,20 @@ export class ProductDetail implements OnInit, OnDestroy {
     return 0;
   }
 
+  /**
+   * 🔥 Verifica se o produto está em oferta
+   */
+  isOnSale(): boolean {
+    return !!(this.product?.oldPrice && this.product.oldPrice > this.product.price);
+  }
+
+  /**
+   * 🔥 Verifica se tem frete grátis
+   */
+  hasFreeShipping(): boolean {
+    return this.product?.freeShipping || (this.product?.price ?? 0) > 100;
+  }
+
   getSellerName(): string {
     return this.sellerName || 'Vendedor';
   }
@@ -280,7 +290,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   /**
-   * 🔥 Retorna o slug da categoria para navegação
+   * Retorna o slug da categoria para navegação
    */
   getCategorySlug(): string {
     return this.categorySlug || this.product?.category || '';
@@ -398,10 +408,6 @@ export class ProductDetail implements OnInit, OnDestroy {
       return this.product.price;
     }
     return 0;
-  }
-
-  isOnSale(): boolean {
-    return !!(this.product?.oldPrice && this.product.oldPrice > this.product.price);
   }
 
   getMainImage(): string {

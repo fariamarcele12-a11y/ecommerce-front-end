@@ -32,8 +32,8 @@ export class ProductForm implements OnInit {
     description: '',
     price: 0,
     oldPrice: 0,
-    category: '', // 🔥 Agora vai armazenar o NOME da categoria
-    categorySlug: '', // 🔥 NOVO: Armazenar o slug separadamente
+    category: '',
+    categorySlug: '',
     condition: 'new' as 'new' | 'used',
     location: '',
     stock: 1,
@@ -112,14 +112,13 @@ export class ProductForm implements OnInit {
         console.log('📦 Produto carregado para edição:', product);
 
         if (product) {
-          // 🔥 CORRIGIDO: Preencher o formulário com os dados do produto
           this.product = {
             name: product.name,
             description: product.description || '',
             price: product.price,
             oldPrice: product.oldPrice || 0,
-            category: product.category || '', // Nome da categoria
-            categorySlug: '', // Será preenchido abaixo
+            category: product.category || '',
+            categorySlug: '',
             condition: product.condition || 'new',
             location: product.location || '',
             stock: product.stock || 1,
@@ -127,7 +126,6 @@ export class ProductForm implements OnInit {
             freeShipping: product.freeShipping || false,
           };
 
-          // 🔥 Encontrar o slug da categoria
           const category = this.categories.find(c => c.name === product.category);
           if (category) {
             this.product.categorySlug = category.slug;
@@ -180,7 +178,6 @@ export class ProductForm implements OnInit {
         this.categories = categories.filter((cat) => cat.active);
         console.log('📦 Categorias carregadas:', this.categories.length);
 
-        // 🔥 Se estiver editando, encontrar o slug da categoria
         if (this.isEditing && this.product.category) {
           const category = this.categories.find(c => c.name === this.product.category);
           if (category) {
@@ -281,10 +278,9 @@ export class ProductForm implements OnInit {
     const select = event.target as HTMLSelectElement;
     const slug = select.value;
 
-    // 🔥 Encontrar a categoria pelo slug e pegar o nome
     const category = this.categories.find(c => c.slug === slug);
     if (category) {
-      this.product.category = category.name; // Salva o NOME
+      this.product.category = category.name;
       this.product.categorySlug = slug;
       console.log(`📌 Categoria selecionada: "${category.name}" (slug: ${slug})`);
     } else {
@@ -294,7 +290,34 @@ export class ProductForm implements OnInit {
   }
 
   /**
-   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO) - CORRIGIDO
+   * 🔥 NOVO: Verifica se o produto está em oferta
+   */
+  isOnSale(): boolean {
+    return this.product.oldPrice > 0 && this.product.oldPrice > this.product.price;
+  }
+
+  /**
+   * 🔥 NOVO: Calcula o percentual de desconto
+   */
+  getDiscountPercentage(): number {
+    if (this.isOnSale()) {
+      return Math.round(((this.product.oldPrice - this.product.price) / this.product.oldPrice) * 100);
+    }
+    return 0;
+  }
+
+  /**
+   * 🔥 NOVO: Formata preço para exibição
+   */
+  formatPrice(price: number): string {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(price);
+  }
+
+  /**
+   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO)
    */
   onSubmit(): void {
     if (!this.validateForm()) {
@@ -310,12 +333,15 @@ export class ProductForm implements OnInit {
     const categoryName = this.product.category;
     console.log(`📌 Salvando produto na categoria: "${categoryName}"`);
 
+    // 🔥 Se não houver oferta, remover oldPrice
+    const oldPrice = this.isOnSale() ? this.product.oldPrice : undefined;
+
     const productData: Partial<Product> = {
       name: this.product.name,
       description: this.product.description,
       price: this.product.price,
-      oldPrice: this.product.oldPrice || undefined,
-      category: categoryName, // 🔥 Salva o NOME da categoria
+      oldPrice: oldPrice,
+      category: categoryName,
       condition: this.product.condition,
       location: this.product.location,
       stock: this.product.stock,
@@ -335,6 +361,7 @@ export class ProductForm implements OnInit {
     console.log(`📤 ${this.isEditing ? 'Atualizando' : 'Criando'} produto:`);
     console.log('📦 Dados:', productData);
     console.log('📌 Categoria sendo salva:', productData.category);
+    console.log('🏷️ Oferta:', this.isOnSale() ? `Sim (-${this.getDiscountPercentage()}%)` : 'Não');
 
     if (this.isEditing && this.productId) {
       this.productService.updateProduct(this.productId, productData).subscribe({
@@ -392,6 +419,14 @@ export class ProductForm implements OnInit {
       this.alertService.warning('Preço inválido', 'Informe um preço válido.');
       return false;
     }
+    // 🔥 Validar que o preço antigo é maior que o atual (se preenchido)
+    if (this.product.oldPrice > 0 && this.product.oldPrice <= this.product.price) {
+      this.alertService.warning(
+        'Preço antigo inválido',
+        'O preço antigo deve ser maior que o preço atual para criar uma oferta.'
+      );
+      return false;
+    }
     if (!this.product.category) {
       this.alertService.warning('Categoria obrigatória', 'Selecione uma categoria.');
       return false;
@@ -415,12 +450,5 @@ export class ProductForm implements OnInit {
   getCategoryName(slug: string): string {
     const category = this.categories.find((cat) => cat.slug === slug);
     return category ? category.name : slug;
-  }
-
-  formatPrice(price: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(price);
   }
 }

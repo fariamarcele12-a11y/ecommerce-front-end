@@ -1,8 +1,10 @@
+// src/app/features/store/product-form/product-form.scss
 .card {
   border-radius: 16px;
 }
 
-.form-control, .form-select {
+.form-control,
+.form-select {
   border-radius: 8px;
 
   &:focus {
@@ -30,4 +32,46 @@
 .form-switch .form-check-input:checked {
   background-color: #667eea;
   border-color: #667eea;
+}
+
+// 🔥 Estilos para o preview de preço
+.price-preview {
+  border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+
+  &.bg-success-subtle {
+    border-color: #00b894;
+    background-color: #d4edda !important;
+
+    .h4 {
+      color: #00a86b !important;
+    }
+  }
+}
+
+.text-decoration-line-through {
+  font-size: 1.1rem;
+}
+
+.badge {
+  &.bg-danger {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%) !important;
+  }
+}
+
+// Animação para o badge de oferta
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.badge.bg-warning {
+  animation: pulse 2s infinite;
 }
