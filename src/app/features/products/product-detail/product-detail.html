@@ -246,7 +246,7 @@
     </div>
   </div>
 
-  <!-- 🔥 SEÇÃO DO VENDEDOR - COM BOTÃO "VISITAR LOJA" (CORRIGIDO) -->
+  <!-- 🔥 SEÇÃO DO VENDEDOR - COM DATA CORRIGIDA -->
   <div class="seller-section mt-5 p-4 bg-light rounded-3">
     <h5 class="fw-bold mb-3">
       <i class="bi bi-shop me-2"></i>
@@ -261,7 +261,6 @@
           {{ getSellerName().charAt(0) || 'V' }}
         </div>
         <div>
-          <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
           <a
             [routerLink]="['/loja', product.storeId]"
             class="text-decoration-none"
@@ -280,7 +279,8 @@
             <span>|</span>
             <span>{{ getSellerSales() }} vendas</span>
             <span>|</span>
-            <span>Membro desde 2024</span>
+            <!-- 🔥 CORRIGIDO: Data dinâmica baseada no cadastro do vendedor -->
+            <span>Membro desde {{ getSellerMemberSince() }}</span>
           </div>
         </div>
       </div>
@@ -295,7 +295,7 @@
           <i class="bi bi-shop me-1"></i> Visitar loja
         </button>
 
-        <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
+        <!-- 🔥 Botão "Perguntar" - só aparece se não for o dono -->
         <button
           *ngIf="!isOwner"
           class="btn btn-outline-success rounded-pill"
@@ -327,7 +327,6 @@
     </div>
     <div class="row g-4">
       <div class="col-lg-3 col-md-4 col-sm-6 col-12" *ngFor="let related of relatedProducts">
-        <!-- 🔥 CORRIGIDO: Passando product.id diretamente -->
         <app-product-card
           [product]="related"
           (favoriteToggle)="loadRelatedProducts(product.category, product.id)"

@@ -11,6 +11,7 @@ import { CartService } from '../../../core/services/cart.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { StoreService } from '../../../core/services/store.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { UserService } from '../../../core/services/user.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -31,6 +32,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   sellerName: string = 'Carregando...';
   isOwner: boolean = false;
   currentUserId: string | null = null;
+  sellerMemberSince: string = '2024'; // 🔥 NOVO: Data de cadastro do vendedor
 
   private routeSub: Subscription = new Subscription();
 
@@ -42,6 +44,7 @@ export class ProductDetail implements OnInit, OnDestroy {
     private alertService: AlertService,
     private storeService: StoreService,
     private authService: AuthService,
+    private userService: UserService,
   ) {}
 
   ngOnInit(): void {
@@ -106,6 +109,9 @@ export class ProductDetail implements OnInit, OnDestroy {
       this.isOwner = sellerId === this.currentUserId;
       console.log('👤 É o dono?', this.isOwner);
       this.sellerName = product.seller.name || 'Vendedor';
+
+      // 🔥 NOVO: Buscar data de cadastro do vendedor
+      this.loadSellerMemberSince(sellerId);
       return;
     }
 
@@ -122,6 +128,9 @@ export class ProductDetail implements OnInit, OnDestroy {
             console.log('👤 É o dono da loja?', this.isOwner);
             console.log('🆔 Store User ID:', storeUserId);
             console.log('👤 Current User ID:', this.currentUserId);
+
+            // 🔥 NOVO: Buscar data de cadastro do dono da loja
+            this.loadSellerMemberSince(storeUserId);
           }
         },
         error: (error) => {
@@ -133,6 +142,28 @@ export class ProductDetail implements OnInit, OnDestroy {
       this.sellerName = 'Vendedor';
       this.isOwner = false;
     }
+  }
+
+  // 🔥 NOVO: Método para carregar data de cadastro do vendedor
+  loadSellerMemberSince(userId: string): void {
+    this.userService.getUserById(userId).subscribe({
+      next: (user) => {
+        if (user && user.createdAt) {
+          const date = new Date(user.createdAt);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          this.sellerMemberSince = `${month}/${year}`;
+          console.log(`📅 Data de cadastro do vendedor: ${this.sellerMemberSince}`);
+        } else {
+          this.sellerMemberSince = '2024';
+          console.warn('⚠️ Data de cadastro não encontrada, usando valor padrão');
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erro ao buscar data de cadastro do vendedor:', error);
+        this.sellerMemberSince = '2024';
+      },
+    });
   }
 
   checkOwnership(product: Product): void {
@@ -207,6 +238,11 @@ export class ProductDetail implements OnInit, OnDestroy {
 
   getSellerSales(): number {
     return this.product?.seller?.sales || 0;
+  }
+
+  // 🔥 NOVO: Método para obter data de cadastro formatada
+  getSellerMemberSince(): string {
+    return this.sellerMemberSince || '2024';
   }
 
   /**
