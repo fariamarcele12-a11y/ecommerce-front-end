@@ -8,6 +8,8 @@ import { User } from '../models/user.model';
 import { Product } from '../models/ProductModel/product.model';
 import { AuthService } from './auth.service';
 import { IdGeneratorService } from './id-generator.service';
+import { ProductService } from './product.service'; // 🔥 IMPORTAR ProductService
+import { AlertService } from './alert.service'; // 🔥 IMPORTAR AlertService
 
 @Injectable({
   providedIn: 'root',
@@ -21,11 +23,23 @@ export class StoreService {
   private currentStoreSubject = new BehaviorSubject<Store | null>(null);
   public currentStore$ = this.currentStoreSubject.asObservable();
 
+  // 🔥 Propriedades para gerenciar produtos e estado
+  private productsSubject = new BehaviorSubject<Product[]>([]);
+  public products$ = this.productsSubject.asObservable();
+
+  private filteredProductsSubject = new BehaviorSubject<Product[]>([]);
+  public filteredProducts$ = this.filteredProductsSubject.asObservable();
+
+  public loading = false;
+  public products: Product[] = [];
+  public filteredProducts: Product[] = [];
+
   private isBrowser: boolean;
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
   private readonly idGenerator = inject(IdGeneratorService);
-
+  private readonly productService = inject(ProductService); // 🔥 INJETAR
+  private readonly alertService = inject(AlertService); // 🔥 INJETAR
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -143,6 +157,10 @@ export class StoreService {
     return this.http.get<Product[]>(`${this.productsApiUrl}?storeId=${id}`).pipe(
       map((products) => {
         console.log(`📦 ${products.length} produtos encontrados na loja`);
+        this.products = products;
+        this.filteredProducts = products;
+        this.productsSubject.next(products);
+        this.filteredProductsSubject.next(products);
         return products;
       }),
       catchError((error) => {
@@ -151,8 +169,6 @@ export class StoreService {
       }),
     );
   }
-
-  // src/app/core/services/store.service.ts
 
   /**
    * 🔥 CRIA UM PRODUTO NA LOJA - VERSÃO CORRIGIDA
@@ -188,6 +204,11 @@ export class StoreService {
         return this.http.post<Product>(this.productsApiUrl, newProduct).pipe(
           tap((product) => {
             console.log('✅ Produto criado com sucesso com ID:', product.id);
+            // 🔥 Atualizar a lista de produtos
+            this.products.push(product);
+            this.filteredProducts = [...this.products];
+            this.productsSubject.next(this.products);
+            this.filteredProductsSubject.next(this.filteredProducts);
           }),
           catchError((error) => {
             console.error('❌ Erro ao criar produto na loja:', error);
@@ -204,7 +225,7 @@ export class StoreService {
   /**
    * Atualiza um produto da loja
    */
-  updateStoreProduct(productId: number, productData: Partial<Product>): Observable<Product> {
+  updateStoreProduct(productId: string, productData: Partial<Product>): Observable<Product> {
     return this.http
       .patch<Product>(`${this.productsApiUrl}/${productId}`, {
         ...productData,
@@ -213,6 +234,14 @@ export class StoreService {
       .pipe(
         tap((product) => {
           console.log('✅ Produto atualizado:', product);
+          // 🔥 Atualizar na lista local
+          const index = this.products.findIndex(p => String(p.id) === productId);
+          if (index !== -1) {
+            this.products[index] = product;
+            this.filteredProducts = [...this.products];
+            this.productsSubject.next(this.products);
+            this.filteredProductsSubject.next(this.filteredProducts);
+          }
         }),
         catchError((error) => {
           console.error('❌ Erro ao atualizar produto:', error);
@@ -222,12 +251,89 @@ export class StoreService {
   }
 
   /**
-   * Remove um produto da loja
+   * 🔥 DELETE PRODUCT - COM REMOÇÃO OTIMISTA
    */
-  deleteStoreProduct(productId: number): Observable<void> {
-    return this.http.delete<void>(`${this.productsApiUrl}/${productId}`).pipe(
+  deleteProduct(productId: string): void {
+    console.log(`🗑️ Solicitando exclusão do produto: ${productId}`);
+
+    // 🔥 Encontrar o produto na lista atual
+    const productToDelete = this.products.find((p) => String(p.id) === productId);
+    if (!productToDelete) {
+      this.alertService.warning('Produto não encontrado', 'Este produto não está mais disponível.');
+      return;
+    }
+
+    this.alertService
+      .confirm(
+        'Excluir produto?',
+        `Tem certeza que deseja excluir "${productToDelete.name}"? Esta ação não pode ser desfeita.`,
+        'Sim, excluir',
+        'Cancelar',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.loading = true;
+          console.log(`🗑️ Excluindo produto ID: ${productId}`);
+
+          // 🔥 Remover da lista IMEDIATAMENTE (otimista)
+          const previousProducts = [...this.products];
+          const previousFiltered = [...this.filteredProducts];
+
+          this.products = this.products.filter((p) => String(p.id) !== productId);
+          this.filteredProducts = this.filteredProducts.filter((p) => String(p.id) !== productId);
+          this.productsSubject.next(this.products);
+          this.filteredProductsSubject.next(this.filteredProducts);
+
+          this.productService.deleteProduct(productId).subscribe({
+            next: () => {
+              this.loading = false;
+              console.log('✅ Produto excluído com sucesso!');
+              this.alertService.success(
+                'Produto excluído!',
+                'O produto foi removido com sucesso. 🎉',
+              );
+            },
+            error: (error: any) => {
+              this.loading = false;
+              console.error('❌ Erro ao excluir produto:', error);
+
+              // 🔥 Restaurar a lista se houver erro
+              if (error.status !== 404) {
+                this.products = previousProducts;
+                this.filteredProducts = previousFiltered;
+                this.productsSubject.next(this.products);
+                this.filteredProductsSubject.next(this.filteredProducts);
+
+                this.alertService.error(
+                  'Erro ao excluir produto',
+                  'Não foi possível excluir o produto. Tente novamente.',
+                );
+              } else {
+                // Produto já foi excluído
+                this.alertService.info(
+                  'Produto removido',
+                  'Este produto já foi removido anteriormente.',
+                );
+              }
+            },
+          });
+        }
+      });
+  }
+
+  /**
+   * Remove um produto da loja (método alternativo)
+   */
+  deleteStoreProduct(productId: number | string): Observable<void> {
+    const id = String(productId);
+    return this.http.delete<void>(`${this.productsApiUrl}/${id}`).pipe(
       tap(() => {
         console.log('✅ Produto removido');
+        // 🔥 Remover da lista local
+        this.products = this.products.filter((p) => String(p.id) !== id);
+        this.filteredProducts = this.filteredProducts.filter((p) => String(p.id) !== id);
+        this.productsSubject.next(this.products);
+        this.filteredProductsSubject.next(this.filteredProducts);
       }),
       catchError((error) => {
         console.error('❌ Erro ao remover produto:', error);
@@ -281,7 +387,7 @@ export class StoreService {
             console.log('✅ Loja criada com sucesso:', store);
             console.log('🏪 ID da loja:', store.id);
 
-            const storeIdString = String(store.id); // 🔥 Converter para string
+            const storeIdString = String(store.id);
 
             const updateData = {
               hasStore: true,

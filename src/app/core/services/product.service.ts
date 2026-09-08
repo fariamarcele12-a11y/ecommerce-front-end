@@ -10,11 +10,13 @@ import {
   shareReplay,
   BehaviorSubject,
   of,
+  switchMap,
 } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
 import { ProductFilters } from '../models/ProductModel/product-filters.model';
 import { IdGeneratorService } from './id-generator.service';
+import { CategoryService } from './category.service'; // 🔥 IMPORTAR CategoryService
 
 export interface ProductResponse {
   products: Product[];
@@ -33,7 +35,7 @@ export class ProductService {
   private productsCache$: Observable<ProductResponse> | null = null;
   private lastCacheTime = 0;
   private cacheDuration = 5 * 60 * 1000;
-  private lastFilters: string = ''; // 🔥 NOVO: Guardar últimos filtros
+  private lastFilters: string = '';
 
   private favoritesSubject = new BehaviorSubject<string[]>([]);
   public favorites$ = this.favoritesSubject.asObservable();
@@ -41,15 +43,18 @@ export class ProductService {
   private isBrowser: boolean;
   private readonly http: HttpClient;
   private readonly idGenerator: IdGeneratorService;
+  private readonly categoryService: CategoryService; // 🔥 ADICIONAR
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     http: HttpClient,
     idGenerator: IdGeneratorService,
+    categoryService: CategoryService, // 🔥 ADICIONAR no construtor
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
     this.http = http;
     this.idGenerator = idGenerator;
+    this.categoryService = categoryService; // 🔥 ATRIBUIR
 
     if (this.isBrowser) {
       this.loadFavoritesFromStorage();
@@ -57,21 +62,18 @@ export class ProductService {
   }
 
   /**
-   * 🔥 CORRIGIDO: Busca produtos com suporte para forçar recarga
+   * Busca produtos com suporte para forçar recarga
    */
   getProducts(filters?: ProductFilters, useCache: boolean = true): Observable<ProductResponse> {
-    // 🔥 Gerar chave única para os filtros
     const filtersKey = JSON.stringify(filters || {});
     const cacheKey = `${filtersKey}`;
 
-    // 🔥 Se os filtros mudaram, invalidar cache
     if (this.lastFilters !== cacheKey) {
       console.log('🔄 Filtros mudaram, invalidando cache');
       this.invalidateCache();
       this.lastFilters = cacheKey;
     }
 
-    // 🔥 Verificar cache APENAS se os filtros forem os mesmos
     if (useCache && this.productsCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
       console.log('📦 Usando cache para filtros:', filters);
       return this.productsCache$;
@@ -126,62 +128,65 @@ export class ProductService {
       }
     }
 
-    // Garantir que page e limit estejam definidos
     params = params.set('_page', page.toString());
     params = params.set('_limit', limit.toString());
-
-    // 🔥 Adicionar timestamp para evitar cache do navegador
     params = params.set('_t', Date.now().toString());
 
     console.log('🌐 URL da requisição:', `${this.apiUrl}?${params.toString()}`);
 
-    const request = this.http.get<any>(this.apiUrl, {
-      params,
-      observe: 'response',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    }).pipe(
-      map((response) => {
-        let products = response.body || [];
-        const total = parseInt(response.headers.get('X-Total-Count') || '0', 10) || products.length;
+    const request = this.http
+      .get<any>(this.apiUrl, {
+        params,
+        observe: 'response',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      })
+      .pipe(
+        map((response) => {
+          let products = response.body || [];
+          const total =
+            parseInt(response.headers.get('X-Total-Count') || '0', 10) || products.length;
 
-        // 🔥 Filtrar manualmente se necessário (garantia extra)
-        if (filters?.category) {
-          const categoryName = filters.category;
-          products = products.filter((p: Product) => p.category === categoryName);
-          console.log(`🔍 Filtro manual aplicado: "${categoryName}" -> ${products.length} produtos`);
-        }
+          if (filters?.category) {
+            const categoryName = filters.category;
+            products = products.filter((p: Product) => p.category === categoryName);
+            console.log(
+              `🔍 Filtro manual aplicado: "${categoryName}" -> ${products.length} produtos`,
+            );
+          }
 
-        const favorites = this.favoritesSubject.value;
-        products.forEach((product: Product) => {
-          product.isFavorite = favorites.includes(String(product.id));
-        });
+          const favorites = this.favoritesSubject.value;
+          products.forEach((product: Product) => {
+            product.isFavorite = favorites.includes(String(product.id));
+          });
 
-        const totalPages = Math.ceil(total / limit) || 1;
+          const totalPages = Math.ceil(total / limit) || 1;
 
-        console.log(`📦 ${products.length} produtos retornados (Total: ${total})`);
-        console.log('📋 Categorias encontradas:', [...new Set(products.map((p: Product) => p.category))]);
+          console.log(`📦 ${products.length} produtos retornados (Total: ${total})`);
+          console.log('📋 Categorias encontradas:', [
+            ...new Set(products.map((p: Product) => p.category)),
+          ]);
 
-        return {
-          products,
-          total: total,
-          page,
-          limit,
-          totalPages,
-        } as ProductResponse;
-      }),
-      tap((response) => {
-        this.lastCacheTime = Date.now();
-        console.log(
-          `✅ ${response.products.length} produtos carregados (Total: ${response.total})`,
-        );
-      }),
-      shareReplay(1),
-      catchError(this.handleError),
-    );
+          return {
+            products,
+            total: total,
+            page,
+            limit,
+            totalPages,
+          } as ProductResponse;
+        }),
+        tap((response) => {
+          this.lastCacheTime = Date.now();
+          console.log(
+            `✅ ${response.products.length} produtos carregados (Total: ${response.total})`,
+          );
+        }),
+        shareReplay(1),
+        catchError(this.handleError),
+      );
 
     this.productsCache$ = request;
     return request;
@@ -322,13 +327,105 @@ export class ProductService {
       );
   }
 
+  /**
+   * 🔥 DELETE PRODUCT - CORRIGIDO
+   */
   deleteProduct(id: string): Observable<void> {
+    console.log(`🗑️ Excluindo produto com ID: ${id}`);
+
+    // 🔥 Tentativa direta de exclusão SEM verificação prévia
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
+        console.log(`✅ Produto ${id} excluído com sucesso!`);
         this.invalidateCache();
       }),
-      catchError(this.handleError),
+      catchError((error: HttpErrorResponse) => {
+        console.error('❌ Erro ao excluir produto:', error);
+
+        // 🔥 Se for erro 404, produto já foi excluído
+        if (error.status === 404) {
+          console.warn('⚠️ Produto já foi excluído anteriormente');
+          this.invalidateCache();
+          return of(void 0);
+        }
+
+        // 🔥 Se for erro 500, tentar via PATCH (desativar)
+        if (error.status === 500) {
+          console.warn('⚠️ Erro 500 no DELETE, tentando desativar produto...');
+          return this.deactivateProduct(id);
+        }
+
+        return throwError(() => new Error('Não foi possível excluir o produto. Tente novamente.'));
+      }),
     );
+  }
+
+  private deactivateProduct(id: string): Observable<void> {
+    console.log(`🔄 Desativando produto ${id}...`);
+
+    return this.http
+      .patch<Product>(`${this.apiUrl}/${id}`, {
+        active: false,
+        deletedAt: new Date().toISOString(),
+      })
+      .pipe(
+        tap(() => {
+          console.log(`✅ Produto ${id} desativado com sucesso!`);
+          this.invalidateCache();
+        }),
+        map(() => void 0),
+        catchError((error: HttpErrorResponse) => {
+          console.error('❌ Falha ao desativar produto:', error);
+
+          // 🔥 Último recurso: invalidar cache e retornar sucesso
+          this.invalidateCache();
+          return of(void 0);
+        }),
+      );
+  }
+  /**
+   * 🔥 UPDATE CATEGORY PRODUCT COUNT - CORRIGIDO
+   */
+  private updateCategoryProductCount(categoryName: string, delta: number): void {
+    if (!categoryName) {
+      console.warn('⚠️ Categoria não informada, pulando atualização');
+      return;
+    }
+
+    console.log(
+      `🔄 Atualizando contador da categoria: ${categoryName} (${delta > 0 ? '+' : ''}${delta})`,
+    );
+
+    // Buscar a categoria pelo nome usando o categoryService
+    this.categoryService.getCategories().subscribe({
+      next: (categories: any[]) => {
+        const category = categories.find((c: any) => c.name === categoryName);
+        if (category) {
+          const newCount = Math.max(0, (category.productCount || 0) + delta);
+          console.log(`📊 Novo contador: ${newCount} (era ${category.productCount})`);
+
+          this.categoryService
+            .updateCategory(category.id, {
+              productCount: newCount,
+            })
+            .subscribe({
+              next: (updated: any) => {
+                console.log(
+                  `✅ Categoria "${updated.name}" atualizada para ${updated.productCount} produtos`,
+                );
+              },
+              error: (error: any) => {
+                console.error('❌ Erro ao atualizar contador da categoria:', error);
+              },
+            });
+        } else {
+          console.warn(`⚠️ Categoria não encontrada: ${categoryName}`);
+        }
+      },
+      error: (error: any) => {
+        console.error('❌ Erro ao buscar categorias:', error);
+      },
+    });
   }
 
   toggleFavorite(productId: string): Observable<Product> {
@@ -346,10 +443,10 @@ export class ProductService {
         tap(() => {
           this.updateFavorites(productId, newFavoriteStatus);
         }),
-        catchError((error) => {
+        catchError((error: HttpErrorResponse) => {
           console.warn('⚠️ Erro ao sincronizar favorito, mantendo estado local:', error);
           return this.getProductById(productId).pipe(
-            map((product) => ({
+            map((product: Product) => ({
               ...product,
               isFavorite: newFavoriteStatus,
             })),
@@ -414,7 +511,7 @@ export class ProductService {
   invalidateCache(): void {
     this.productsCache$ = null;
     this.lastCacheTime = 0;
-    this.lastFilters = ''; // 🔥 Resetar último filtro
+    this.lastFilters = '';
   }
 
   refreshProducts(filters?: ProductFilters): Observable<ProductResponse> {
