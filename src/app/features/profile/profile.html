@@ -129,8 +129,9 @@
               <small class="text-muted">O tipo de cadastro não pode ser alterado.</small>
             </div>
 
-            <!-- Nome -->
-            <div class="form-group mb-3">
+            <!-- 🔥 CORRIGIDO: Campos de Nome de acordo com o tipo -->
+            <!-- PF: Nome Completo -->
+            <div *ngIf="profileData.documentType === 'pf'" class="form-group mb-3">
               <label class="form-label fw-bold small">
                 Nome Completo <span class="text-danger">*</span>
               </label>
@@ -149,26 +150,12 @@
               </div>
             </div>
 
-            <!-- Campos PF -->
-            <div *ngIf="profileData.documentType === 'pf'" class="form-group mb-3">
-              <label class="form-label fw-bold small">Data de Nascimento</label>
-              <div class="input-group">
-                <span class="input-group-text bg-light">
-                  <i class="bi bi-calendar"></i>
-                </span>
-                <input
-                  type="date"
-                  class="form-control"
-                  [(ngModel)]="birthDate"
-                  name="birthDate"
-                />
-              </div>
-            </div>
-
-            <!-- Campos PJ -->
+            <!-- PJ: Razão Social e Nome Fantasia -->
             <div *ngIf="profileData.documentType === 'pj'">
               <div class="form-group mb-3">
-                <label class="form-label fw-bold small">Razão Social</label>
+                <label class="form-label fw-bold small">
+                  Razão Social <span class="text-danger">*</span>
+                </label>
                 <div class="input-group">
                   <span class="input-group-text bg-light">
                     <i class="bi bi-building"></i>
@@ -177,13 +164,16 @@
                     type="text"
                     class="form-control"
                     placeholder="Razão Social da empresa"
-                    [(ngModel)]="companyName"
-                    name="companyName"
+                    [(ngModel)]="profileData.name"
+                    name="name"
+                    required
                   />
                 </div>
               </div>
               <div class="form-group mb-3">
-                <label class="form-label fw-bold small">Nome Fantasia</label>
+                <label class="form-label fw-bold small">
+                  Nome Fantasia
+                </label>
                 <div class="input-group">
                   <span class="input-group-text bg-light">
                     <i class="bi bi-shop"></i>
@@ -196,6 +186,22 @@
                     name="tradeName"
                   />
                 </div>
+              </div>
+            </div>
+
+            <!-- Data de Nascimento (apenas PF) -->
+            <div *ngIf="profileData.documentType === 'pf'" class="form-group mb-3">
+              <label class="form-label fw-bold small">Data de Nascimento</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-calendar"></i>
+                </span>
+                <input
+                  type="date"
+                  class="form-control"
+                  [(ngModel)]="birthDate"
+                  name="birthDate"
+                />
               </div>
             </div>
 

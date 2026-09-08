@@ -100,9 +100,16 @@ export class Profile implements OnInit {
     // 🔥 Dados específicos
     if (user.documentType === 'pf') {
       this.birthDate = user.birthDate || '';
+      this.companyName = '';
+      this.tradeName = '';
     } else {
-      this.companyName = user.companyName || '';
+      // 🔥 PJ: Nome Fantasia
       this.tradeName = user.tradeName || '';
+      this.companyName = user.companyName || '';
+      this.birthDate = '';
+
+      // 🔥 Se for PJ, o campo "name" é a Razão Social
+      this.profileData.name = user.name || user.companyName || '';
     }
 
     // 🔥 Buscar dados da loja se tiver
@@ -114,7 +121,6 @@ export class Profile implements OnInit {
         },
         error: (error) => {
           console.error('❌ Erro ao carregar loja:', error);
-          // 🔥 Se não encontrar a loja, atualizar o usuário
           if (error.status === 404) {
             this.hasStore = false;
             this.store = null;
@@ -190,7 +196,8 @@ export class Profile implements OnInit {
       updateData.companyName = undefined;
       updateData.tradeName = undefined;
     } else {
-      updateData.companyName = this.companyName;
+      // 🔥 PJ: Salvar Razão Social e Nome Fantasia
+      updateData.companyName = this.profileData.name;
       updateData.tradeName = this.tradeName;
       updateData.birthDate = undefined;
     }
@@ -203,7 +210,6 @@ export class Profile implements OnInit {
             'Perfil atualizado!',
             'Suas informações foram atualizadas com sucesso. 🎉',
           );
-          // 🔥 Recarregar dados
           this.loadUserData();
         } else {
           this.alertService.error('Erro', response.message || 'Erro ao atualizar perfil.');
