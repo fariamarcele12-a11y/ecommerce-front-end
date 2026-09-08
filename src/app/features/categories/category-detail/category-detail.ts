@@ -7,6 +7,7 @@ import { Category } from '../../../core/models/category.model';
 import { Products } from '../../products/products';
 import { Subscription } from 'rxjs';
 import { ProductFilters } from '../../../core/models/ProductModel/product-filters.model';
+import { CategoryStatsService } from '../../../core/services/category-stats.service';
 
 @Component({
   selector: 'app-category-detail',
@@ -20,12 +21,14 @@ export class CategoryDetail implements OnInit, OnDestroy {
   loading = true;
   filters: ProductFilters = {};
   private routeSub: Subscription = new Subscription();
-  private categorySlug: string = ''; // 🔥 NOVO: Guardar o slug atual
+  private categorySlug: string = '';
+  private isUpdatingCount = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private categoryService: CategoryService,
+    private categoryStatsService: CategoryStatsService,
   ) {}
 
   ngOnInit(): void {
@@ -35,7 +38,6 @@ export class CategoryDetail implements OnInit, OnDestroy {
       console.log('🔄 Categoria anterior:', this.categorySlug);
 
       if (slug) {
-        // 🔥 Se o slug mudou, recarregar
         if (this.categorySlug !== slug) {
           this.categorySlug = slug;
           this.loadCategory(slug);
@@ -52,7 +54,6 @@ export class CategoryDetail implements OnInit, OnDestroy {
     this.loading = true;
     console.log(`🔍 Buscando categoria com slug: ${slug}`);
 
-    // 🔥 Limpar os filtros antes de carregar nova categoria
     this.filters = {};
 
     this.categoryService.getCategoryBySlug(slug).subscribe({
@@ -61,10 +62,12 @@ export class CategoryDetail implements OnInit, OnDestroy {
         if (category) {
           this.category = category;
 
+          // 🔥 Atualizar a contagem de produtos da categoria
+          this.updateCategoryCount(category);
+
           const categoryName = category.name;
           console.log(`📌 Nome da categoria para filtro: "${categoryName}"`);
 
-          // 🔥 Forçar novos filtros
           this.filters = {
             category: categoryName,
             sortBy: 'newest',
@@ -84,6 +87,31 @@ export class CategoryDetail implements OnInit, OnDestroy {
         this.loading = false;
         this.router.navigate(['/home']);
       },
+    });
+  }
+
+  /**
+   * 🔥 Atualiza a contagem de produtos da categoria
+   */
+  private updateCategoryCount(category: Category): void {
+    if (this.isUpdatingCount) return;
+    this.isUpdatingCount = true;
+
+    console.log(`🔄 Atualizando contagem da categoria: ${category.name}`);
+
+    this.categoryStatsService.updateCategoryCount(category.id).subscribe({
+      next: (updatedCategory) => {
+        this.isUpdatingCount = false;
+        if (updatedCategory) {
+          console.log(`✅ Contagem atualizada: ${updatedCategory.productCount} produtos`);
+          this.category = updatedCategory;
+        }
+      },
+      error: (error) => {
+        this.isUpdatingCount = false;
+        console.error('❌ Erro ao atualizar contagem:', error);
+        // Não mostrar erro para o usuário, apenas log
+      }
     });
   }
 

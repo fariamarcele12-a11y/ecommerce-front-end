@@ -81,7 +81,7 @@ export class CategoryService {
   /**
    * Busca categoria por ID
    */
-  getCategoryById(id: number): Observable<Category> {
+  getCategoryById(id: string | number): Observable<Category> {
     return this.http.get<Category>(`${this.apiUrl}/${id}`).pipe(catchError(this.handleError));
   }
 
