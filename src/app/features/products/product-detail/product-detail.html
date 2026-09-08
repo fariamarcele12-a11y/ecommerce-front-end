@@ -202,7 +202,7 @@
             productId: product.id,
             sellerId: product.seller.id || product.storeId,
             productName: product.name,
-            sellerName: getSellerName(),
+            sellerName: getSellerName()
           }"
         >
           <i class="bi bi-chat-dots me-2"></i>
@@ -246,7 +246,7 @@
     </div>
   </div>
 
-  <!-- 🔥 SEÇÃO DO VENDEDOR - COM BOTÃO OCULTO PARA O DONO -->
+  <!-- 🔥 SEÇÃO DO VENDEDOR - COM BOTÃO "VISITAR LOJA" (CORRIGIDO) -->
   <div class="seller-section mt-5 p-4 bg-light rounded-3">
     <h5 class="fw-bold mb-3">
       <i class="bi bi-shop me-2"></i>
@@ -261,7 +261,17 @@
           {{ getSellerName().charAt(0) || 'V' }}
         </div>
         <div>
-          <h6 class="mb-0">{{ getSellerName() }}</h6>
+          <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
+          <a
+            [routerLink]="['/loja', product.storeId]"
+            class="text-decoration-none"
+            title="Visitar loja do vendedor"
+          >
+            <h6 class="mb-0 text-primary fw-bold hover-underline">
+              {{ getSellerName() }}
+              <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 12px;"></i>
+            </h6>
+          </a>
           <div class="d-flex align-items-center gap-2 small text-muted">
             <span>
               <i class="bi bi-star-fill text-warning me-1"></i>
@@ -275,20 +285,31 @@
         </div>
       </div>
 
-      <!-- 🔥 BOTÃO "PERGUNTAR AO VENDEDOR" - OCULTO SE FOR O DONO -->
-      <button
-        *ngIf="!isOwner"
-        class="btn btn-outline-primary rounded-pill ms-auto"
-        [routerLink]="['/chat']"
-        [queryParams]="{
-          sellerId: product.seller.id || product.storeId,
-          sellerName: getSellerName(),
-          productId: product.id,
-          store: 'true',
-        }"
-      >
-        <i class="bi bi-chat me-1"></i> Perguntar ao vendedor
-      </button>
+      <div class="d-flex gap-2 ms-auto">
+        <!-- 🔥 Botão "Visitar Loja" - aparece para todos -->
+        <button
+          class="btn btn-outline-primary rounded-pill"
+          (click)="goToStore()"
+          title="Ver todos os produtos do vendedor"
+        >
+          <i class="bi bi-shop me-1"></i> Visitar loja
+        </button>
+
+        <!-- 🔥 CORRIGIDO: Removido '?.' desnecessário -->
+        <button
+          *ngIf="!isOwner"
+          class="btn btn-outline-success rounded-pill"
+          [routerLink]="['/chat']"
+          [queryParams]="{
+            sellerId: product.seller.id || product.storeId,
+            sellerName: getSellerName(),
+            productId: product.id,
+            store: 'true'
+          }"
+        >
+          <i class="bi bi-chat me-1"></i> Perguntar
+        </button>
+      </div>
     </div>
   </div>
 
@@ -306,6 +327,7 @@
     </div>
     <div class="row g-4">
       <div class="col-lg-3 col-md-4 col-sm-6 col-12" *ngFor="let related of relatedProducts">
+        <!-- 🔥 CORRIGIDO: Passando product.id diretamente -->
         <app-product-card
           [product]="related"
           (favoriteToggle)="loadRelatedProducts(product.category, product.id)"

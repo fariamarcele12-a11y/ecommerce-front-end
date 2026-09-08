@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ProductService } from '../../core/services/product.service';
-import { CategoryService } from '../../core/services/category.service'; // 🔥 ADICIONAR
+import { CategoryService } from '../../core/services/category.service';
 import { AlertService } from '../../core/services/alert.service';
 import { Store as StoreModel } from '../../core/models/store.model';
 import { Product } from '../../core/models/ProductModel/product.model';
@@ -22,6 +22,7 @@ export class Store implements OnInit {
   products: Product[] = [];
   loading = true;
   isOwner = false;
+  isVisitor = false;
   storeId: string | null = null;
   deletingProduct = false;
 
@@ -31,7 +32,7 @@ export class Store implements OnInit {
     private storeService: StoreService,
     private authService: AuthService,
     private productService: ProductService,
-    private categoryService: CategoryService, // 🔥 ADICIONAR
+    private categoryService: CategoryService,
     private alertService: AlertService,
   ) {}
 
@@ -75,6 +76,7 @@ export class Store implements OnInit {
           this.store = store;
           this.checkOwnership(String(store.userId));
           this.loadProducts(String(store.id));
+          this.checkVisitor();
         } else {
           console.log('❌ Loja não encontrada');
           this.router.navigate(['/home']);
@@ -106,6 +108,29 @@ export class Store implements OnInit {
     const user = this.authService.getCurrentUser();
     this.isOwner = String(user?.id) === userId;
     console.log('👤 É o dono da loja?', this.isOwner);
+  }
+
+  /**
+   * 🔥 Verifica se o usuário é um visitante (não é o dono)
+   */
+  checkVisitor(): void {
+    this.isVisitor = !this.isOwner && this.authService.isLoggedIn();
+    console.log('👤 É visitante?', this.isVisitor);
+  }
+
+  /**
+   * 🔥 Inicia uma conversa com a loja (para visitantes)
+   */
+  contactStore(): void {
+    if (this.store) {
+      this.router.navigate(['/chat'], {
+        queryParams: {
+          sellerId: this.store.userId,
+          sellerName: this.store.storeName,
+          store: 'true'
+        }
+      });
+    }
   }
 
   /**
@@ -149,6 +174,7 @@ export class Store implements OnInit {
         }
       });
   }
+
   /**
    * 🔥 ATUALIZA O CONTADOR DE PRODUTOS DA CATEGORIA
    */
@@ -251,20 +277,16 @@ export class Store implements OnInit {
     }).format(dateObj);
   }
 
+  /**
+   * 🔥 Navega para criar produto
+   */
   goToCreateProduct(): void {
     if (this.store?.id) {
       const storeId = String(this.store.id);
       console.log('🔗 Navegando para criar produto com storeId:', storeId);
-      this.router.navigate([`/loja/${storeId}/produto/novo`]);
+      this.router.navigate(['/loja', storeId, 'produto', 'novo']);
     } else {
       console.error('❌ ID da loja não disponível');
-    }
-  }
-
-  testNavigate(): void {
-    if (this.store?.id) {
-      const storeId = String(this.store.id);
-      this.router.navigate([`/loja/${storeId}/produto/novo`]);
     }
   }
 

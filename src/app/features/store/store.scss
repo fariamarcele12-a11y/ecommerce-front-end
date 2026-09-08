@@ -21,6 +21,23 @@
   }
 }
 
+// 🔥 Seção do Vendedor
+.seller-section {
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+
+  .avatar-placeholder {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+  }
+
+  .badge {
+    font-size: 13px;
+    padding: 6px 14px;
+  }
+}
+
 .btn-primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
@@ -40,7 +57,6 @@
   }
 }
 
-// 🔥 Estilos para os cards de produto com ações
 .hover-effect {
   transition: all 0.3s ease;
 
@@ -75,6 +91,25 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+  }
+}
+
+.badge {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 500;
+
+  &.bg-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  }
+
+  &.bg-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #0dcaf0 100%) !important;
+  }
+
+  &.bg-secondary {
+    background: #6c757d !important;
   }
 }
 
@@ -113,6 +148,22 @@
         font-size: 0.8rem;
       }
     }
+  }
+
+  .seller-section {
+    .d-flex {
+      flex-direction: column;
+      text-align: center;
+
+      .ms-auto {
+        margin-left: 0 !important;
+      }
+    }
+  }
+
+  .badge {
+    font-size: 12px;
+    padding: 6px 12px;
   }
 }
 

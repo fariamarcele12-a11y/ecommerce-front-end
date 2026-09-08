@@ -67,13 +67,11 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
-  // 🔥 CORRIGIDO: id como string
-  loadProduct(id: string | number): void {
+  loadProduct(id: string): void {
     this.loading = true;
-    const productId = String(id);
-    console.log(`🔍 Buscando produto com ID: ${productId}`);
+    console.log(`🔍 Buscando produto com ID: ${id}`);
 
-    this.productService.getProductById(productId).subscribe({
+    this.productService.getProductById(id).subscribe({
       next: (product: Product) => {
         if (product) {
           this.product = product;
@@ -149,7 +147,6 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
-  // 🔥 CORRIGIDO: productId como string
   loadRelatedProducts(category: string, productId: string): void {
     this.productService.getRelatedProducts(category, productId).subscribe({
       next: (products: Product[]) => {
@@ -212,6 +209,29 @@ export class ProductDetail implements OnInit, OnDestroy {
     return this.product?.seller?.sales || 0;
   }
 
+  /**
+   * 🔥 Obtém o ID da loja do produto
+   */
+  getStoreId(): string {
+    if (this.product?.storeId) {
+      return String(this.product.storeId);
+    }
+    return '';
+  }
+
+  /**
+   * 🔥 Navega para a loja do vendedor
+   */
+  goToStore(): void {
+    const storeId = this.getStoreId();
+    if (storeId) {
+      console.log(`🏪 Navegando para a loja ID: ${storeId}`);
+      this.router.navigate(['/loja', storeId]);
+    } else {
+      this.alertService.warning('Loja não encontrada', 'Não foi possível encontrar a loja do vendedor.');
+    }
+  }
+
   // ===== MÉTODOS DE AÇÃO =====
 
   addToCart(): void {
@@ -245,7 +265,6 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
-  // 🔥 CORRIGIDO: product.id é string
   toggleFavorite(): void {
     if (this.product) {
       this.isFavorite = !this.isFavorite;

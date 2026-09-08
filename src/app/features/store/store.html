@@ -57,16 +57,17 @@
 
       <div class="col-md-4 text-md-end mt-3 mt-md-0">
         <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-          <!-- 🔥 Botão "Falar com a loja" - oculto para o dono -->
+          <!-- 🔥 Botão "Falar com a loja" - para visitantes -->
           <button
-            *ngIf="!isOwner"
+            *ngIf="isVisitor"
             class="btn btn-outline-success rounded-pill px-4"
-            [routerLink]="['/chat']"
-            [queryParams]="{ sellerId: store.userId, sellerName: store.storeName, store: 'true' }"
+            (click)="contactStore()"
           >
             <i class="bi bi-chat me-2"></i>
             Falar com a loja
           </button>
+
+          <!-- 🔥 Botão "Adicionar Produto" - apenas para o dono -->
           <button
             *ngIf="isOwner"
             class="btn btn-primary rounded-pill px-4"
@@ -75,6 +76,19 @@
             <i class="bi bi-plus-circle me-2"></i>
             Adicionar Produto
           </button>
+
+          <!-- 🔥 Badge para identificar o tipo de usuário -->
+          <span class="badge"
+                [class.bg-success]="isOwner"
+                [class.bg-info]="isVisitor"
+                [class.bg-secondary]="!isOwner && !isVisitor"
+                style="font-size: 14px; padding: 8px 16px; align-self: center;">
+            <i class="bi"
+               [class.bi-shop]="isOwner"
+               [class.bi-person]="isVisitor"
+               [class.bi-eye]="!isOwner && !isVisitor"></i>
+            {{ isOwner ? 'Dono da loja' : isVisitor ? 'Visitante' : 'Visualizando' }}
+          </span>
         </div>
       </div>
     </div>
@@ -116,6 +130,43 @@
       <div class="card-body">
         <h6 class="fw-bold mb-2"><i class="bi bi-info-circle me-2"></i>Sobre a loja</h6>
         <p class="text-secondary mb-0">{{ store.description }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔥 SEÇÃO: Sobre o Vendedor -->
+  <div class="seller-section mb-4 p-4 bg-light rounded-3">
+    <h5 class="fw-bold mb-3">
+      <i class="bi bi-person-badge me-2"></i>
+      Sobre o Vendedor
+    </h5>
+    <div class="d-flex align-items-center gap-4 flex-wrap">
+      <div class="d-flex align-items-center gap-3">
+        <div
+          class="avatar-placeholder rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+          style="width: 60px; height: 60px; font-size: 24px; font-weight: bold"
+        >
+          {{ getInitials(store.storeName) }}
+        </div>
+        <div>
+          <h6 class="mb-0">{{ store.storeName }}</h6>
+          <div class="d-flex align-items-center gap-2 small text-muted">
+            <span>
+              <i class="bi bi-star-fill text-warning me-1"></i>
+              {{ store.rating || 0 }}
+            </span>
+            <span>|</span>
+            <span>{{ store.totalSales || 0 }} vendas</span>
+            <span>|</span>
+            <span>Membro desde {{ formatDate(store.createdAt) }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="ms-auto">
+        <span class="badge bg-primary">
+          <i class="bi bi-shop me-1"></i>
+          Vendedor verificado
+        </span>
       </div>
     </div>
   </div>
@@ -204,7 +255,7 @@
     </div>
   </div>
 
-  <!-- 🔥 Produtos da Loja com Botões Editar/Excluir -->
+  <!-- Produtos da Loja -->
   <div>
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
