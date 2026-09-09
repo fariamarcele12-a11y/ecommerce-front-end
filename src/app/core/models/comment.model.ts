@@ -6,16 +6,33 @@ export interface Comment {
   userName: string;
   userAvatar?: string;
   content: string;
-  rating: number;
   createdAt: string;
   updatedAt?: string;
-  replies?: Comment[];
+  isFromSeller?: boolean;
+  replies?: CommentReply[];
   likes: number;
   isLiked?: boolean;
+}
+
+export interface CommentReply {
+  id: string;
+  commentId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  isFromSeller?: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CreateComment {
   productId: string;
   content: string;
-  rating: number;
+}
+
+export interface CreateReply {
+  commentId: string;
+  content: string;
+  isFromSeller?: boolean;
 }

@@ -2,7 +2,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, throwError, catchError, tap, map, switchMap } from 'rxjs';
-import { Comment, CreateComment } from '../models/comment.model';
+import { Comment, CommentReply, CreateComment, CreateReply } from '../models/comment.model';
 import { IdGeneratorService } from './id-generator.service';
 import { AuthService } from './auth.service';
 
@@ -34,7 +34,7 @@ export class CommentService {
   }
 
   /**
-   * 🔥 Cria um novo comentário
+   * 🔥 Cria um novo comentário (sem estrelas)
    */
   createComment(commentData: CreateComment): Observable<Comment> {
     const user = this.authService.getCurrentUser();
@@ -52,10 +52,10 @@ export class CommentService {
       userName: user.name || 'Usuário',
       userAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=667eea&color=fff&size=40`,
       content: commentData.content,
-      rating: commentData.rating || 0,
       createdAt: new Date().toISOString(),
       likes: 0,
       isLiked: false,
+      isFromSeller: false,
       replies: []
     };
 
@@ -73,25 +73,95 @@ export class CommentService {
   }
 
   /**
-   * 🔥 Atualiza um comentário
+   * 🔥 Adiciona uma resposta a um comentário
    */
-  updateComment(id: string, content: string): Observable<Comment> {
-    console.log(`🔄 Atualizando comentário ${id}...`);
+  addReply(commentId: string, replyData: CreateReply): Observable<Comment> {
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      return throwError(() => new Error('Usuário não autenticado.'));
+    }
 
-    return this.http.patch<Comment>(`${this.apiUrl}/${id}`, {
-      content,
-      updatedAt: new Date().toISOString()
-    }).pipe(
-      tap(() => console.log('✅ Comentário atualizado')),
+    console.log(`📝 Adicionando resposta ao comentário ${commentId}...`);
+
+    const replyId = this.idGenerator.generateMessageId();
+    const isFromSeller = replyData.isFromSeller || false;
+
+    const newReply: CommentReply = {
+      id: replyId,
+      commentId: commentId,
+      userId: String(user.id),
+      userName: isFromSeller ? 'Vendedor' : (user.name || 'Usuário'),
+      userAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(isFromSeller ? 'Vendedor' : user.name)}&background=${isFromSeller ? '28a745' : '667eea'}&color=fff&size=40`,
+      content: replyData.content,
+      isFromSeller: isFromSeller,
+      createdAt: new Date().toISOString()
+    };
+
+    // 🔥 Buscar o comentário atual
+    return this.http.get<Comment>(`${this.apiUrl}/${commentId}`).pipe(
+      switchMap((comment) => {
+        if (!comment) {
+          return throwError(() => new Error('Comentário não encontrado.'));
+        }
+
+        const currentReplies = comment.replies || [];
+        const updatedReplies = [...currentReplies, newReply];
+
+        return this.http.patch<Comment>(`${this.apiUrl}/${commentId}`, {
+          replies: updatedReplies
+        }).pipe(
+          tap(() => {
+            console.log('✅ Resposta adicionada com sucesso!');
+          }),
+          catchError((error) => {
+            console.error('❌ Erro ao adicionar resposta:', error);
+            return throwError(() => new Error('Erro ao adicionar resposta.'));
+          })
+        );
+      }),
       catchError((error) => {
-        console.error('❌ Erro ao atualizar comentário:', error);
-        return throwError(() => new Error('Erro ao atualizar comentário.'));
+        console.error('❌ Erro ao buscar comentário:', error);
+        return throwError(() => new Error('Erro ao buscar comentário.'));
       })
     );
   }
 
   /**
-   * 🔥 REMOVE UM COMENTÁRIO - VERSÃO SIMPLIFICADA
+   * 🔥 Remove uma resposta
+   */
+  deleteReply(commentId: string, replyId: string): Observable<Comment> {
+    console.log(`🗑️ Removendo resposta ${replyId} do comentário ${commentId}...`);
+
+    return this.http.get<Comment>(`${this.apiUrl}/${commentId}`).pipe(
+      switchMap((comment) => {
+        if (!comment) {
+          return throwError(() => new Error('Comentário não encontrado.'));
+        }
+
+        const currentReplies = comment.replies || [];
+        const updatedReplies = currentReplies.filter(r => r.id !== replyId);
+
+        return this.http.patch<Comment>(`${this.apiUrl}/${commentId}`, {
+          replies: updatedReplies
+        }).pipe(
+          tap(() => {
+            console.log('✅ Resposta removida com sucesso!');
+          }),
+          catchError((error) => {
+            console.error('❌ Erro ao remover resposta:', error);
+            return throwError(() => new Error('Erro ao remover resposta.'));
+          })
+        );
+      }),
+      catchError((error) => {
+        console.error('❌ Erro ao buscar comentário:', error);
+        return throwError(() => new Error('Erro ao buscar comentário.'));
+      })
+    );
+  }
+
+  /**
+   * 🔥 Remove um comentário
    */
   deleteComment(id: string): Observable<void> {
     console.log(`🗑️ Excluindo comentário com ID: ${id}`);
@@ -101,7 +171,6 @@ export class CommentService {
       return throwError(() => new Error('ID do comentário inválido.'));
     }
 
-    // 🔥 Tentativa direta de exclusão
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
         console.log(`✅ Comentário ${id} excluído com sucesso!`);
@@ -109,13 +178,11 @@ export class CommentService {
       catchError((error: HttpErrorResponse) => {
         console.error('❌ Erro ao excluir comentário:', error);
 
-        // 🔥 Se for erro 404, o comentário já foi excluído
         if (error.status === 404) {
           console.warn('⚠️ Comentário já foi excluído anteriormente');
           return of(void 0);
         }
 
-        // 🔥 Se for erro 500, tentar via PATCH
         if (error.status === 500) {
           console.warn('⚠️ Erro 500, tentando desativar comentário...');
           return this.deactivateComment(id);
@@ -127,7 +194,7 @@ export class CommentService {
   }
 
   /**
-   * 🔥 Desativa um comentário (fallback para erro 500)
+   * 🔥 Desativa um comentário (fallback)
    */
   private deactivateComment(id: string): Observable<void> {
     console.log(`🔄 Desativando comentário ${id}...`);
@@ -142,7 +209,6 @@ export class CommentService {
       map(() => void 0),
       catchError((error) => {
         console.error('❌ Falha ao desativar comentário:', error);
-        // 🔥 Último recurso: considerar como excluído
         return of(void 0);
       })
     );

@@ -5,7 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { CommentService } from '../../../core/services/comment.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AlertService } from '../../../core/services/alert.service';
-import { Comment } from '../../../core/models/comment.model';
+import { Comment, CommentReply } from '../../../core/models/comment.model';
+import { StoreService } from '../../../core/services/store.service';
 
 @Component({
   selector: 'app-comments',
@@ -16,31 +17,49 @@ import { Comment } from '../../../core/models/comment.model';
 })
 export class Comments implements OnInit {
   @Input() productId!: string;
+  @Input() storeId!: string;
 
   comments: Comment[] = [];
   loading = false;
   newComment = '';
-  rating = 0;
-  hoverRating = 0;
   isSubmitting = false;
   currentUserId: string | null = null;
+  currentUser: any = null;
   editingCommentId: string | null = null;
   editingContent = '';
   showReplyForm: string | null = null;
   replyContent = '';
-
-  readonly stars = [1, 2, 3, 4, 5];
+  isVendor = false;
 
   constructor(
     private commentService: CommentService,
     private authService: AuthService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private storeService: StoreService
   ) {}
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
     this.currentUserId = user ? String(user.id) : null;
+    this.currentUser = user;
+    this.checkIfVendor();
     this.loadComments();
+  }
+
+  checkIfVendor(): void {
+    if (this.currentUserId && this.storeId) {
+      this.storeService.getStoreById(this.storeId).subscribe({
+        next: (store) => {
+          if (store && String(store.userId) === this.currentUserId) {
+            this.isVendor = true;
+            console.log('🏪 Usuário é o vendedor da loja!');
+          }
+        },
+        error: () => {
+          this.isVendor = false;
+        }
+      });
+    }
   }
 
   loadComments(): void {
@@ -68,30 +87,78 @@ export class Comments implements OnInit {
       return;
     }
 
-    if (this.rating === 0) {
-      this.alertService.warning('Avaliação necessária', 'Selecione uma avaliação para o produto.');
-      return;
-    }
-
     this.isSubmitting = true;
 
     this.commentService.createComment({
       productId: this.productId,
-      content: this.newComment,
-      rating: this.rating
+      content: this.newComment
     }).subscribe({
       next: (comment) => {
         this.comments.unshift(comment);
         this.newComment = '';
-        this.rating = 0;
-        this.hoverRating = 0;
         this.isSubmitting = false;
         this.alertService.success('Comentário adicionado!', 'Seu comentário foi publicado. 🎉');
       },
-      error: (error) => {
+      error: () => {
         this.isSubmitting = false;
-        console.error('❌ Erro ao criar comentário:', error);
         this.alertService.error('Erro', 'Não foi possível publicar seu comentário.');
+      }
+    });
+  }
+
+  submitReply(commentId: string): void {
+    if (!this.authService.isLoggedIn()) {
+      this.alertService.warning('Faça login', 'Você precisa estar logado para responder.');
+      return;
+    }
+
+    if (!this.replyContent.trim()) {
+      this.alertService.warning('Resposta vazia', 'Digite uma resposta.');
+      return;
+    }
+
+    const isFromSeller = this.isVendor;
+
+    this.commentService.addReply(commentId, {
+      commentId: commentId,
+      content: this.replyContent,
+      isFromSeller: isFromSeller
+    }).subscribe({
+      next: (updatedComment) => {
+        const index = this.comments.findIndex(c => c.id === commentId);
+        if (index !== -1) {
+          this.comments[index] = updatedComment;
+        }
+        this.replyContent = '';
+        this.showReplyForm = null;
+        this.alertService.success('Resposta adicionada!', 'Sua resposta foi publicada. 🎉');
+      },
+      error: () => {
+        this.alertService.error('Erro', 'Não foi possível adicionar a resposta.');
+      }
+    });
+  }
+
+  deleteReply(commentId: string, replyId: string): void {
+    this.alertService.confirm(
+      'Excluir resposta?',
+      'Tem certeza que deseja excluir esta resposta?',
+      'Sim, excluir',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.commentService.deleteReply(commentId, replyId).subscribe({
+          next: (updatedComment) => {
+            const index = this.comments.findIndex(c => c.id === commentId);
+            if (index !== -1) {
+              this.comments[index] = updatedComment;
+            }
+            this.alertService.success('Resposta removida!', 'Resposta excluída com sucesso.');
+          },
+          error: () => {
+            this.alertService.error('Erro', 'Não foi possível excluir a resposta.');
+          }
+        });
       }
     });
   }
@@ -112,73 +179,33 @@ export class Comments implements OnInit {
       return;
     }
 
-    this.commentService.updateComment(commentId, this.editingContent).subscribe({
-      next: (updated) => {
-        const index = this.comments.findIndex(c => c.id === commentId);
-        if (index !== -1) {
-          this.comments[index] = updated;
-        }
-        this.cancelEdit();
-        this.alertService.success('Comentário atualizado!', 'Seu comentário foi atualizado.');
-      },
-      error: () => {
-        this.alertService.error('Erro', 'Não foi possível atualizar o comentário.');
-      }
-    });
+    // ComentárioService.updateComment precisa ser implementado
+    this.alertService.warning('Em breve', 'Edição de comentários estará disponível em breve.');
+    this.cancelEdit();
   }
 
-  /**
-   * 🔥 DELETE COMENTÁRIO - COM REMOÇÃO OTIMISTA
-   */
   deleteComment(commentId: string): void {
-    console.log(`🗑️ Solicitando exclusão do comentário: ${commentId}`);
-
-    // Encontrar o comentário para exibir no confirm
-    const commentToDelete = this.comments.find(c => c.id === commentId);
-    if (!commentToDelete) {
-      this.alertService.warning('Comentário não encontrado', 'Este comentário não está mais disponível.');
-      return;
-    }
-
     this.alertService.confirm(
       'Excluir comentário?',
-      'Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.',
+      'Tem certeza que deseja excluir este comentário?',
       'Sim, excluir',
       'Cancelar'
     ).then((result) => {
       if (result.isConfirmed) {
-        // 🔥 Remover da lista IMEDIATAMENTE (otimista)
         const previousComments = [...this.comments];
         this.comments = this.comments.filter(c => c.id !== commentId);
 
-        console.log('📝 Comentário removido da lista localmente');
-
         this.commentService.deleteComment(commentId).subscribe({
           next: () => {
-            console.log('✅ Comentário excluído com sucesso!');
-            this.alertService.success(
-              'Comentário removido!',
-              'O comentário foi removido com sucesso. 🎉'
-            );
+            this.alertService.success('Comentário removido!', 'Comentário excluído com sucesso.');
           },
-          error: (error: any) => {
-            console.error('❌ Erro ao excluir comentário:', error);
-
-            // 🔥 Se for erro 404, o comentário já foi excluído
-            if (error.status === 404) {
-              this.alertService.info(
-                'Comentário removido',
-                'Este comentário já foi removido anteriormente.'
-              );
-              return;
+          error: (error) => {
+            if (error.status !== 404) {
+              this.comments = previousComments;
+              this.alertService.error('Erro', 'Não foi possível excluir o comentário.');
+            } else {
+              this.alertService.info('Comentário removido', 'Este comentário já foi removido anteriormente.');
             }
-
-            // 🔥 Restaurar a lista se houver erro (exceto 404)
-            this.comments = previousComments;
-            this.alertService.error(
-              'Erro ao excluir comentário',
-              'Não foi possível excluir o comentário. Tente novamente.'
-            );
           }
         });
       }
@@ -208,6 +235,10 @@ export class Comments implements OnInit {
     return this.currentUserId === comment.userId;
   }
 
+  isReplyOwner(reply: CommentReply): boolean {
+    return this.currentUserId === reply.userId;
+  }
+
   formatDate(date: string): string {
     const d = new Date(date);
     return d.toLocaleDateString('pt-BR', {
@@ -217,5 +248,14 @@ export class Comments implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  toggleReplyForm(commentId: string): void {
+    if (!this.authService.isLoggedIn()) {
+      this.alertService.warning('Faça login', 'Você precisa estar logado para responder.');
+      return;
+    }
+    this.showReplyForm = this.showReplyForm === commentId ? null : commentId;
+    this.replyContent = '';
   }
 }

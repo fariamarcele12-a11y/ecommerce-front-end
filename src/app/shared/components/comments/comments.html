@@ -9,26 +9,6 @@
   <!-- Formulário de Comentário -->
   <div class="comment-form card p-4 mb-4">
     <div class="mb-3">
-      <label class="form-label fw-bold">Sua avaliação</label>
-      <div class="star-rating">
-        <i
-          *ngFor="let star of [1,2,3,4,5]"
-          class="bi"
-          [class.bi-star]="star > rating"
-          [class.bi-star-fill]="star <= rating"
-          [class.text-warning]="star <= rating"
-          (click)="rating = star"
-          (mouseenter)="hoverRating = star"
-          (mouseleave)="hoverRating = 0"
-          [class.hover]="hoverRating >= star"
-        ></i>
-        <span class="ms-2 text-muted small">
-          {{ rating > 0 ? rating + ' estrelas' : 'Selecione uma nota' }}
-        </span>
-      </div>
-    </div>
-
-    <div class="mb-3">
       <textarea
         class="form-control"
         rows="3"
@@ -42,7 +22,7 @@
       <button
         class="btn btn-primary rounded-pill px-4"
         (click)="submitComment()"
-        [disabled]="isSubmitting || !newComment.trim() || rating === 0"
+        [disabled]="isSubmitting || !newComment.trim()"
       >
         <span *ngIf="!isSubmitting">
           <i class="bi bi-send me-2"></i>
@@ -93,53 +73,18 @@
 
             <!-- Ações -->
             <div *ngIf="isOwner(comment)" class="comment-actions">
-              <button class="btn btn-sm btn-link text-primary" (click)="startEdit(comment)">
-                <i class="bi bi-pencil"></i>
-              </button>
               <button class="btn btn-sm btn-link text-danger" (click)="deleteComment(comment.id)">
                 <i class="bi bi-trash"></i>
               </button>
             </div>
           </div>
 
-          <!-- 🔥 Estrelas - CORRIGIDO -->
-          <div class="star-rating-small">
-            <ng-container *ngFor="let star of [1,2,3,4,5]">
-              <i
-                *ngIf="star <= comment.rating"
-                class="bi bi-star-fill text-warning"
-              ></i>
-              <i
-                *ngIf="star > comment.rating"
-                class="bi bi-star text-muted"
-              ></i>
-            </ng-container>
-          </div>
-
           <!-- Conteúdo -->
-          <div *ngIf="editingCommentId !== comment.id" class="mt-2">
+          <div class="mt-2">
             <p class="mb-0">{{ comment.content }}</p>
           </div>
 
-          <!-- Edição -->
-          <div *ngIf="editingCommentId === comment.id" class="mt-2">
-            <textarea
-              class="form-control mb-2"
-              rows="2"
-              [(ngModel)]="editingContent"
-            ></textarea>
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-primary" (click)="saveEdit(comment.id)">
-                <i class="bi bi-check me-1"></i>
-                Salvar
-              </button>
-              <button class="btn btn-sm btn-secondary" (click)="cancelEdit()">
-                Cancelar
-              </button>
-            </div>
-          </div>
-
-          <!-- Likes -->
+          <!-- Likes e Responder -->
           <div class="mt-2 d-flex align-items-center gap-3">
             <button
               class="btn btn-sm btn-link text-muted p-0"
@@ -153,6 +98,81 @@
               ></i>
               <span class="ms-1">{{ comment.likes }}</span>
             </button>
+
+            <button
+              class="btn btn-sm btn-link text-muted p-0"
+              (click)="toggleReplyForm(comment.id)"
+            >
+              <i class="bi bi-reply me-1"></i>
+              Responder
+            </button>
+
+            <span class="text-muted small" *ngIf="comment.replies?.length">
+              {{ comment.replies?.length }} respostas
+            </span>
+          </div>
+
+          <!-- Formulário de Resposta -->
+          <div *ngIf="showReplyForm === comment.id" class="reply-form mt-3">
+            <div class="d-flex gap-2">
+              <textarea
+                class="form-control form-control-sm"
+                rows="2"
+                placeholder="Escreva sua resposta..."
+                [(ngModel)]="replyContent"
+              ></textarea>
+            </div>
+            <div class="d-flex gap-2 mt-2">
+              <button
+                class="btn btn-sm btn-primary"
+                (click)="submitReply(comment.id)"
+                [disabled]="!replyContent.trim()"
+              >
+                <i class="bi bi-check me-1"></i>
+                Responder
+              </button>
+              <button
+                class="btn btn-sm btn-secondary"
+                (click)="toggleReplyForm(comment.id)"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+
+          <!-- Respostas -->
+          <div *ngIf="comment.replies && comment.replies.length > 0" class="replies-list mt-3">
+            <div *ngFor="let reply of comment.replies" class="reply-item ps-4 border-start border-3">
+              <div class="d-flex align-items-start gap-2">
+                <img
+                  [src]="reply.userAvatar || 'https://ui-avatars.com/api/?name=' + reply.userName + '&background=667eea&color=fff&size=30'"
+                  [alt]="reply.userName"
+                  class="rounded-circle"
+                  width="30"
+                  height="30"
+                />
+
+                <div class="flex-grow-1">
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <strong class="small">{{ reply.userName }}</strong>
+                    <span *ngIf="reply.isFromSeller" class="badge bg-success">Vendedor</span>
+                    <span class="text-muted small">{{ formatDate(reply.createdAt) }}</span>
+                  </div>
+                  <p class="mb-0 small">{{ reply.content }}</p>
+
+                  <!-- Ações da Resposta -->
+                  <div *ngIf="isReplyOwner(reply) || isVendor" class="mt-1">
+                    <button
+                      class="btn btn-sm btn-link text-danger p-0"
+                      (click)="deleteReply(comment.id, reply.id)"
+                    >
+                      <i class="bi bi-trash"></i>
+                      <span class="small">Excluir</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
