@@ -110,7 +110,7 @@
         </span>
       </div>
 
-      <!-- 🔥 Preço com efeito de desconto -->
+      <!-- Preço com efeito de desconto -->
       <div
         class="price-section p-4 rounded-3 mb-4"
         [class.bg-light]="!isOnSale()"
@@ -349,6 +349,11 @@
         </button>
       </div>
     </div>
+  </div>
+
+  <!-- 🔥 Seção de Comentários Públicos -->
+  <div class="comments-wrapper mt-5" *ngIf="product && product.id">
+    <app-comments [productId]="product.id"></app-comments>
   </div>
 
   <!-- Produtos Relacionados -->

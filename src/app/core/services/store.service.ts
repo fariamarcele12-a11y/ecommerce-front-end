@@ -8,8 +8,8 @@ import { User } from '../models/user.model';
 import { Product } from '../models/ProductModel/product.model';
 import { AuthService } from './auth.service';
 import { IdGeneratorService } from './id-generator.service';
-import { ProductService } from './product.service'; // 🔥 IMPORTAR ProductService
-import { AlertService } from './alert.service'; // 🔥 IMPORTAR AlertService
+import { ProductService } from './product.service';
+import { AlertService } from './alert.service';
 
 @Injectable({
   providedIn: 'root',
@@ -38,8 +38,8 @@ export class StoreService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
   private readonly idGenerator = inject(IdGeneratorService);
-  private readonly productService = inject(ProductService); // 🔥 INJETAR
-  private readonly alertService = inject(AlertService); // 🔥 INJETAR
+  private readonly productService = inject(ProductService);
+  private readonly alertService = inject(AlertService);
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -87,7 +87,7 @@ export class StoreService {
   }
 
   /**
-   * Busca a loja do usuário (aceita string ou number) - VERSÃO CORRIGIDA
+   * Busca a loja do usuário (aceita string ou number)
    */
   getStoreByUser(userId: number | string): Observable<Store | null> {
     const id = String(userId);
@@ -171,7 +171,7 @@ export class StoreService {
   }
 
   /**
-   * 🔥 CRIA UM PRODUTO NA LOJA - VERSÃO CORRIGIDA
+   * 🔥 CRIA UM PRODUTO NA LOJA COM ID ÚNICO
    */
   createStoreProduct(storeId: string | number, productData: Partial<Product>): Observable<Product> {
     const id = String(storeId);
@@ -343,11 +343,15 @@ export class StoreService {
   }
 
   /**
-   * 🔥 CRIA UMA NOVA LOJA
+   * 🔥 CRIA UMA NOVA LOJA COM ID ÚNICO
    */
   createStore(storeData: StoreForm, user: User): Observable<Store> {
     console.log('📝 Criando loja para usuário:', user.id);
     console.log('📋 Dados da loja:', storeData);
+
+    // 🔥 Gerar ID único para a loja
+    const storeId = this.idGenerator.generateStoreId();
+    console.log('🔑 ID único gerado para a loja:', storeId);
 
     return this.hasStore(user.id).pipe(
       switchMap((hasStore) => {
@@ -359,13 +363,13 @@ export class StoreService {
         }
 
         const newStore: any = {
+          id: storeId, // 🔥 ID único
           userId: user.id,
           storeName: storeData.storeName,
           description: storeData.description,
           category: storeData.category,
           logo: storeData.logo || 'https://via.placeholder.com/200x200/667eea/ffffff?text=Loja',
-          banner:
-            storeData.banner || 'https://via.placeholder.com/1200x400/667eea/ffffff?text=Banner',
+          banner: storeData.banner || 'https://via.placeholder.com/1200x400/667eea/ffffff?text=Banner',
           documentType: user.documentType,
           cpf: user.documentType === 'pf' ? user.document : undefined,
           cnpj: user.documentType === 'pj' ? user.document : undefined,
@@ -504,6 +508,7 @@ export class StoreService {
         const store = JSON.parse(storeData);
         this.currentStoreSubject.next(store);
         console.log('🏪 Loja carregada do localStorage:', store.storeName);
+        console.log('🏪 ID da loja:', store.id);
       }
     } catch (error) {
       console.error('Erro ao carregar loja:', error);

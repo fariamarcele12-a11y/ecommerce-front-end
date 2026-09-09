@@ -4,6 +4,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProductCard } from '../../../shared/components/product-card/product-card';
+import { Comments } from '../../../shared/components/comments/comments';
 import { Subscription } from 'rxjs';
 import { Product } from '../../../core/models/ProductModel/product.model';
 import { ProductService } from '../../../core/services/product.service';
@@ -17,7 +18,7 @@ import { CategoryService } from '../../../core/services/category.service';
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ProductCard],
+  imports: [CommonModule, FormsModule, RouterLink, ProductCard, Comments],
   templateUrl: './product-detail.html',
   styleUrls: ['./product-detail.scss'],
 })
@@ -260,14 +261,14 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   /**
-   * 🔥 Verifica se o produto está em oferta
+   * Verifica se o produto está em oferta
    */
   isOnSale(): boolean {
     return !!(this.product?.oldPrice && this.product.oldPrice > this.product.price);
   }
 
   /**
-   * 🔥 Verifica se tem frete grátis
+   * Verifica se tem frete grátis
    */
   hasFreeShipping(): boolean {
     return this.product?.freeShipping || (this.product?.price ?? 0) > 100;

@@ -1,6 +1,6 @@
 // src/app/core/models/user.model.ts
 export interface User {
-  id: string | number;
+  id: string; // 🔥 AGORA É STRING (UUID)
   name: string;
   email: string;
   password?: string;
@@ -18,7 +18,7 @@ export interface User {
     country: string;
   };
   hasStore?: boolean;
-  storeId?: string | null; // 🔥 Mudado para string
+  storeId?: string | null;
   companyName?: string;
   tradeName?: string;
   birthDate?: string;

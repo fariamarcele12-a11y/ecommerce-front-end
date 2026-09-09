@@ -175,10 +175,15 @@ export class Register {
     }
 
     this.loading = true;
+    console.log('📝 Enviando dados de registro...');
+    console.log('📧 Email:', this.credentials.email);
+    console.log('🔑 ID será gerado automaticamente pelo sistema');
+
     this.authService.register(this.credentials).subscribe({
       next: (response) => {
         this.loading = false;
         if (response.success) {
+          console.log('✅ Usuário registrado com ID:', response.user?.id);
           this.alertService.success('Cadastro realizado!', 'Bem-vindo ao MarketHub! 🎉');
           this.router.navigate(['/home']);
         } else {

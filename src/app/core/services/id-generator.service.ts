@@ -30,7 +30,7 @@ export class IdGeneratorService {
   }
 
   /**
-   * 🔥 Gera um ID com prefixo (ex: PROD-xxx-xxx)
+   * 🔥 Gera um ID para produto
    */
   generateProductId(): string {
     const timestamp = Date.now().toString(36);
@@ -63,5 +63,23 @@ export class IdGeneratorService {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 4);
     return `ORD-${timestamp}-${random}`;
+  }
+
+  /**
+   * 🔥 Gera um ID para categorias
+   */
+  generateCategoryId(): string {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 6);
+    return `CAT-${timestamp}-${random}`;
+  }
+
+  /**
+   * 🔥 Gera um ID para cupons
+   */
+  generateCouponId(): string {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 6);
+    return `CPN-${timestamp}-${random}`;
   }
 }

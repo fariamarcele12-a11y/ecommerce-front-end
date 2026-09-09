@@ -1,3 +1,5 @@
+// src/app/features/products/product-detail/product-detail.scss
+
 // Galeria de Imagens
 .product-gallery {
   .main-image-container {
@@ -90,6 +92,44 @@
 .price-section {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+
+  &.bg-success-subtle {
+    background: #d4edda !important;
+    border-color: #28a745;
+
+    .text-danger {
+      color: #dc3545 !important;
+    }
+  }
+}
+
+.old-price-detail {
+  font-size: 1.1rem;
+  color: #adb5bd !important;
+}
+
+// Badges de desconto
+.discount-badge {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+  animation: pulse 2s infinite;
+  font-weight: 700;
+  border-radius: 20px;
+}
+
+.sale-badge {
+  background: linear-gradient(135deg, #00b894 0%, #00a86b 100%) !important;
+  box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
+  animation: pulse 2s infinite;
+  font-weight: 700;
+  border-radius: 20px;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 // Descrição
@@ -99,6 +139,7 @@
 
     &.truncated {
       display: -webkit-box;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
@@ -143,6 +184,10 @@
   .avatar-placeholder {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
+
+  .hover-underline:hover {
+    text-decoration: underline !important;
+  }
 }
 
 // Produtos Relacionados
@@ -150,6 +195,12 @@
   .row {
     animation: fadeIn 0.5s ease-out;
   }
+}
+
+// Comentários
+.comments-wrapper {
+  border-top: 1px solid #e9ecef;
+  padding-top: 1.5rem;
 }
 
 // Responsividade
@@ -188,6 +239,49 @@
       padding: 12px 20px;
     }
   }
+
+  .price-section {
+    padding: 1rem !important;
+
+    .display-6 {
+      font-size: 1.5rem !important;
+    }
+
+    .old-price-detail {
+      font-size: 0.9rem !important;
+    }
+  }
+
+  .discount-badge {
+    font-size: 0.75rem !important;
+    padding: 4px 10px !important;
+  }
+
+  .sale-badge {
+    font-size: 0.75rem !important;
+    padding: 4px 10px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .product-gallery {
+    .main-image-container {
+      .main-image {
+        height: 220px;
+      }
+    }
+  }
+
+  .seller-section {
+    .d-flex {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .ms-auto {
+      margin-left: 0 !important;
+    }
+  }
 }
 
 // Animações
@@ -207,4 +301,8 @@ input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
 }
