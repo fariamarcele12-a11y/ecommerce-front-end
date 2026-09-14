@@ -153,11 +153,12 @@
               </div>
 
               <div class="row g-3">
-                <!-- Documento (CPF/CNPJ) -->
+                <!-- 🔥 Documento (CPF/CNPJ) COM VALIDAÇÃO -->
                 <div class="col-md-6">
                   <div class="form-group">
                     <label class="form-label fw-bold small">
                       {{ documentType === 'pf' ? 'CPF' : 'CNPJ' }}
+                      <span class="text-danger">*</span>
                     </label>
                     <div class="input-group">
                       <span class="input-group-text bg-light">
@@ -166,13 +167,33 @@
                       <input
                         type="text"
                         class="form-control"
+                        [class.is-invalid]="documentError"
+                        [class.is-valid]="!documentError && credentials.document && ((documentType === 'pf' && credentials.document.replace(/\D/g, '').length === 11) || (documentType === 'pj' && credentials.document.replace(/\D/g, '').length === 14))"
                         [placeholder]="documentType === 'pf' ? '000.000.000-00' : '00.000.000/0000-00'"
-                        [(ngModel)]="credentials.document"
-                        (input)="credentials.document = formatDocument(credentials.document)"
+                        [ngModel]="credentials.document"
+                        (ngModelChange)="onDocumentChange($event)"
                         name="document"
                         required
                         [maxlength]="documentType === 'pf' ? 14 : 18"
                       />
+                      <!-- 🔥 Ícone de validação -->
+                      <span class="input-group-text" *ngIf="credentials.document && ((documentType === 'pf' && credentials.document.replace(/\D/g, '').length === 11) || (documentType === 'pj' && credentials.document.replace(/\D/g, '').length === 14))">
+                        <i class="bi"
+                           [class.bi-check-circle-fill]="!documentError"
+                           [class.text-success]="!documentError"
+                           [class.bi-x-circle-fill]="documentError"
+                           [class.text-danger]="documentError">
+                        </i>
+                      </span>
+                    </div>
+                    <!-- 🔥 Mensagem de erro -->
+                    <div *ngIf="documentError" class="text-danger small mt-1">
+                      <i class="bi bi-exclamation-circle me-1"></i>
+                      {{ documentError }}
+                    </div>
+                    <div *ngIf="!documentError && credentials.document && ((documentType === 'pf' && credentials.document.replace(/\D/g, '').length === 11) || (documentType === 'pj' && credentials.document.replace(/\D/g, '').length === 14))" class="text-success small mt-1">
+                      <i class="bi bi-check-circle me-1"></i>
+                      {{ documentType === 'pf' ? 'CPF' : 'CNPJ' }} válido!
                     </div>
                   </div>
                 </div>
@@ -320,11 +341,10 @@
                 </div>
               </div>
 
-              <!-- 🔥 TERMOS E POLÍTICAS - CHECKBOX PERFEITAMENTE ALINHADO -->
+              <!-- Termos e Políticas -->
               <div class="mb-3 p-3 bg-light rounded-3 border"
                    [class.border-danger]="formSubmitted && !termsAccepted"
                    [class.border-success]="termsAccepted && formSubmitted">
-                <!-- 🔥 USANDO CONTAINER FLEX COM ALINHAMENTO CORRETO -->
                 <div class="d-flex align-items-center gap-2">
                   <input
                     type="checkbox"
@@ -357,7 +377,7 @@
               <button
                 type="submit"
                 class="btn btn-primary w-100 rounded-pill py-2 fw-bold"
-                [disabled]="loading || isSearchingCep"
+                [disabled]="loading || isSearchingCep || !!documentError"
               >
                 <span *ngIf="!loading">
                   <i class="bi bi-person-plus me-2"></i>
