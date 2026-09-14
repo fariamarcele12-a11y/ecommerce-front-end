@@ -9,6 +9,7 @@ import { OrderService } from '../../core/services/order.service';
 import { AlertService } from '../../core/services/alert.service';
 import { CepService, Endereco } from '../../core/services/cep.service';
 import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
+import { DocumentValidator } from '../../core/utils/validators';
 
 @Component({
   selector: 'app-checkout',
@@ -52,6 +53,9 @@ export class Checkout implements OnInit, OnDestroy {
   orderId = '';
   paymentError = '';
   isSearchingCep = false;
+
+  // 🔥 Controle de validação do documento
+  documentError: string = '';
 
   private subscriptions: Subscription = new Subscription();
 
@@ -189,77 +193,68 @@ export class Checkout implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * 🔥 Valida CPF/CNPJ em tempo real enquanto o usuário digita
+   */
+  onCpfCnpjChange(value: string): void {
+    this.form.cpfCnpj = this.formatCpfCnpj(value);
+
+    const numbers = value.replace(/\D/g, '');
+
+    if (numbers.length === 11) {
+      // Validar CPF
+      if (!DocumentValidator.isValidCPF(numbers)) {
+        this.documentError = 'CPF inválido. Verifique os dígitos.';
+      } else {
+        this.documentError = '';
+      }
+    } else if (numbers.length === 14) {
+      // Validar CNPJ
+      if (!DocumentValidator.isValidCNPJ(numbers)) {
+        this.documentError = 'CNPJ inválido. Verifique os dígitos.';
+      } else {
+        this.documentError = '';
+      }
+    } else if (numbers.length > 0 && numbers.length < 11) {
+      this.documentError = ''; // Ainda não tem tamanho suficiente para validar
+    } else if (numbers.length > 11 && numbers.length < 14) {
+      this.documentError = ''; // Ainda não tem tamanho suficiente para validar CNPJ
+    } else {
+      this.documentError = '';
+    }
+  }
+
   isValidCep(cep: string): boolean {
     return this.cepService.validarCep(cep);
   }
 
+  /**
+   * 🔥 Valida CPF usando o DocumentValidator
+   */
   isValidCpf(cpf: string): boolean {
-    const numbers = cpf.replace(/\D/g, '');
-    if (numbers.length !== 11) return false;
-    if (/^(\d)\1{10}$/.test(numbers)) return false;
-
-    let sum = 0;
-    let remainder;
-
-    for (let i = 1; i <= 9; i++) {
-      sum += parseInt(numbers.substring(i - 1, i)) * (11 - i);
-    }
-    remainder = (sum * 10) % 11;
-    if (remainder === 10 || remainder === 11) remainder = 0;
-    if (remainder !== parseInt(numbers.substring(9, 10))) return false;
-
-    sum = 0;
-    for (let i = 1; i <= 10; i++) {
-      sum += parseInt(numbers.substring(i - 1, i)) * (12 - i);
-    }
-    remainder = (sum * 10) % 11;
-    if (remainder === 10 || remainder === 11) remainder = 0;
-    if (remainder !== parseInt(numbers.substring(10, 11))) return false;
-
-    return true;
+    return DocumentValidator.isValidCPF(cpf);
   }
 
+  /**
+   * 🔥 Valida CNPJ usando o DocumentValidator
+   */
   isValidCnpj(cnpj: string): boolean {
-    const numbers = cnpj.replace(/\D/g, '');
-    if (numbers.length !== 14) return false;
-    if (/^(\d)\1{13}$/.test(numbers)) return false;
-
-    let length = numbers.length - 2;
-    let numbersArray = numbers.split('');
-    let sum = 0;
-    let pos = length - 7;
-
-    for (let i = length; i >= 1; i--) {
-      sum += parseInt(numbersArray[length - i]) * pos--;
-      if (pos < 2) pos = 9;
-    }
-
-    let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-    if (result !== parseInt(numbersArray[length])) return false;
-
-    length = length + 1;
-    numbersArray = numbers.split('');
-    sum = 0;
-    pos = length - 7;
-
-    for (let i = length; i >= 1; i--) {
-      sum += parseInt(numbersArray[length - i]) * pos--;
-      if (pos < 2) pos = 9;
-    }
-
-    result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-    if (result !== parseInt(numbersArray[length])) return false;
-
-    return true;
+    return DocumentValidator.isValidCNPJ(cnpj);
   }
 
+  /**
+   * 🔥 Valida documento (CPF ou CNPJ) automaticamente
+   */
   isValidDocument(document: string): boolean {
+    return DocumentValidator.isValidDocument(document, this.getDocumentType(document));
+  }
+
+  /**
+   * 🔥 Retorna o tipo do documento baseado no tamanho
+   */
+  private getDocumentType(document: string): 'pf' | 'pj' {
     const numbers = document.replace(/\D/g, '');
-    if (numbers.length <= 11) {
-      return this.isValidCpf(document);
-    } else {
-      return this.isValidCnpj(document);
-    }
+    return numbers.length <= 11 ? 'pf' : 'pj';
   }
 
   loadSavedAddress(): void {
@@ -324,14 +319,36 @@ export class Checkout implements OnInit, OnDestroy {
       return false;
     }
 
+    // 🔥 VALIDAÇÃO COMPLETA DO CPF/CNPJ
     const cpfClean = this.form.cpfCnpj.replace(/\D/g, '');
+
     if (!this.form.cpfCnpj || cpfClean.length < 11) {
       this.alertService.warning('CPF/CNPJ inválido', 'Por favor, informe um CPF/CNPJ válido.');
       return false;
     }
 
-    if (!this.isValidDocument(this.form.cpfCnpj)) {
-      this.alertService.warning('Documento inválido', 'Por favor, informe um CPF ou CNPJ válido.');
+    // 🔥 Validar CPF ou CNPJ com base no tamanho
+    if (cpfClean.length === 11) {
+      if (!DocumentValidator.isValidCPF(cpfClean)) {
+        this.alertService.error(
+          'CPF inválido',
+          'O CPF informado não é válido. Verifique os dígitos e tente novamente.'
+        );
+        return false;
+      }
+    } else if (cpfClean.length === 14) {
+      if (!DocumentValidator.isValidCNPJ(cpfClean)) {
+        this.alertService.error(
+          'CNPJ inválido',
+          'O CNPJ informado não é válido. Verifique os dígitos e tente novamente.'
+        );
+        return false;
+      }
+    } else {
+      this.alertService.warning(
+        'Documento inválido',
+        'O documento deve ter 11 dígitos (CPF) ou 14 dígitos (CNPJ).'
+      );
       return false;
     }
 

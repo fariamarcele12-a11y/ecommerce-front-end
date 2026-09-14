@@ -7,6 +7,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CepService } from '../../../core/services/cep.service';
 import { RegisterCredentials } from '../../../core/models/user.model';
+import { DocumentValidator } from '../../../core/utils/validators';
 
 @Component({
   selector: 'app-register',
@@ -52,6 +53,9 @@ export class Register {
   showConfirmPassword = false;
   formSubmitted = false;
 
+  // 🔥 Controle de validação do documento
+  documentError: string = '';
+
   // 🔥 Getter com asserção de não-nulo
   get address() {
     return this.credentials.address!;
@@ -68,11 +72,40 @@ export class Register {
     this.documentType = type;
     this.credentials.documentType = type;
     this.credentials.document = '';
+    this.documentError = '';
     if (type === 'pf') {
       this.companyName = '';
       this.tradeName = '';
     } else {
       this.birthDate = '';
+    }
+  }
+
+  /**
+   * 🔥 Valida o documento enquanto o usuário digita
+   */
+  onDocumentChange(value: string): void {
+    this.credentials.document = this.formatDocument(value);
+
+    const cleanDoc = value.replace(/\D/g, '');
+
+    // Só valida quando tiver o tamanho completo
+    if (this.documentType === 'pf' && cleanDoc.length === 11) {
+      const isValid = DocumentValidator.isValidCPF(cleanDoc);
+      if (!isValid) {
+        this.documentError = 'CPF inválido. Verifique os dígitos.';
+      } else {
+        this.documentError = '';
+      }
+    } else if (this.documentType === 'pj' && cleanDoc.length === 14) {
+      const isValid = DocumentValidator.isValidCNPJ(cleanDoc);
+      if (!isValid) {
+        this.documentError = 'CNPJ inválido. Verifique os dígitos.';
+      } else {
+        this.documentError = '';
+      }
+    } else {
+      this.documentError = '';
     }
   }
 
@@ -104,54 +137,120 @@ export class Register {
     });
   }
 
+  /**
+   * 🔥 VALIDAÇÃO COMPLETA DO FORMULÁRIO
+   */
   validateForm(): boolean {
     this.formSubmitted = true;
 
+    // Nome
     if (!this.credentials.name || this.credentials.name.trim().length < 3) {
       this.alertService.warning('Nome inválido', 'Digite seu nome completo (mínimo 3 caracteres).');
       return false;
     }
 
-    if (!this.credentials.email || !this.credentials.email.includes('@')) {
+    // Email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!this.credentials.email || !emailRegex.test(this.credentials.email)) {
       this.alertService.warning('E-mail inválido', 'Digite um e-mail válido.');
       return false;
     }
 
+    // Senha
     if (!this.credentials.password || this.credentials.password.length < 6) {
       this.alertService.warning('Senha inválida', 'A senha deve ter pelo menos 6 caracteres.');
       return false;
     }
 
+    // Confirmar Senha
     if (this.credentials.password !== this.credentials.confirmPassword) {
       this.alertService.warning('Senhas não conferem', 'As senhas digitadas não são iguais.');
       return false;
     }
 
+    // 🔥 VALIDAÇÃO COMPLETA DO CPF/CNPJ
     const docClean = this.credentials.document.replace(/\D/g, '');
-    if (this.documentType === 'pf' && docClean.length !== 11) {
-      this.alertService.warning('CPF inválido', 'Digite um CPF válido com 11 dígitos.');
-      return false;
-    }
-    if (this.documentType === 'pj' && docClean.length !== 14) {
-      this.alertService.warning('CNPJ inválido', 'Digite um CNPJ válido com 14 dígitos.');
-      return false;
+
+    if (this.documentType === 'pf') {
+      if (docClean.length !== 11) {
+        this.alertService.warning('CPF inválido', 'Digite um CPF válido com 11 dígitos.');
+        return false;
+      }
+
+      if (!DocumentValidator.isValidCPF(docClean)) {
+        this.alertService.error(
+          'CPF inválido',
+          'O CPF informado não é válido. Verifique os dígitos e tente novamente.'
+        );
+        return false;
+      }
+    } else {
+      if (docClean.length !== 14) {
+        this.alertService.warning('CNPJ inválido', 'Digite um CNPJ válido com 14 dígitos.');
+        return false;
+      }
+
+      if (!DocumentValidator.isValidCNPJ(docClean)) {
+        this.alertService.error(
+          'CNPJ inválido',
+          'O CNPJ informado não é válido. Verifique os dígitos e tente novamente.'
+        );
+        return false;
+      }
     }
 
+    // CEP
     const cepClean = this.address.cep.replace(/\D/g, '');
     if (cepClean.length !== 8) {
       this.alertService.warning('CEP inválido', 'Digite um CEP válido com 8 dígitos.');
       return false;
     }
 
+    // Telefone
     const phoneClean = this.credentials.phone.replace(/\D/g, '');
-    if (phoneClean.length < 10) {
+    if (phoneClean.length < 10 || phoneClean.length > 11) {
       this.alertService.warning('Telefone inválido', 'Digite um telefone válido com DDD.');
       return false;
     }
 
-    // 🔥 VALIDAÇÃO DOS TERMOS - OBRIGATÓRIO
+    // Endereço
+    if (!this.address.street || this.address.street.trim().length < 3) {
+      this.alertService.warning('Endereço inválido', 'Informe o nome da rua.');
+      return false;
+    }
+
+    if (!this.address.number || this.address.number.trim().length === 0) {
+      this.alertService.warning('Número inválido', 'Informe o número do endereço.');
+      return false;
+    }
+
+    if (!this.address.neighborhood || this.address.neighborhood.trim().length < 2) {
+      this.alertService.warning('Bairro inválido', 'Informe o bairro.');
+      return false;
+    }
+
+    if (!this.address.city || this.address.city.trim().length < 2) {
+      this.alertService.warning('Cidade inválida', 'Informe a cidade.');
+      return false;
+    }
+
+    if (!this.address.state || this.address.state.length !== 2) {
+      this.alertService.warning('Estado inválido', 'Selecione o estado.');
+      return false;
+    }
+
+    // 🔥 Data de nascimento (apenas PF)
+    if (this.documentType === 'pf' && !this.birthDate) {
+      this.alertService.warning('Data de nascimento', 'Informe sua data de nascimento.');
+      return false;
+    }
+
+    // 🔥 Termos
     if (!this.termsAccepted) {
-      this.alertService.warning('Aceite os termos', 'Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.');
+      this.alertService.warning(
+        'Aceite os termos',
+        'Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.'
+      );
       return false;
     }
 
@@ -177,6 +276,7 @@ export class Register {
     this.loading = true;
     console.log('📝 Enviando dados de registro...');
     console.log('📧 Email:', this.credentials.email);
+    console.log('📄 Documento:', this.credentials.document);
     console.log('🔑 ID será gerado automaticamente pelo sistema');
 
     this.authService.register(this.credentials).subscribe({
@@ -206,6 +306,9 @@ export class Register {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
 
+  /**
+   * 🔥 Formata CPF ou CNPJ
+   */
   formatDocument(value: string): string {
     const numbers = value.replace(/\D/g, '');
     if (this.documentType === 'pf') {
@@ -222,6 +325,9 @@ export class Register {
     }
   }
 
+  /**
+   * 🔥 Formata telefone
+   */
   formatPhone(value: string): string {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 2) return numbers;
@@ -230,6 +336,9 @@ export class Register {
     return numbers.replace(/(\d{2})(\d{5})(\d{1,4})/, '($1) $2-$3');
   }
 
+  /**
+   * 🔥 Formata CEP
+   */
   formatCep(value: string): string {
     return this.cepService.formatarCep(value);
   }
