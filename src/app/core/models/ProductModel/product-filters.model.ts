@@ -6,7 +6,7 @@ export interface ProductFilters {
   condition?: 'new' | 'used';
   search?: string;
   location?: string;
-  sellerId?: number;
+  sellerId?: string;
   sellerName?: string;
   minRating?: number;
   hasDiscount?: boolean;

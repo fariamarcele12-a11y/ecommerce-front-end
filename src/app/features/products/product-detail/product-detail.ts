@@ -36,6 +36,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   currentUserId: string | null = null;
   sellerMemberSince: string = 'Carregando...';
   categorySlug: string = '';
+  sellerId: string = '';
 
   private routeSub: Subscription = new Subscription();
 
@@ -83,6 +84,12 @@ export class ProductDetail implements OnInit, OnDestroy {
         if (product) {
           this.product = product;
           this.isFavorite = product.isFavorite || false;
+
+          // 🔥 Capturar o seller ID
+          if (product.seller) {
+            this.sellerId = String(product.seller.id);
+            console.log('🆔 Seller ID do produto:', this.sellerId);
+          }
 
           this.loadCategorySlug(product.category);
           this.loadSellerInfo(product);
@@ -135,6 +142,9 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * 🔥 Carrega informações do vendedor CORRIGIDO
+   */
   loadSellerInfo(product: Product): void {
     console.log('🔍 Carregando informações do vendedor...');
     console.log('📦 Produto:', product);
@@ -149,7 +159,17 @@ export class ProductDetail implements OnInit, OnDestroy {
       console.log('👤 É o dono?', this.isOwner);
       this.sellerName = product.seller.name || 'Vendedor';
 
-      this.loadSellerMemberSince(sellerId);
+      // 🔥 Verificar se o seller tem memberSince
+      if (product.seller.memberSince) {
+        const date = new Date(product.seller.memberSince);
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        this.sellerMemberSince = `${month}/${year}`;
+        console.log('📅 Data do seller:', this.sellerMemberSince);
+      } else {
+        // 🔥 Buscar data do usuário
+        this.loadSellerMemberSince(sellerId);
+      }
       return;
     }
 
@@ -183,17 +203,56 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * 🔥 Busca data de cadastro do vendedor
+   */
   loadSellerMemberSince(userId: string): void {
     console.log(`📅 Buscando data de cadastro do usuário ${userId}...`);
 
-    this.userService.getMemberSince(userId).subscribe({
-      next: (memberSince) => {
-        this.sellerMemberSince = memberSince;
-        console.log(`📅 Data de cadastro do vendedor: ${this.sellerMemberSince}`);
+    // 🔥 Primeiro tentar buscar do usuário
+    this.userService.getUserById(userId).subscribe({
+      next: (user) => {
+        if (user?.createdAt) {
+          const date = new Date(user.createdAt);
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = date.getFullYear();
+          this.sellerMemberSince = `${month}/${year}`;
+          console.log(`📅 Data de cadastro do vendedor: ${this.sellerMemberSince}`);
+        } else {
+          // 🔥 Fallback: tentar buscar da loja
+          this.loadMemberSinceFromStore(userId);
+        }
       },
       error: (error) => {
         console.error('❌ Erro ao buscar data de cadastro:', error);
+        // 🔥 Fallback: tentar buscar da loja
+        this.loadMemberSinceFromStore(userId);
+      }
+    });
+  }
+
+  /**
+   * 🔥 Busca data de cadastro da loja (fallback)
+   */
+  private loadMemberSinceFromStore(userId: string): void {
+    console.log(`🔍 Buscando loja do usuário ${userId} para obter data...`);
+    
+    this.storeService.getStoreByUser(userId).subscribe({
+      next: (store) => {
+        if (store?.createdAt) {
+          const date = new Date(store.createdAt);
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = date.getFullYear();
+          this.sellerMemberSince = `${month}/${year}`;
+          console.log(`📅 Data da loja: ${this.sellerMemberSince}`);
+        } else {
+          this.sellerMemberSince = '2024';
+          console.warn('⚠️ Data não encontrada, usando fallback');
+        }
+      },
+      error: () => {
         this.sellerMemberSince = '2024';
+        console.warn('⚠️ Erro ao buscar loja, usando fallback');
       }
     });
   }
