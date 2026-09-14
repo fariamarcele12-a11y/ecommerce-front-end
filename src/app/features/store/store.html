@@ -14,22 +14,69 @@
     </ol>
   </nav>
 
+  <!-- 🔥 BANNER DA LOJA -->
+  <div class="store-banner-wrapper mb-4" *ngIf="hasBanner()">
+    <img
+      [src]="getStoreBanner()"
+      [alt]="store.storeName + ' banner'"
+      class="store-banner-img"
+      (error)="onBannerError()"
+    />
+    <button
+      *ngIf="isOwner"
+      class="btn btn-light btn-sm rounded-circle position-absolute banner-edit-btn"
+      (click)="openEditModal()"
+      title="Editar banner"
+    >
+      <i class="bi bi-pencil"></i>
+    </button>
+  </div>
+
+  <!-- Banner placeholder (para lojas sem banner) -->
+  <div class="store-banner-placeholder mb-4" *ngIf="!hasBanner()">
+    <div class="d-flex align-items-center justify-content-center h-100">
+      <i class="bi bi-shop display-1 text-white-50"></i>
+    </div>
+    <button
+      *ngIf="isOwner"
+      class="btn btn-light btn-sm rounded-pill position-absolute banner-add-btn"
+      (click)="openEditModal()"
+    >
+      <i class="bi bi-plus-circle me-1"></i>
+      Adicionar banner
+    </button>
+  </div>
+
   <!-- Cabeçalho da Loja -->
   <div class="store-header bg-white rounded-3 shadow-sm p-4 mb-4">
     <div class="row align-items-center">
       <div class="col-md-8">
         <div class="d-flex align-items-center gap-4">
-          <!-- Avatar -->
-          <div
-            class="store-avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-            style="width: 80px; height: 80px; font-size: 32px; font-weight: bold"
-          >
-            {{ getInitials(store.storeName) }}
+          <!-- 🔥 Avatar/Logo da Loja -->
+          <div class="store-avatar-wrapper">
+            <img
+              *ngIf="hasLogo()"
+              [src]="getStoreLogo()"
+              [alt]="store.storeName"
+              class="store-avatar-img"
+              (error)="onLogoError()"
+            />
+            <div *ngIf="!hasLogo()" class="store-avatar-initials">
+              {{ getInitials(store.storeName) }}
+            </div>
+            <button
+              *ngIf="isOwner"
+              class="btn btn-light btn-sm rounded-circle position-absolute logo-edit-btn"
+              (click)="openEditModal()"
+              title="Editar logo"
+            >
+              <i class="bi bi-camera-fill"></i>
+            </button>
           </div>
 
           <!-- Informações -->
-          <div>
-            <h1 class="fw-bold mb-1">{{ store.storeName }}</h1>
+          <div class="flex-grow-1 min-width-0">
+            <h1 class="fw-bold mb-1 text-truncate">{{ store.storeName }}</h1>
             <div class="d-flex flex-wrap align-items-center gap-3 text-muted small">
               <span>
                 <i class="bi bi-star-fill text-warning me-1"></i>
@@ -57,7 +104,7 @@
 
       <div class="col-md-4 text-md-end mt-3 mt-md-0">
         <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-          <!-- 🔥 Botão "Falar com a loja" - para visitantes -->
+          <!-- Botão "Falar com a loja" - para visitantes -->
           <button
             *ngIf="isVisitor"
             class="btn btn-outline-success rounded-pill px-4"
@@ -67,7 +114,17 @@
             Falar com a loja
           </button>
 
-          <!-- 🔥 Botão "Adicionar Produto" - apenas para o dono -->
+          <!-- 🔥 Botão "Editar Loja" - apenas para o dono -->
+          <button
+            *ngIf="isOwner"
+            class="btn btn-outline-primary rounded-pill px-4"
+            (click)="openEditModal()"
+          >
+            <i class="bi bi-pencil-square me-2"></i>
+            Editar Loja
+          </button>
+
+          <!-- Botão "Adicionar Produto" - apenas para o dono -->
           <button
             *ngIf="isOwner"
             class="btn btn-primary rounded-pill px-4"
@@ -77,7 +134,7 @@
             Adicionar Produto
           </button>
 
-          <!-- 🔥 Badge para identificar o tipo de usuário -->
+          <!-- Badge para identificar o tipo de usuário -->
           <span class="badge"
                 [class.bg-success]="isOwner"
                 [class.bg-info]="isVisitor"
@@ -142,11 +199,17 @@
     </h5>
     <div class="d-flex align-items-center gap-4 flex-wrap">
       <div class="d-flex align-items-center gap-3">
-        <div
-          class="avatar-placeholder rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-          style="width: 60px; height: 60px; font-size: 24px; font-weight: bold"
-        >
-          {{ getInitials(store.storeName) }}
+        <div class="seller-avatar-wrapper">
+          <img
+            *ngIf="hasLogo()"
+            [src]="getStoreLogo()"
+            [alt]="store.storeName"
+            class="seller-avatar-img"
+            (error)="onLogoError()"
+          />
+          <div *ngIf="!hasLogo()" class="seller-avatar-initials">
+            {{ getInitials(store.storeName) }}
+          </div>
         </div>
         <div>
           <h6 class="mb-0">{{ store.storeName }}</h6>
@@ -269,7 +332,7 @@
     <div *ngIf="products.length > 0" class="row g-4">
       <div *ngFor="let product of products" class="col-md-4 col-sm-6">
         <div class="card h-100 shadow-sm hover-effect position-relative">
-          <!-- 🔥 Imagem do Produto -->
+          <!-- Imagem do Produto -->
           <img
             [src]="product.images[0]"
             [alt]="product.name"
@@ -280,7 +343,7 @@
             "
           />
 
-          <!-- 🔥 Botões de Ação do Produto (apenas para o dono) -->
+          <!-- Botões de Ação do Produto (apenas para o dono) -->
           <div *ngIf="isOwner" class="position-absolute top-0 end-0 m-2 d-flex gap-1">
             <button
               class="btn btn-sm btn-light rounded-circle shadow-sm"
@@ -348,4 +411,118 @@
     <i class="bi bi-arrow-left me-2"></i>
     Voltar para Home
   </a>
+</div>
+
+<!-- 🔥 MODAL DE EDIÇÃO DA LOJA -->
+<div *ngIf="showEditModal" class="modal-overlay" (click)="closeEditModal()">
+  <div class="modal-content-custom" (click)="$event.stopPropagation()">
+    <div class="modal-header-custom">
+      <h5 class="fw-bold mb-0">
+        <i class="bi bi-pencil-square text-primary me-2"></i>
+        Editar Loja
+      </h5>
+      <button class="btn-close" (click)="closeEditModal()"></button>
+    </div>
+
+    <div class="modal-body-custom">
+      <!-- Banner -->
+      <div class="mb-4">
+        <label class="form-label fw-bold">Banner da Loja</label>
+        <p class="text-muted small">Recomendado: 1200x400 pixels (máx 10MB)</p>
+        <app-image-upload
+          type="banner"
+          [currentImage]="editForm.banner"
+          [maxSizeMB]="10"
+          aspectRatio="3:1"
+          (imageUploaded)="onBannerUploaded($event)"
+          (imageRemoved)="onBannerRemoved()"
+        ></app-image-upload>
+      </div>
+
+      <!-- Logo -->
+      <div class="mb-4">
+        <label class="form-label fw-bold">Logo da Loja</label>
+        <p class="text-muted small">Recomendado: 400x400 pixels (máx 5MB)</p>
+        <app-image-upload
+          type="logo"
+          [currentImage]="editForm.logo"
+          [maxSizeMB]="5"
+          aspectRatio="1:1"
+          (imageUploaded)="onLogoUploaded($event)"
+          (imageRemoved)="onLogoRemoved()"
+        ></app-image-upload>
+      </div>
+
+      <!-- Nome -->
+      <div class="mb-3">
+        <label class="form-label fw-bold">Nome da Loja *</label>
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="editForm.storeName"
+          required
+        />
+      </div>
+
+      <!-- Categoria -->
+      <div class="mb-3">
+        <label class="form-label fw-bold">Categoria *</label>
+        <select class="form-select" [(ngModel)]="editForm.category">
+          <option value="">Selecione</option>
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+
+      <!-- Descrição -->
+      <div class="mb-3">
+        <label class="form-label fw-bold">Descrição</label>
+        <textarea
+          class="form-control"
+          rows="3"
+          [(ngModel)]="editForm.description"
+        ></textarea>
+      </div>
+
+      <!-- Telefone / Email -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-bold">Telefone</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="editForm.phone"
+            (input)="editForm.phone = formatPhone(editForm.phone)"
+          />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-bold">E-mail</label>
+          <input
+            type="email"
+            class="form-control"
+            [(ngModel)]="editForm.email"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer-custom">
+      <button class="btn btn-outline-secondary rounded-pill" (click)="closeEditModal()">
+        Cancelar
+      </button>
+      <button
+        class="btn btn-primary rounded-pill px-4"
+        (click)="saveStore()"
+        [disabled]="saving"
+      >
+        <span *ngIf="!saving">
+          <i class="bi bi-check-lg me-1"></i>
+          Salvar
+        </span>
+        <span *ngIf="saving">
+          <span class="spinner-border spinner-border-sm me-1"></span>
+          Salvando...
+        </span>
+      </button>
+    </div>
+  </div>
 </div>

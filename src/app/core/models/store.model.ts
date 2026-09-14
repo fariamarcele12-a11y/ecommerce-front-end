@@ -1,123 +1,85 @@
 // src/app/core/models/store.model.ts
+
 export interface Store {
-  id: string; // 🔥 Mudado para string
-  userId: string | number; // 🔥 Mudado para string | number
+  id: string;
+  userId: string;
   storeName: string;
   description: string;
   category: string;
-  logo: string;
-  banner: string;
-  cnpj?: string;
+  logo?: string;
+  banner?: string;
+  documentType?: 'pf' | 'pj';
   cpf?: string;
-  documentType: 'pf' | 'pj';
-  address: {
-    street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    cep: string;
-    country: string;
-  };
+  cnpj?: string;
+  address: StoreAddress;
   phone: string;
   email: string;
   website?: string;
-  socialMedia?: {
-    instagram?: string;
-    facebook?: string;
-    youtube?: string;
-  };
+  socialMedia?: StoreSocialMedia;
   rating: number;
   totalSales: number;
   active: boolean;
-  createdAt: string; // 🔥 Mudado para string
-  updatedAt?: string; // 🔥 Mudado para string
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface StoreAddress {
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  cep: string;
+  country: string;
+}
+
+export interface StoreSocialMedia {
+  instagram?: string;
+  facebook?: string;
+  youtube?: string;
 }
 
 export interface StoreForm {
   storeName: string;
   description: string;
   category: string;
-  logo: string;
-  banner: string;
+  logo?: string;
+  banner?: string;
   phone: string;
   email: string;
   website?: string;
-  socialMedia: {
-    instagram?: string;
-    facebook?: string;
-    youtube?: string;
-  };
-  address: {
-    street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    cep: string;
-    country: string;
-  };
-}// src/app/core/models/store.model.ts
-export interface Store {
-  id: string; // 🔥 Mudado para string
-  userId: string | number; // 🔥 Mudado para string | number
-  storeName: string;
-  description: string;
-  category: string;
-  logo: string;
-  banner: string;
-  cnpj?: string;
-  cpf?: string;
-  documentType: 'pf' | 'pj';
-  address: {
-    street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    cep: string;
-    country: string;
-  };
-  phone: string;
-  email: string;
-  website?: string;
-  socialMedia?: {
-    instagram?: string;
-    facebook?: string;
-    youtube?: string;
-  };
-  rating: number;
-  totalSales: number;
-  active: boolean;
-  createdAt: string; // 🔥 Mudado para string
-  updatedAt?: string; // 🔥 Mudado para string
+  socialMedia?: StoreSocialMedia;
+  address: StoreAddress;
 }
 
-export interface StoreForm {
+export interface StoreSummary {
+  id: string;
   storeName: string;
-  description: string;
+  logo?: string;
+  banner?: string;
   category: string;
-  logo: string;
-  banner: string;
-  phone: string;
-  email: string;
-  website?: string;
-  socialMedia: {
-    instagram?: string;
-    facebook?: string;
-    youtube?: string;
-  };
-  address: {
-    street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    cep: string;
-    country: string;
-  };
+  rating: number;
+  totalSales: number;
+  productCount?: number;
+}
+
+export interface StoreFilters {
+  category?: string;
+  search?: string;
+  minRating?: number;
+  city?: string;
+  state?: string;
+  sortBy?: 'rating' | 'sales' | 'newest' | 'name';
+  page?: number;
+  limit?: number;
+  active?: boolean;
+}
+
+export interface StoreResponse {
+  stores: Store[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }

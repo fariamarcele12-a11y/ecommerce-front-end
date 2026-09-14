@@ -1,0 +1,96 @@
+<!-- src/app/shared/components/image-upload/image-upload.html -->
+<div class="image-upload-container" [class.banner-mode]="type === 'banner'">
+  <!-- Input de arquivo oculto -->
+  <input
+    type="file"
+    [id]="'file-input-' + type"
+    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+    (change)="onFileSelected($event)"
+    style="display: none;"
+  />
+
+  <!-- Área de upload -->
+  <div
+    class="upload-area"
+    [class.dragging]="isDragging"
+    [class.processing]="isProcessing"
+    [class.has-image]="previewUrl && previewUrl !== placeholder"
+    [class.banner]="type === 'banner'"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    (click)="openFileSelector()"
+  >
+    <!-- Preview da imagem -->
+    <img
+      *ngIf="previewUrl && previewUrl !== placeholder"
+      [src]="previewUrl"
+      [alt]="getPlaceholderText()"
+      class="preview-image"
+      [class.banner-image]="type === 'banner'"
+      (error)="previewUrl = placeholder"
+    />
+
+    <!-- Overlay de loading -->
+    <div *ngIf="isProcessing" class="processing-overlay">
+      <div class="spinner-border text-light" role="status">
+        <span class="visually-hidden">Processando...</span>
+      </div>
+      <span class="processing-text">Processando imagem...</span>
+    </div>
+
+    <!-- Overlay de hover -->
+    <div 
+      *ngIf="!isProcessing && previewUrl && previewUrl !== placeholder" 
+      class="hover-overlay"
+      (click)="openFileSelector()"
+    >
+      <i class="bi bi-camera-fill"></i>
+      <span>Alterar imagem</span>
+    </div>
+
+    <!-- Placeholder quando não tem imagem -->
+    <div *ngIf="!previewUrl || previewUrl === placeholder" class="placeholder-content">
+      <i class="bi" [class]="getPlaceholderIcon()"></i>
+      <span class="placeholder-text">{{ getPlaceholderText() }}</span>
+      <span class="placeholder-hint">
+        <i class="bi bi-cloud-arrow-up me-1"></i>
+        Clique ou arraste uma imagem
+      </span>
+      <span class="placeholder-size">
+        Máx: {{ maxSizeMB }}MB • JPG, PNG, WEBP
+      </span>
+    </div>
+  </div>
+
+  <!-- 🔥 Botão de remover - CORRIGIDO -->
+  <button
+    *ngIf="previewUrl && previewUrl !== placeholder && !isProcessing"
+    type="button"
+    class="btn-remove"
+    (click)="removeImage($event)"
+    title="Remover imagem"
+  >
+    <i class="bi bi-trash"></i>
+  </button>
+
+  <!-- Mensagem de erro -->
+  <div *ngIf="errorMessage" class="error-message">
+    <i class="bi bi-exclamation-circle me-1"></i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Dicas de formato -->
+  <div class="upload-hints" *ngIf="type === 'avatar' || type === 'logo'">
+    <small class="text-muted">
+      <i class="bi bi-info-circle me-1"></i>
+      Recomendado: imagem quadrada ({{ aspectRatio }})
+    </small>
+  </div>
+  <div class="upload-hints" *ngIf="type === 'banner'">
+    <small class="text-muted">
+      <i class="bi bi-info-circle me-1"></i>
+      Recomendado: 1200x400 pixels (3:1)
+    </small>
+  </div>
+</div>

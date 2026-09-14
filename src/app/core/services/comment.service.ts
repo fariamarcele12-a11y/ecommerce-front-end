@@ -1,10 +1,11 @@
 // src/app/core/services/comment.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, throwError, catchError, tap, map, switchMap } from 'rxjs';
+import { Observable, of, throwError, catchError, tap, map, switchMap, forkJoin } from 'rxjs';
 import { Comment, CommentReply, CreateComment, CreateReply } from '../models/comment.model';
 import { IdGeneratorService } from './id-generator.service';
 import { AuthService } from './auth.service';
+import { UserService } from './user.service';
 
 @Injectable({
   providedIn: 'root'
@@ -15,16 +16,82 @@ export class CommentService {
   private readonly http = inject(HttpClient);
   private readonly idGenerator = inject(IdGeneratorService);
   private readonly authService = inject(AuthService);
+  private readonly userService = inject(UserService);
 
   /**
-   * 🔥 Busca comentários de um produto
+   * 🔥 Gera URL do avatar (SEMPRE usa avatar real ou fallback com iniciais)
+   */
+  private generateAvatarUrl(userName: string, userAvatar?: string, isSeller = false): string {
+    // Se tem avatar real, usar
+    if (userAvatar && userAvatar.trim() !== '' && userAvatar !== 'null' && userAvatar !== 'undefined') {
+      return userAvatar;
+    }
+
+    // Fallback: ui-avatars.com com iniciais do nome
+    const name = encodeURIComponent(userName || 'Usuário');
+    const bgColor = isSeller ? '28a745' : '667eea';
+    return `https://ui-avatars.com/api/?name=${name}&background=${bgColor}&color=fff&size=80&bold=true`;
+  }
+
+  /**
+   * 🔥 Busca comentários de um produto COM AVATARES DOS USUÁRIOS
    */
   getCommentsByProduct(productId: string): Observable<Comment[]> {
     console.log(`🔍 Buscando comentários do produto ${productId}...`);
+
     return this.http.get<Comment[]>(`${this.apiUrl}?productId=${productId}&_sort=createdAt&_order=desc`).pipe(
-      map((comments) => {
+      switchMap((comments) => {
         console.log(`📦 ${comments.length} comentários encontrados`);
-        return comments;
+
+        if (comments.length === 0) {
+          return of([]);
+        }
+
+        // 🔥 Coletar todos os IDs de usuários (comentários + respostas)
+        const userIds = new Set<string>();
+
+        comments.forEach(comment => {
+          if (comment.userId) userIds.add(String(comment.userId));
+
+          if (comment.replies && comment.replies.length > 0) {
+            comment.replies.forEach(reply => {
+              if (reply.userId) userIds.add(String(reply.userId));
+            });
+          }
+        });
+
+        console.log(`👥 ${userIds.size} usuários únicos encontrados`);
+
+        if (userIds.size === 0) {
+          return of(this.applyAvatarFallback(comments, {}, {}));
+        }
+
+        // 🔥 Buscar TODOS os usuários (cliente E vendedor)
+        const userRequests = Array.from(userIds).map(userId =>
+          this.userService.getUserById(userId).pipe(
+            catchError(() => of(null))
+          )
+        );
+
+        return forkJoin(userRequests).pipe(
+          map((users) => {
+            const userAvatarMap: { [key: string]: string } = {};
+            const userNameMap: { [key: string]: string } = {};
+
+            users.forEach(user => {
+              if (user) {
+                const userId = String(user.id);
+                // 🔥 SEMPRE usar o avatar do USUÁRIO (nunca da loja)
+                userAvatarMap[userId] = (user as any).avatar || '';
+                userNameMap[userId] = user.name || 'Usuário';
+              }
+            });
+
+            console.log('📸 Avatares encontrados:', Object.keys(userAvatarMap).length);
+
+            return this.applyAvatarFallback(comments, userAvatarMap, userNameMap);
+          })
+        );
       }),
       catchError((error) => {
         console.error('❌ Erro ao buscar comentários:', error);
@@ -34,7 +101,59 @@ export class CommentService {
   }
 
   /**
-   * 🔥 Cria um novo comentário (sem estrelas)
+   * 🔥 Aplica avatar do USUÁRIO em comentários e respostas
+   */
+  private applyAvatarFallback(
+    comments: Comment[],
+    userAvatarMap: { [key: string]: string },
+    userNameMap: { [key: string]: string }
+  ): Comment[] {
+    return comments.map(comment => {
+      const updatedComment = { ...comment };
+      const commentUserId = String(comment.userId);
+
+      // 🔥 Nome do usuário
+      if (userNameMap[commentUserId]) {
+        updatedComment.userName = userNameMap[commentUserId];
+      }
+
+      // 🔥 Avatar do USUÁRIO (não da loja)
+      const commentAvatar = userAvatarMap[commentUserId] || comment.userAvatar || '';
+      updatedComment.userAvatar = this.generateAvatarUrl(
+        updatedComment.userName || 'Usuário',
+        commentAvatar,
+        false
+      );
+
+      // 🔥 Atualizar respostas
+      if (updatedComment.replies && updatedComment.replies.length > 0) {
+        updatedComment.replies = updatedComment.replies.map(reply => {
+          const updatedReply = { ...reply };
+          const replyUserId = String(reply.userId);
+
+          // 🔥 IMPORTANTE: SEMPRE usar nome/avatar do USUÁRIO
+          // O badge "Vendedor" é controlado pela flag isFromSeller
+          if (userNameMap[replyUserId]) {
+            updatedReply.userName = userNameMap[replyUserId];
+          }
+
+          const replyAvatar = userAvatarMap[replyUserId] || reply.userAvatar || '';
+          updatedReply.userAvatar = this.generateAvatarUrl(
+            updatedReply.userName || 'Usuário',
+            replyAvatar,
+            updatedReply.isFromSeller || false // 🔥 Só afeta a cor do fallback
+          );
+
+          return updatedReply;
+        });
+      }
+
+      return updatedComment;
+    });
+  }
+
+  /**
+   * 🔥 Cria um novo comentário
    */
   createComment(commentData: CreateComment): Observable<Comment> {
     const user = this.authService.getCurrentUser();
@@ -43,14 +162,16 @@ export class CommentService {
     }
 
     const commentId = this.idGenerator.generateMessageId();
-    console.log('🔑 ID único gerado para o comentário:', commentId);
+    const userName = user.name || 'Usuário';
+    const userAvatar = (user as any).avatar || '';
+    const finalAvatar = this.generateAvatarUrl(userName, userAvatar, false);
 
     const newComment: Comment = {
       id: commentId,
       productId: commentData.productId,
       userId: String(user.id),
-      userName: user.name || 'Usuário',
-      userAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=667eea&color=fff&size=40`,
+      userName: userName,
+      userAvatar: finalAvatar,
       content: commentData.content,
       createdAt: new Date().toISOString(),
       likes: 0,
@@ -59,12 +180,7 @@ export class CommentService {
       replies: []
     };
 
-    console.log('📤 Enviando comentário:', newComment);
-
     return this.http.post<Comment>(this.apiUrl, newComment).pipe(
-      tap((comment) => {
-        console.log('✅ Comentário criado com ID:', comment.id);
-      }),
       catchError((error) => {
         console.error('❌ Erro ao criar comentário:', error);
         return throwError(() => new Error('Erro ao criar comentário. Tente novamente.'));
@@ -73,7 +189,7 @@ export class CommentService {
   }
 
   /**
-   * 🔥 Adiciona uma resposta a um comentário
+   * 🔥 Adiciona uma resposta - USA AVATAR DO USUÁRIO (não da loja)
    */
   addReply(commentId: string, replyData: CreateReply): Observable<Comment> {
     const user = this.authService.getCurrentUser();
@@ -82,22 +198,28 @@ export class CommentService {
     }
 
     console.log(`📝 Adicionando resposta ao comentário ${commentId}...`);
+    console.log('👤 Usuário:', user.name);
+    console.log('📸 Avatar do usuário:', (user as any).avatar ? 'Sim' : 'Não');
 
     const replyId = this.idGenerator.generateMessageId();
     const isFromSeller = replyData.isFromSeller || false;
+
+    // 🔥 SEMPRE usar o avatar/nome do USUÁRIO
+    const userName = user.name || 'Usuário';
+    const userAvatar = (user as any).avatar || '';
+    const finalAvatar = this.generateAvatarUrl(userName, userAvatar, isFromSeller);
 
     const newReply: CommentReply = {
       id: replyId,
       commentId: commentId,
       userId: String(user.id),
-      userName: isFromSeller ? 'Vendedor' : (user.name || 'Usuário'),
-      userAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(isFromSeller ? 'Vendedor' : user.name)}&background=${isFromSeller ? '28a745' : '667eea'}&color=fff&size=40`,
+      userName: userName, // 🔥 Nome REAL do usuário
+      userAvatar: finalAvatar, // 🔥 Avatar REAL do usuário
       content: replyData.content,
-      isFromSeller: isFromSeller,
+      isFromSeller: isFromSeller, // 🔥 Só a flag
       createdAt: new Date().toISOString()
     };
 
-    // 🔥 Buscar o comentário atual
     return this.http.get<Comment>(`${this.apiUrl}/${commentId}`).pipe(
       switchMap((comment) => {
         if (!comment) {
@@ -109,19 +231,11 @@ export class CommentService {
 
         return this.http.patch<Comment>(`${this.apiUrl}/${commentId}`, {
           replies: updatedReplies
-        }).pipe(
-          tap(() => {
-            console.log('✅ Resposta adicionada com sucesso!');
-          }),
-          catchError((error) => {
-            console.error('❌ Erro ao adicionar resposta:', error);
-            return throwError(() => new Error('Erro ao adicionar resposta.'));
-          })
-        );
+        });
       }),
       catchError((error) => {
-        console.error('❌ Erro ao buscar comentário:', error);
-        return throwError(() => new Error('Erro ao buscar comentário.'));
+        console.error('❌ Erro ao adicionar resposta:', error);
+        return throwError(() => new Error('Erro ao adicionar resposta.'));
       })
     );
   }
@@ -130,8 +244,6 @@ export class CommentService {
    * 🔥 Remove uma resposta
    */
   deleteReply(commentId: string, replyId: string): Observable<Comment> {
-    console.log(`🗑️ Removendo resposta ${replyId} do comentário ${commentId}...`);
-
     return this.http.get<Comment>(`${this.apiUrl}/${commentId}`).pipe(
       switchMap((comment) => {
         if (!comment) {
@@ -143,19 +255,11 @@ export class CommentService {
 
         return this.http.patch<Comment>(`${this.apiUrl}/${commentId}`, {
           replies: updatedReplies
-        }).pipe(
-          tap(() => {
-            console.log('✅ Resposta removida com sucesso!');
-          }),
-          catchError((error) => {
-            console.error('❌ Erro ao remover resposta:', error);
-            return throwError(() => new Error('Erro ao remover resposta.'));
-          })
-        );
+        });
       }),
       catchError((error) => {
-        console.error('❌ Erro ao buscar comentário:', error);
-        return throwError(() => new Error('Erro ao buscar comentário.'));
+        console.error('❌ Erro ao remover resposta:', error);
+        return throwError(() => new Error('Erro ao remover resposta.'));
       })
     );
   }
@@ -164,66 +268,40 @@ export class CommentService {
    * 🔥 Remove um comentário
    */
   deleteComment(id: string): Observable<void> {
-    console.log(`🗑️ Excluindo comentário com ID: ${id}`);
-
     if (!id || id === 'null' || id === 'undefined') {
-      console.error('❌ ID do comentário inválido:', id);
       return throwError(() => new Error('ID do comentário inválido.'));
     }
 
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
-      tap(() => {
-        console.log(`✅ Comentário ${id} excluído com sucesso!`);
-      }),
       catchError((error: HttpErrorResponse) => {
-        console.error('❌ Erro ao excluir comentário:', error);
-
         if (error.status === 404) {
-          console.warn('⚠️ Comentário já foi excluído anteriormente');
           return of(void 0);
         }
-
         if (error.status === 500) {
-          console.warn('⚠️ Erro 500, tentando desativar comentário...');
           return this.deactivateComment(id);
         }
-
         return throwError(() => new Error('Erro ao excluir comentário.'));
       })
     );
   }
 
-  /**
-   * 🔥 Desativa um comentário (fallback)
-   */
   private deactivateComment(id: string): Observable<void> {
-    console.log(`🔄 Desativando comentário ${id}...`);
-
     return this.http.patch<Comment>(`${this.apiUrl}/${id}`, {
       active: false,
       deletedAt: new Date().toISOString()
     }).pipe(
-      tap(() => {
-        console.log(`✅ Comentário ${id} desativado com sucesso!`);
-      }),
       map(() => void 0),
-      catchError((error) => {
-        console.error('❌ Falha ao desativar comentário:', error);
-        return of(void 0);
-      })
+      catchError(() => of(void 0))
     );
   }
 
   /**
-   * 🔥 Alterna like em um comentário
+   * 🔥 Alterna like
    */
   toggleLike(id: string): Observable<Comment> {
-    console.log(`🔄 Toggle like no comentário ${id}...`);
-
     return this.http.get<Comment>(`${this.apiUrl}/${id}`).pipe(
       switchMap((comment) => {
         if (!comment) {
-          console.warn(`⚠️ Comentário ${id} não encontrado`);
           return throwError(() => new Error('Comentário não encontrado.'));
         }
 
@@ -233,9 +311,7 @@ export class CommentService {
         return this.http.patch<Comment>(`${this.apiUrl}/${id}`, {
           likes: updatedLikes,
           isLiked: isLiked
-        }).pipe(
-          tap(() => console.log(`✅ Like ${isLiked ? 'adicionado' : 'removido'}`))
-        );
+        });
       }),
       catchError((error) => {
         console.error('❌ Erro ao alternar like:', error);

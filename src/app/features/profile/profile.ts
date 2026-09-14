@@ -9,11 +9,12 @@ import { CepService } from '../../core/services/cep.service';
 import { User } from '../../core/models/user.model';
 import { StoreService } from '../../core/services/store.service';
 import { Store } from '../../core/models/store.model';
+import { ImageUpload } from '../../shared/components/image-upload/image-upload';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ImageUpload],
   templateUrl: './profile.html',
   styleUrls: ['./profile.scss'],
 })
@@ -32,6 +33,7 @@ export class Profile implements OnInit {
     phone: '',
     document: '',
     documentType: 'pf' as 'pf' | 'pj',
+    avatar: '', // 🔥 NOVO: Avatar do usuário
     address: {
       street: '',
       number: '',
@@ -85,6 +87,7 @@ export class Profile implements OnInit {
       phone: user.phone || '',
       document: user.document || '',
       documentType: user.documentType || 'pf',
+      avatar: (user as any).avatar || '', // 🔥 Carregar avatar
       address: {
         street: user.address?.street || '',
         number: user.address?.number || '',
@@ -103,12 +106,9 @@ export class Profile implements OnInit {
       this.companyName = '';
       this.tradeName = '';
     } else {
-      // 🔥 PJ: Nome Fantasia
       this.tradeName = user.tradeName || '';
       this.companyName = user.companyName || '';
       this.birthDate = '';
-
-      // 🔥 Se for PJ, o campo "name" é a Razão Social
       this.profileData.name = user.name || user.companyName || '';
     }
 
@@ -132,6 +132,53 @@ export class Profile implements OnInit {
 
     this.loading = false;
     console.log('👤 Dados do usuário carregados:', this.profileData);
+  }
+
+  /**
+   * 🔥 Quando o avatar é atualizado
+   */
+  onAvatarUploaded(base64: string): void {
+    console.log('✅ Avatar atualizado');
+    this.profileData.avatar = base64;
+
+    // 🔥 Salvar automaticamente o avatar
+    this.saveAvatar(base64);
+  }
+
+  /**
+   * 🔥 Quando o avatar é removido
+   */
+  onAvatarRemoved(): void {
+    console.log('🗑️ Avatar removido');
+    this.profileData.avatar = '';
+
+    // 🔥 Remover avatar do servidor
+    this.saveAvatar('');
+  }
+
+  /**
+   * 🔥 Salva o avatar no servidor
+   */
+  private saveAvatar(avatar: string): void {
+    if (!this.user) return;
+
+    const updateData: Partial<User> = {
+      ...(avatar ? { avatar } : { avatar: null }) as any
+    };
+
+    this.authService.updateUser(updateData).subscribe({
+      next: (response) => {
+        if (response.success) {
+          console.log('✅ Avatar salvo no servidor');
+          // Atualizar o usuário local
+          this.user = this.authService.getCurrentUser();
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erro ao salvar avatar:', error);
+        this.alertService.error('Erro', 'Não foi possível salvar a foto de perfil.');
+      }
+    });
   }
 
   /**
@@ -189,6 +236,7 @@ export class Profile implements OnInit {
       phone: this.profileData.phone,
       address: this.profileData.address,
       documentType: this.profileData.documentType,
+      ...(this.profileData.avatar ? { avatar: this.profileData.avatar } as any : {})
     };
 
     if (this.profileData.documentType === 'pf') {
@@ -196,7 +244,6 @@ export class Profile implements OnInit {
       updateData.companyName = undefined;
       updateData.tradeName = undefined;
     } else {
-      // 🔥 PJ: Salvar Razão Social e Nome Fantasia
       updateData.companyName = this.profileData.name;
       updateData.tradeName = this.tradeName;
       updateData.birthDate = undefined;

@@ -1,9 +1,10 @@
 // src/app/core/models/user.model.ts
 export interface User {
-  id: string; // 🔥 AGORA É STRING (UUID)
+  id: string;
   name: string;
   email: string;
   password?: string;
+  avatar?: string;
   document?: string;
   documentType?: 'pf' | 'pj';
   phone?: string;

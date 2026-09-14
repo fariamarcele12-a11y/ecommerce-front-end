@@ -25,6 +25,8 @@ export class Comments implements OnInit {
   isSubmitting = false;
   currentUserId: string | null = null;
   currentUser: any = null;
+  currentUserAvatar: string = '';
+  currentUserName: string = '';
   editingCommentId: string | null = null;
   editingContent = '';
   showReplyForm: string | null = null;
@@ -42,8 +44,29 @@ export class Comments implements OnInit {
     const user = this.authService.getCurrentUser();
     this.currentUserId = user ? String(user.id) : null;
     this.currentUser = user;
+    this.currentUserName = user?.name || 'Usuário';
+
+    // 🔥 Avatar do USUÁRIO (não da loja)
+    const realAvatar = (user as any)?.avatar || '';
+    this.currentUserAvatar = this.getAvatarUrl(this.currentUserName, realAvatar);
+
+    console.log('👤 Usuário:', this.currentUserName);
+    console.log('📸 Avatar:', this.currentUserAvatar);
+
     this.checkIfVendor();
     this.loadComments();
+  }
+
+  /**
+   * 🔥 Gera URL do avatar (SEMPRE com fallback)
+   */
+  getAvatarUrl(userName: string, userAvatar?: string, isSeller = false): string {
+    if (userAvatar && userAvatar.trim() !== '' && userAvatar !== 'null' && userAvatar !== 'undefined') {
+      return userAvatar;
+    }
+    const name = encodeURIComponent(userName || 'Usuário');
+    const bgColor = isSeller ? '28a745' : '667eea';
+    return `https://ui-avatars.com/api/?name=${name}&background=${bgColor}&color=fff&size=80&bold=true`;
   }
 
   checkIfVendor(): void {
@@ -52,7 +75,7 @@ export class Comments implements OnInit {
         next: (store) => {
           if (store && String(store.userId) === this.currentUserId) {
             this.isVendor = true;
-            console.log('🏪 Usuário é o vendedor da loja!');
+            console.log('🏪 Usuário é o vendedor!');
           }
         },
         error: () => {
@@ -94,14 +117,18 @@ export class Comments implements OnInit {
       content: this.newComment
     }).subscribe({
       next: (comment) => {
-        this.comments.unshift(comment);
+        const commentWithAvatar = {
+          ...comment,
+          userAvatar: comment.userAvatar || this.getAvatarUrl(comment.userName, '', false)
+        };
+        this.comments.unshift(commentWithAvatar);
         this.newComment = '';
         this.isSubmitting = false;
-        this.alertService.success('Comentário adicionado!', 'Seu comentário foi publicado. 🎉');
+        this.alertService.success('Comentário adicionado!', 'Publicado com sucesso! 🎉');
       },
       error: () => {
         this.isSubmitting = false;
-        this.alertService.error('Erro', 'Não foi possível publicar seu comentário.');
+        this.alertService.error('Erro', 'Não foi possível publicar.');
       }
     });
   }
@@ -125,18 +152,45 @@ export class Comments implements OnInit {
       isFromSeller: isFromSeller
     }).subscribe({
       next: (updatedComment) => {
+        const processedComment = this.ensureAvatars(updatedComment);
         const index = this.comments.findIndex(c => c.id === commentId);
         if (index !== -1) {
-          this.comments[index] = updatedComment;
+          this.comments[index] = processedComment;
         }
         this.replyContent = '';
         this.showReplyForm = null;
-        this.alertService.success('Resposta adicionada!', 'Sua resposta foi publicada. 🎉');
+        this.alertService.success('Resposta adicionada!', 'Publicada com sucesso! 🎉');
       },
       error: () => {
         this.alertService.error('Erro', 'Não foi possível adicionar a resposta.');
       }
     });
+  }
+
+  /**
+   * 🔥 Garante avatares em TODOS os lugares
+   */
+  private ensureAvatars(comment: Comment): Comment {
+    const updatedComment = { ...comment };
+
+    updatedComment.userAvatar = this.getAvatarUrl(
+      updatedComment.userName,
+      updatedComment.userAvatar,
+      false
+    );
+
+    if (updatedComment.replies && updatedComment.replies.length > 0) {
+      updatedComment.replies = updatedComment.replies.map(reply => ({
+        ...reply,
+        userAvatar: this.getAvatarUrl(
+          reply.userName,
+          reply.userAvatar,
+          reply.isFromSeller || false
+        )
+      }));
+    }
+
+    return updatedComment;
   }
 
   deleteReply(commentId: string, replyId: string): void {
@@ -151,37 +205,16 @@ export class Comments implements OnInit {
           next: (updatedComment) => {
             const index = this.comments.findIndex(c => c.id === commentId);
             if (index !== -1) {
-              this.comments[index] = updatedComment;
+              this.comments[index] = this.ensureAvatars(updatedComment);
             }
-            this.alertService.success('Resposta removida!', 'Resposta excluída com sucesso.');
+            this.alertService.success('Resposta removida!', 'Excluída com sucesso.');
           },
           error: () => {
-            this.alertService.error('Erro', 'Não foi possível excluir a resposta.');
+            this.alertService.error('Erro', 'Não foi possível excluir.');
           }
         });
       }
     });
-  }
-
-  startEdit(comment: Comment): void {
-    this.editingCommentId = comment.id;
-    this.editingContent = comment.content;
-  }
-
-  cancelEdit(): void {
-    this.editingCommentId = null;
-    this.editingContent = '';
-  }
-
-  saveEdit(commentId: string): void {
-    if (!this.editingContent.trim()) {
-      this.alertService.warning('Conteúdo vazio', 'Digite um conteúdo para o comentário.');
-      return;
-    }
-
-    // ComentárioService.updateComment precisa ser implementado
-    this.alertService.warning('Em breve', 'Edição de comentários estará disponível em breve.');
-    this.cancelEdit();
   }
 
   deleteComment(commentId: string): void {
@@ -197,14 +230,12 @@ export class Comments implements OnInit {
 
         this.commentService.deleteComment(commentId).subscribe({
           next: () => {
-            this.alertService.success('Comentário removido!', 'Comentário excluído com sucesso.');
+            this.alertService.success('Comentário removido!', 'Excluído com sucesso.');
           },
           error: (error) => {
             if (error.status !== 404) {
               this.comments = previousComments;
-              this.alertService.error('Erro', 'Não foi possível excluir o comentário.');
-            } else {
-              this.alertService.info('Comentário removido', 'Este comentário já foi removido anteriormente.');
+              this.alertService.error('Erro', 'Não foi possível excluir.');
             }
           }
         });
@@ -214,7 +245,7 @@ export class Comments implements OnInit {
 
   toggleLike(commentId: string): void {
     if (!this.authService.isLoggedIn()) {
-      this.alertService.warning('Faça login', 'Você precisa estar logado para curtir.');
+      this.alertService.warning('Faça login', 'Você precisa estar logado.');
       return;
     }
 
@@ -222,11 +253,11 @@ export class Comments implements OnInit {
       next: (updated) => {
         const index = this.comments.findIndex(c => c.id === commentId);
         if (index !== -1) {
-          this.comments[index] = updated;
+          this.comments[index] = this.ensureAvatars(updated);
         }
       },
       error: () => {
-        this.alertService.error('Erro', 'Não foi possível curtir o comentário.');
+        this.alertService.error('Erro', 'Não foi possível curtir.');
       }
     });
   }
@@ -237,6 +268,10 @@ export class Comments implements OnInit {
 
   isReplyOwner(reply: CommentReply): boolean {
     return this.currentUserId === reply.userId;
+  }
+
+  getUserAvatar(userAvatar: string | undefined, userName: string): string {
+    return this.getAvatarUrl(userName, userAvatar, false);
   }
 
   formatDate(date: string): string {
@@ -257,5 +292,15 @@ export class Comments implements OnInit {
     }
     this.showReplyForm = this.showReplyForm === commentId ? null : commentId;
     this.replyContent = '';
+  }
+
+  onAvatarError(event: any, userName: string): void {
+    const target = event.target as HTMLImageElement;
+    const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'Usuário')}&background=667eea&color=fff&size=80&bold=true`;
+
+    if (target.src !== fallbackUrl) {
+      console.warn('⚠️ Erro ao carregar avatar, usando fallback');
+      target.src = fallbackUrl;
+    }
   }
 }

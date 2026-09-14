@@ -1,3 +1,4 @@
+<!-- src/app/shared/components/navbar/navbar.html -->
 <nav
   class="navbar navbar-expand-lg sticky-top bg-white border-bottom"
   [class.scrolled]="isScrolled"
@@ -30,7 +31,7 @@
 
       <!-- Ícones e Ações -->
       <div class="d-flex align-items-center gap-2 gap-lg-3 ms-auto">
-        <!-- 🔥 Minha Loja (visível apenas se tiver loja) -->
+        <!-- Minha Loja (visível apenas se tiver loja) -->
         <a
           *ngIf="hasStore && storeId"
           class="btn btn-outline-primary rounded-pill px-3 px-lg-4"
@@ -45,6 +46,7 @@
           <i class="bi bi-heart fs-5"></i>
           <span
             class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+            *ngIf="favoritesCount > 0"
           >
             {{ favoritesCount }}
             <span class="visually-hidden">favoritos</span>
@@ -56,13 +58,14 @@
           <i class="bi bi-cart3 fs-5"></i>
           <span
             class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary"
+            *ngIf="cartCount > 0"
           >
             {{ cartCount }}
             <span class="visually-hidden">itens no carrinho</span>
           </span>
         </a>
 
-        <!-- Avatar/Usuário -->
+        <!-- 🔥 Avatar/Usuário com suporte a imagem -->
         <div class="dropdown">
           <button
             class="btn btn-link text-dark text-decoration-none dropdown-toggle d-flex align-items-center gap-2"
@@ -70,8 +73,30 @@
             data-bs-toggle="dropdown"
             aria-expanded="false"
           >
-            <div class="rounded-circle bg-secondary bg-opacity-25 p-2">
-              <i class="bi bi-person-circle fs-5"></i>
+            <!-- 🔥 Avatar com imagem do usuário -->
+            <div class="user-avatar-wrapper">
+              <!-- Foto do usuário (logado com avatar) -->
+              <img
+                *ngIf="isLoggedIn && userAvatar"
+                [src]="userAvatar"
+                [alt]="userName"
+                class="user-avatar-img"
+                (error)="onAvatarError()"
+              />
+              <!-- Iniciais do nome (logado sem avatar) -->
+              <div
+                *ngIf="isLoggedIn && !userAvatar"
+                class="user-avatar-initials"
+              >
+                {{ getInitials(userName) }}
+              </div>
+              <!-- Ícone de visitante (deslogado) -->
+              <div
+                *ngIf="!isLoggedIn"
+                class="user-avatar-guest"
+              >
+                <i class="bi bi-person-circle"></i>
+              </div>
             </div>
             <span class="d-none d-lg-block" *ngIf="!isLoggedIn">Minha Conta</span>
             <span class="d-none d-lg-block" *ngIf="isLoggedIn">{{ userName }}</span>
@@ -83,6 +108,38 @@
             <!-- USUÁRIO LOGADO -->
             <!-- ========================================== -->
             <ng-container *ngIf="isLoggedIn">
+              <!-- 🔥 Cabeçalho do usuário no dropdown -->
+              <li class="dropdown-header-user">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="dropdown-avatar-wrapper">
+                    <img
+                      *ngIf="userAvatar"
+                      [src]="userAvatar"
+                      [alt]="userName"
+                      class="dropdown-avatar-img"
+                      (error)="onAvatarError()"
+                    />
+                    <div
+                      *ngIf="!userAvatar"
+                      class="dropdown-avatar-initials"
+                    >
+                      {{ getInitials(userName) }}
+                    </div>
+                  </div>
+                  <div class="flex-grow-1 min-width-0">
+                    <strong class="text-dark d-block text-truncate">{{ userName }}</strong>
+                    <small class="text-muted" *ngIf="hasStore">
+                      <i class="bi bi-shop me-1"></i>Vendedor
+                    </small>
+                    <small class="text-muted" *ngIf="!hasStore">
+                      <i class="bi bi-person me-1"></i>Cliente
+                    </small>
+                  </div>
+                </div>
+              </li>
+
+              <li><hr class="dropdown-divider" /></li>
+
               <!-- Perfil -->
               <li>
                 <a class="dropdown-item" routerLink="/perfil">
@@ -123,7 +180,6 @@
               <!-- ========================================== -->
               <!-- SEÇÃO DA LOJA -->
               <!-- ========================================== -->
-              <!-- Criar Loja (aparece apenas se NÃO tiver loja) -->
               <li *ngIf="!hasStore">
                 <a class="dropdown-item fw-bold text-primary" routerLink="/criar-loja">
                   <i class="bi bi-shop me-2"></i>Criar Loja
@@ -131,14 +187,12 @@
                 </a>
               </li>
 
-              <!-- Minha Loja (aparece apenas se tiver loja) -->
               <li *ngIf="hasStore && storeId">
                 <a class="dropdown-item fw-bold" [routerLink]="['/loja', storeId]">
                   <i class="bi bi-shop me-2"></i>Minha Loja
                 </a>
               </li>
 
-              <!-- Adicionar Produto (aparece apenas se tiver loja) -->
               <li *ngIf="hasStore && storeId">
                 <a class="dropdown-item" [routerLink]="[`/loja/${storeId}/produto/novo`]">
                   <i class="bi bi-plus-circle me-2"></i>Adicionar Produto

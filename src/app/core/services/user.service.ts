@@ -10,7 +10,8 @@ import { AuthService } from './auth.service';
   providedIn: 'root',
 })
 export class UserService {
-  private apiUrl = 'http://localhost:3000/api/users'; // Ajuste conforme sua API
+  // 🔥 CORRIGIDO: URL sem /api
+  private apiUrl = 'http://localhost:3000/users';
 
   constructor(
     private http: HttpClient,
@@ -18,32 +19,29 @@ export class UserService {
   ) {}
 
   /**
-   * Busca um usuário pelo ID
+   * 🔥 Busca um usuário pelo ID (SEMPRE da API para dados atualizados)
    */
   getUserById(id: string | number): Observable<User | null> {
     const userId = String(id);
     console.log(`🔍 Buscando usuário ${userId}...`);
 
-    // Primeiro, verifica se o usuário atual é o mesmo
+    // 🔥 Se for o usuário atual, retornar dados do cache local
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && String(currentUser.id) === userId) {
-      console.log('👤 Usuário encontrado no cache local:', currentUser);
+      console.log('👤 Usuário atual (cache):', currentUser.name);
+      console.log('📸 Avatar:', (currentUser as any).avatar || 'SEM AVATAR');
       return of(currentUser);
     }
 
+    // 🔥 Buscar da API
     return this.http.get<User>(`${this.apiUrl}/${userId}`).pipe(
       map((user) => {
-        console.log('👤 Usuário encontrado na API:', user);
+        console.log('👤 Usuário encontrado na API:', user.name);
+        console.log('📸 Avatar:', (user as any).avatar || 'SEM AVATAR');
         return user;
       }),
       catchError((error) => {
-        console.error('❌ Erro ao buscar usuário:', error);
-        // Fallback: tenta usar o usuário atual
-        const fallbackUser = this.authService.getCurrentUser();
-        if (fallbackUser) {
-          console.log('⚠️ Usando fallback - usuário atual:', fallbackUser);
-          return of(fallbackUser);
-        }
+        console.error(`❌ Erro ao buscar usuário ${userId}:`, error);
         return of(null);
       }),
     );
@@ -64,9 +62,8 @@ export class UserService {
           const year = date.getFullYear();
           return `${month}/${year}`;
         }
-        // 🔥 Se não encontrar, tenta buscar pela loja
-        console.warn('⚠️ Data de cadastro não encontrada para o usuário, tentando fallback...');
-        return this.getMemberSinceFromStore(userIdStr);
+        console.warn('⚠️ Data de cadastro não encontrada');
+        return '2024';
       }),
       catchError(() => {
         return of('2024');
@@ -74,28 +71,40 @@ export class UserService {
     );
   }
 
-  private getMemberSinceFromStore(userId: string): string {
-    return '2024';
-  }
-
   /**
-   * Atualiza dados do usuário
+   * 🔥 Atualiza dados do usuário
    */
   updateUser(id: string | number, data: Partial<User>): Observable<User> {
-    return this.http.put<User>(`${this.apiUrl}/${id}`, data);
+    const userId = String(id);
+    return this.http.put<User>(`${this.apiUrl}/${userId}`, data).pipe(
+      catchError((error) => {
+        console.error('❌ Erro ao atualizar usuário:', error);
+        throw error;
+      })
+    );
   }
 
   /**
-   * Busca todos os usuários (apenas para admin)
+   * 🔥 Busca todos os usuários
    */
   getAllUsers(): Observable<User[]> {
-    return this.http.get<User[]>(this.apiUrl);
+    return this.http.get<User[]>(this.apiUrl).pipe(
+      catchError((error) => {
+        console.error('❌ Erro ao buscar usuários:', error);
+        return of([]);
+      })
+    );
   }
 
   /**
-   * Busca usuários por nome
+   * 🔥 Busca usuários por nome
    */
   searchUsers(term: string): Observable<User[]> {
-    return this.http.get<User[]>(`${this.apiUrl}?search=${term}`);
+    return this.http.get<User[]>(`${this.apiUrl}?q=${term}`).pipe(
+      catchError((error) => {
+        console.error('❌ Erro ao buscar usuários:', error);
+        return of([]);
+      })
+    );
   }
 }

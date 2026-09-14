@@ -8,14 +8,25 @@
 
   <!-- Formulário de Comentário -->
   <div class="comment-form card p-4 mb-4">
-    <div class="mb-3">
-      <textarea
-        class="form-control"
-        rows="3"
-        placeholder="Compartilhe sua opinião sobre este produto..."
-        [(ngModel)]="newComment"
-        [disabled]="isSubmitting"
-      ></textarea>
+    <div class="d-flex align-items-start gap-3 mb-3">
+      <!-- 🔥 Avatar do usuário atual - SEMPRE EXIBE -->
+      <img
+        [src]="currentUserAvatar"
+        [alt]="currentUserName"
+        class="rounded-circle comment-avatar"
+        width="40"
+        height="40"
+        (error)="onAvatarError($event, currentUserName)"
+      />
+      <div class="flex-grow-1">
+        <textarea
+          class="form-control"
+          rows="3"
+          placeholder="Compartilhe sua opinião sobre este produto..."
+          [(ngModel)]="newComment"
+          [disabled]="isSubmitting"
+        ></textarea>
+      </div>
     </div>
 
     <div class="d-flex justify-content-end">
@@ -52,13 +63,14 @@
   <div *ngIf="!loading && comments.length > 0" class="comments-list">
     <div *ngFor="let comment of comments" class="comment-item card p-3 mb-3">
       <div class="d-flex align-items-start gap-3">
-        <!-- Avatar -->
+        <!-- 🔥 Avatar do autor do comentário - SEMPRE EXIBE -->
         <img
-          [src]="comment.userAvatar || 'https://ui-avatars.com/api/?name=' + comment.userName + '&background=667eea&color=fff&size=40'"
+          [src]="getUserAvatar(comment.userAvatar, comment.userName)"
           [alt]="comment.userName"
-          class="rounded-circle"
+          class="rounded-circle comment-avatar"
           width="40"
           height="40"
+          (error)="onAvatarError($event, comment.userName)"
         />
 
         <div class="flex-grow-1">
@@ -114,7 +126,16 @@
 
           <!-- Formulário de Resposta -->
           <div *ngIf="showReplyForm === comment.id" class="reply-form mt-3">
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-start">
+              <!-- 🔥 Avatar do usuário atual - SEMPRE EXIBE -->
+              <img
+                [src]="currentUserAvatar"
+                [alt]="currentUserName"
+                class="rounded-circle flex-shrink-0"
+                width="32"
+                height="32"
+                (error)="onAvatarError($event, currentUserName)"
+              />
               <textarea
                 class="form-control form-control-sm"
                 rows="2"
@@ -122,7 +143,13 @@
                 [(ngModel)]="replyContent"
               ></textarea>
             </div>
-            <div class="d-flex gap-2 mt-2">
+            <div class="d-flex gap-2 mt-2 justify-content-end">
+              <button
+                class="btn btn-sm btn-secondary"
+                (click)="toggleReplyForm(comment.id)"
+              >
+                Cancelar
+              </button>
               <button
                 class="btn btn-sm btn-primary"
                 (click)="submitReply(comment.id)"
@@ -131,12 +158,6 @@
                 <i class="bi bi-check me-1"></i>
                 Responder
               </button>
-              <button
-                class="btn btn-sm btn-secondary"
-                (click)="toggleReplyForm(comment.id)"
-              >
-                Cancelar
-              </button>
             </div>
           </div>
 
@@ -144,12 +165,14 @@
           <div *ngIf="comment.replies && comment.replies.length > 0" class="replies-list mt-3">
             <div *ngFor="let reply of comment.replies" class="reply-item ps-4 border-start border-3">
               <div class="d-flex align-items-start gap-2">
+                <!-- 🔥 Avatar do autor da resposta - SEMPRE EXIBE -->
                 <img
-                  [src]="reply.userAvatar || 'https://ui-avatars.com/api/?name=' + reply.userName + '&background=667eea&color=fff&size=30'"
+                  [src]="getUserAvatar(reply.userAvatar, reply.userName)"
                   [alt]="reply.userName"
-                  class="rounded-circle"
+                  class="rounded-circle flex-shrink-0"
                   width="30"
                   height="30"
+                  (error)="onAvatarError($event, reply.userName)"
                 />
 
                 <div class="flex-grow-1">

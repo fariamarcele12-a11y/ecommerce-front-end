@@ -1,19 +1,22 @@
 // src/app/features/store/store.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { StoreService } from '../../core/services/store.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ProductService } from '../../core/services/product.service';
 import { CategoryService } from '../../core/services/category.service';
 import { AlertService } from '../../core/services/alert.service';
+import { CepService } from '../../core/services/cep.service';
 import { Store as StoreModel } from '../../core/models/store.model';
 import { Product } from '../../core/models/ProductModel/product.model';
+import { ImageUpload } from '../../shared/components/image-upload/image-upload';
 
 @Component({
   selector: 'app-store',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ImageUpload],
   templateUrl: './store.html',
   styleUrls: ['./store.scss'],
 })
@@ -26,6 +29,60 @@ export class Store implements OnInit {
   storeId: string | null = null;
   deletingProduct = false;
 
+  // 🔥 Modal de edição da loja
+  showEditModal = false;
+  saving = false;
+  isSearchingCep = false;
+
+  // 🔥 Controle de remoção
+  logoRemoved = false;
+  bannerRemoved = false;
+
+  // 🔥 Dados do formulário de edição
+  editForm: any = {
+    storeName: '',
+    description: '',
+    category: '',
+    logo: '',
+    banner: '',
+    phone: '',
+    email: '',
+    website: '',
+    socialMedia: {
+      instagram: '',
+      facebook: '',
+      youtube: ''
+    },
+    address: {
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      cep: '',
+      country: 'Brasil'
+    }
+  };
+
+  categories: string[] = [
+    'Eletrônicos',
+    'Moda',
+    'Casa e Decoração',
+    'Esportes',
+    'Automóveis',
+    'Imóveis',
+    'Livros',
+    'Beleza',
+    'Alimentação',
+    'Brinquedos',
+    'Ferramentas',
+    'Saúde',
+    'Pet Shop',
+    'Papelaria',
+    'Outros'
+  ];
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -34,6 +91,7 @@ export class Store implements OnInit {
     private productService: ProductService,
     private categoryService: CategoryService,
     private alertService: AlertService,
+    private cepService: CepService,
   ) {}
 
   ngOnInit(): void {
@@ -52,39 +110,30 @@ export class Store implements OnInit {
 
   loadUserStore(): void {
     const user = this.authService.getCurrentUser();
-    console.log('👤 Usuário atual:', user);
-
     if (user?.storeId) {
       this.storeId = String(user.storeId);
       this.loadStore(this.storeId);
     } else {
       this.loading = false;
-      console.log('❌ Usuário não tem loja, redirecionando para criar');
       this.router.navigate(['/criar-loja']);
     }
   }
 
   loadStore(id: string): void {
     this.loading = true;
-    console.log(`🔍 Buscando loja com ID: ${id}`);
-
     this.storeService.getStoreById(id).subscribe({
       next: (store) => {
-        console.log('📦 Resposta da loja:', store);
-
         if (store) {
           this.store = store;
           this.checkOwnership(String(store.userId));
           this.loadProducts(String(store.id));
           this.checkVisitor();
         } else {
-          console.log('❌ Loja não encontrada');
           this.router.navigate(['/home']);
         }
         this.loading = false;
       },
-      error: (error) => {
-        console.error('❌ Erro ao carregar loja:', error);
+      error: () => {
         this.loading = false;
         this.router.navigate(['/home']);
       },
@@ -92,10 +141,8 @@ export class Store implements OnInit {
   }
 
   loadProducts(storeId: string): void {
-    console.log(`🔍 Buscando produtos da loja ${storeId}`);
     this.storeService.getStoreProducts(storeId).subscribe({
       next: (products) => {
-        console.log(`📦 ${products.length} produtos encontrados`);
         this.products = products;
       },
       error: (error) => {
@@ -107,20 +154,12 @@ export class Store implements OnInit {
   checkOwnership(userId: string): void {
     const user = this.authService.getCurrentUser();
     this.isOwner = String(user?.id) === userId;
-    console.log('👤 É o dono da loja?', this.isOwner);
   }
 
-  /**
-   * 🔥 Verifica se o usuário é um visitante (não é o dono)
-   */
   checkVisitor(): void {
     this.isVisitor = !this.isOwner && this.authService.isLoggedIn();
-    console.log('👤 É visitante?', this.isVisitor);
   }
 
-  /**
-   * 🔥 Inicia uma conversa com a loja (para visitantes)
-   */
   contactStore(): void {
     if (this.store) {
       this.router.navigate(['/chat'], {
@@ -134,8 +173,191 @@ export class Store implements OnInit {
   }
 
   /**
-   * 🔥 EXCLUIR PRODUTO - COM ATUALIZAÇÃO DA CATEGORIA
+   * 🔥 Abre o modal de edição da loja
    */
+  openEditModal(): void {
+    if (!this.store) return;
+
+    // 🔥 Resetar flags de remoção
+    this.logoRemoved = false;
+    this.bannerRemoved = false;
+
+    this.editForm = {
+      storeName: this.store.storeName || '',
+      description: this.store.description || '',
+      category: this.store.category || '',
+      logo: this.store.logo || '',
+      banner: this.store.banner || '',
+      phone: this.store.phone || '',
+      email: this.store.email || '',
+      website: this.store.website || '',
+      socialMedia: {
+        instagram: this.store.socialMedia?.instagram || '',
+        facebook: this.store.socialMedia?.facebook || '',
+        youtube: this.store.socialMedia?.youtube || ''
+      },
+      address: {
+        street: this.store.address?.street || '',
+        number: this.store.address?.number || '',
+        complement: this.store.address?.complement || '',
+        neighborhood: this.store.address?.neighborhood || '',
+        city: this.store.address?.city || '',
+        state: this.store.address?.state || '',
+        cep: this.store.address?.cep || '',
+        country: this.store.address?.country || 'Brasil'
+      }
+    };
+
+    console.log('📸 Logo carregada no form:', this.editForm.logo ? 'Sim' : 'Não');
+    console.log('🖼️ Banner carregado no form:', this.editForm.banner ? 'Sim' : 'Não');
+
+    this.showEditModal = true;
+  }
+
+  /**
+   * 🔥 Fecha o modal de edição
+   */
+  closeEditModal(): void {
+    this.showEditModal = false;
+    // 🔥 Resetar flags
+    this.logoRemoved = false;
+    this.bannerRemoved = false;
+  }
+
+  /**
+   * 🔥 Quando o logo é atualizado
+   */
+  onLogoUploaded(base64: string): void {
+    console.log('✅ Logo atualizada:', base64.length, 'caracteres');
+    this.editForm.logo = base64;
+    this.logoRemoved = false;
+  }
+
+  /**
+   * 🔥 Quando o logo é removido
+   */
+  onLogoRemoved(): void {
+    console.log('🗑️ Logo removida');
+    this.editForm.logo = '';
+    this.logoRemoved = true;
+  }
+
+  /**
+   * 🔥 Quando o banner é atualizado
+   */
+  onBannerUploaded(base64: string): void {
+    console.log('✅ Banner atualizado:', base64.length, 'caracteres');
+    this.editForm.banner = base64;
+    this.bannerRemoved = false;
+  }
+
+  /**
+   * 🔥 Quando o banner é removido
+   */
+  onBannerRemoved(): void {
+    console.log('🗑️ Banner removido');
+    this.editForm.banner = '';
+    this.bannerRemoved = true;
+  }
+
+  /**
+   * 🔥 Salva as alterações da loja
+   */
+  saveStore(): void {
+    if (!this.store || !this.storeId) return;
+
+    if (!this.editForm.storeName || this.editForm.storeName.trim().length < 3) {
+      this.alertService.warning('Nome inválido', 'Digite o nome da loja.');
+      return;
+    }
+
+    this.saving = true;
+    console.log('📤 Salvando alterações da loja...');
+    console.log('📸 Logo:', this.editForm.logo ? `${this.editForm.logo.length} caracteres` : 'Vazio');
+    console.log('🖼️ Banner:', this.editForm.banner ? `${this.editForm.banner.length} caracteres` : 'Vazio');
+
+    // 🔥 Montar dados de atualização
+    const updateData: any = {
+      storeName: this.editForm.storeName,
+      description: this.editForm.description,
+      category: this.editForm.category,
+      phone: this.editForm.phone,
+      email: this.editForm.email,
+      website: this.editForm.website,
+      socialMedia: this.editForm.socialMedia,
+      address: this.editForm.address,
+      updatedAt: new Date().toISOString()
+    };
+
+    // 🔥 Lógica para logo
+    if (this.logoRemoved) {
+      // Se foi removido, enviar placeholder ou vazio
+      updateData.logo = '';
+      console.log('📸 Logo sendo REMOVIDA');
+    } else if (this.editForm.logo) {
+      // Se tem valor, enviar
+      updateData.logo = this.editForm.logo;
+      console.log('📸 Logo sendo ATUALIZADA');
+    }
+
+    // 🔥 Lógica para banner
+    if (this.bannerRemoved) {
+      updateData.banner = '';
+      console.log('🖼️ Banner sendo REMOVIDO');
+    } else if (this.editForm.banner) {
+      updateData.banner = this.editForm.banner;
+      console.log('🖼️ Banner sendo ATUALIZADO');
+    }
+
+    this.storeService.updateStore(this.storeId, updateData).subscribe({
+      next: (updatedStore) => {
+        this.saving = false;
+        this.store = updatedStore;
+        this.logoRemoved = false;
+        this.bannerRemoved = false;
+        console.log('✅ Loja atualizada com sucesso!');
+        this.alertService.success('Loja atualizada!', 'Suas alterações foram salvas com sucesso. 🎉');
+        this.closeEditModal();
+      },
+      error: (error) => {
+        this.saving = false;
+        console.error('❌ Erro ao atualizar loja:', error);
+        this.alertService.error('Erro', 'Não foi possível salvar as alterações.');
+      }
+    });
+  }
+
+  onCepBlur(): void {
+    const cep = this.editForm.address.cep.replace(/\D/g, '');
+    if (cep.length === 8) {
+      this.isSearchingCep = true;
+      this.cepService.buscarCep(cep).subscribe({
+        next: (endereco) => {
+          this.editForm.address.street = endereco.logradouro || '';
+          this.editForm.address.neighborhood = endereco.bairro || '';
+          this.editForm.address.city = endereco.localidade || '';
+          this.editForm.address.state = endereco.uf || '';
+          this.isSearchingCep = false;
+        },
+        error: () => {
+          this.isSearchingCep = false;
+        }
+      });
+    }
+  }
+
+  formatCep(value: string): string {
+    return this.cepService.formatarCep(value);
+  }
+
+  formatPhone(value: string): string {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7) return numbers.replace(/(\d{2})(\d{1,5})/, '($1) $2');
+    if (numbers.length <= 10) return numbers.replace(/(\d{2})(\d{4})(\d{1,4})/, '($1) $2-$3');
+    return numbers.replace(/(\d{2})(\d{5})(\d{1,4})/, '($1) $2-$3');
+  }
+
   deleteProduct(productId: string, productName: string, categorySlug: string): void {
     this.alertService
       .confirm(
@@ -147,113 +369,47 @@ export class Store implements OnInit {
       .then((result) => {
         if (result.isConfirmed) {
           this.deletingProduct = true;
-          console.log(`🗑️ Excluindo produto ID: ${productId}`);
-
           this.productService.deleteProduct(productId).subscribe({
             next: () => {
               this.deletingProduct = false;
-              console.log('✅ Produto excluído com sucesso');
               this.updateCategoryProductCount(categorySlug, -1);
-              this.alertService.success(
-                'Produto excluído!',
-                'O produto foi removido da sua loja com sucesso.',
-              );
+              this.alertService.success('Produto excluído!', 'O produto foi removido com sucesso.');
               if (this.store?.id) {
                 this.loadProducts(String(this.store.id));
               }
             },
-            error: (error) => {
+            error: () => {
               this.deletingProduct = false;
-              console.error('❌ Erro ao excluir produto:', error);
-              this.alertService.error(
-                'Erro',
-                'Não foi possível excluir o produto. Tente novamente.',
-              );
+              this.alertService.error('Erro', 'Não foi possível excluir o produto.');
             },
           });
         }
       });
   }
 
-  /**
-   * 🔥 ATUALIZA O CONTADOR DE PRODUTOS DA CATEGORIA
-   */
   private updateCategoryProductCount(categorySlug: string, increment: number): void {
-    console.log(`🔄 Atualizando contador da categoria: ${categorySlug} (${increment})`);
-
-    if (!categorySlug) {
-      console.warn('⚠️ Categoria não informada, pulando atualização');
-      return;
-    }
+    if (!categorySlug) return;
 
     this.categoryService.getCategoryBySlug(categorySlug).subscribe({
       next: (category) => {
         if (category) {
-          console.log(`📦 Categoria encontrada: ${category.name} (ID: ${category.id})`);
-
           const newCount = Math.max(0, (category.productCount || 0) + increment);
-          console.log(`📊 Novo contador: ${newCount}`);
-
-          this.categoryService
-            .updateCategory(category.id, {
-              productCount: newCount,
-            })
-            .subscribe({
-              next: (updated) => {
-                console.log(
-                  `✅ Categoria ${updated.name} atualizada para ${updated.productCount} produtos`,
-                );
-              },
-              error: (error) => {
-                console.error('❌ Erro ao atualizar contador da categoria:', error);
-              },
-            });
-        } else {
-          console.warn(`⚠️ Categoria não encontrada: ${categorySlug}`);
+          this.categoryService.updateCategory(category.id, { productCount: newCount }).subscribe();
         }
-      },
-      error: (error) => {
-        console.error('❌ Erro ao buscar categoria:', error);
       },
     });
   }
 
-  /**
-   * 🔥 Navega para editar produto
-   */
   editProduct(productId: string): void {
-    if (!this.store?.id) {
-      console.error('❌ ID da loja não disponível');
-      this.alertService?.error('Erro', 'ID da loja não disponível.');
-      return;
-    }
-
-    if (!productId) {
-      console.error('❌ ID do produto não disponível');
-      this.alertService?.error('Erro', 'ID do produto não disponível.');
-      return;
-    }
-
+    if (!this.store?.id || !productId) return;
     const storeId = String(this.store.id);
-    console.log(`🔗 Navegando para editar produto ${productId} da loja ${storeId}`);
-
-    this.router
-      .navigate([`/loja/${storeId}/produto/${productId}/editar`])
-      .then((success) => {
-        if (success) {
-          console.log(`✅ Navegação para edição do produto ${productId} bem-sucedida`);
-        } else {
-          console.error(`❌ Navegação para edição do produto ${productId} falhou`);
-        }
-      })
-      .catch((error) => {
-        console.error(`❌ Erro na navegação:`, error);
-      });
+    this.router.navigate([`/loja/${storeId}/produto/${productId}/editar`]);
   }
 
-  /**
-   * 🔥 Retorna as iniciais do nome da loja
-   */
+  editStore(): void {
+    this.openEditModal();
+  }
+
   getInitials(name: string): string {
     if (!name) return '?';
     const words = name.trim().split(' ');
@@ -263,12 +419,8 @@ export class Store implements OnInit {
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
-  /**
-   * 🔥 Formata uma data para exibição
-   */
   formatDate(date: string | Date): string {
     if (!date) return 'Data não disponível';
-
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
@@ -277,22 +429,13 @@ export class Store implements OnInit {
     }).format(dateObj);
   }
 
-  /**
-   * 🔥 Navega para criar produto
-   */
   goToCreateProduct(): void {
     if (this.store?.id) {
       const storeId = String(this.store.id);
-      console.log('🔗 Navegando para criar produto com storeId:', storeId);
       this.router.navigate(['/loja', storeId, 'produto', 'novo']);
-    } else {
-      console.error('❌ ID da loja não disponível');
     }
   }
 
-  /**
-   * 🔥 Formata preço para exibição
-   */
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -300,15 +443,47 @@ export class Store implements OnInit {
     }).format(price);
   }
 
-  /**
-   * 🔥 Alterna favorito do produto
-   */
   onFavoriteToggle(productId: string): void {
-    console.log('⭐ Toggle favorito para produto:', productId);
     this.productService.toggleFavorite(productId);
     const product = this.products.find((p) => String(p.id) === productId);
     if (product) {
       product.isFavorite = !product.isFavorite;
     }
+  }
+
+  getStoreLogo(): string {
+    return this.editForm.logo || (this.store as any)?.logo || '';
+  }
+
+  getStoreBanner(): string {
+    return this.editForm.banner || (this.store as any)?.banner || '';
+  }
+
+  hasLogo(): boolean {
+    // 🔥 Verificar se não foi removido
+    if (this.logoRemoved) return false;
+    return !!(this.editForm.logo || (this.store as any)?.logo);
+  }
+
+  hasBanner(): boolean {
+    // 🔥 Verificar se não foi removido
+    if (this.bannerRemoved) return false;
+    return !!(this.editForm.banner || (this.store as any)?.banner);
+  }
+
+  onLogoError(): void {
+    console.warn('⚠️ Erro ao carregar logo');
+    if (this.store) {
+      (this.store as any).logo = '';
+    }
+    this.editForm.logo = '';
+  }
+
+  onBannerError(): void {
+    console.warn('⚠️ Erro ao carregar banner');
+    if (this.store) {
+      (this.store as any).banner = '';
+    }
+    this.editForm.banner = '';
   }
 }

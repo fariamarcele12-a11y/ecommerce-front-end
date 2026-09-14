@@ -98,3 +98,42 @@
     }
   }
 }
+
+// 🔥 Avatar com borda
+.comment-avatar {
+  border: 2px solid #e9ecef;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: #f8f9fa;
+}
+
+.comment-item {
+  .d-flex {
+    img.rounded-circle {
+      border: 2px solid #e9ecef;
+      flex-shrink: 0;
+      object-fit: cover;
+      background: #f8f9fa;
+    }
+  }
+}
+
+.reply-form {
+  .d-flex {
+    img.rounded-circle {
+      border: 2px solid #e9ecef;
+      object-fit: cover;
+      background: #f8f9fa;
+    }
+  }
+}
+
+.replies-list {
+  .reply-item {
+    img.rounded-circle {
+      border: 2px solid #e9ecef;
+      object-fit: cover;
+      background: #f8f9fa;
+    }
+  }
+}
