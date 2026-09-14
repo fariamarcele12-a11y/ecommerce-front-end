@@ -25,12 +25,15 @@
     <div class="col-lg-4">
       <div class="card border-0 shadow-sm">
         <div class="card-body text-center p-4">
-          <!-- Avatar -->
+          <!-- 🔥 Avatar com Upload -->
           <div class="avatar-wrapper mx-auto mb-3">
-            <div class="avatar-placeholder rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-                 style="width: 100px; height: 100px; font-size: 40px; font-weight: bold; margin: 0 auto;">
-              {{ getInitials(user.name) }}
-            </div>
+            <app-image-upload
+              type="avatar"
+              [currentImage]="profileData.avatar"
+              [maxSizeMB]="5"
+              (imageUploaded)="onAvatarUploaded($event)"
+              (imageRemoved)="onAvatarRemoved()"
+            ></app-image-upload>
           </div>
 
           <h4 class="fw-bold mb-1">{{ user.name }}</h4>
@@ -55,7 +58,6 @@
               <span class="text-muted">Documento</span>
               <span class="fw-semibold">{{ user.document || 'Não informado' }}</span>
             </div>
-            <!-- 🔥 CORRIGIDO: Verificando store com *ngIf -->
             <div class="d-flex justify-content-between py-2" *ngIf="hasStore && store">
               <span class="text-muted">Loja</span>
               <a [routerLink]="['/loja', store.id]" class="fw-semibold text-primary text-decoration-none">
@@ -67,7 +69,6 @@
 
           <!-- Botões de ação -->
           <div class="d-grid gap-2 mt-3">
-            <!-- 🔥 CORRIGIDO: Verificando store com *ngIf -->
             <a *ngIf="hasStore && store"
                [routerLink]="['/loja', store.id]"
                class="btn btn-outline-primary rounded-pill">
@@ -129,7 +130,6 @@
               <small class="text-muted">O tipo de cadastro não pode ser alterado.</small>
             </div>
 
-            <!-- 🔥 CORRIGIDO: Campos de Nome de acordo com o tipo -->
             <!-- PF: Nome Completo -->
             <div *ngIf="profileData.documentType === 'pf'" class="form-group mb-3">
               <label class="form-label fw-bold small">

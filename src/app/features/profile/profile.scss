@@ -4,6 +4,60 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
   }
+
+  // 🔥 Ajustar o componente de upload para o perfil
+  ::ng-deep app-image-upload {
+    .image-upload-container {
+      display: flex;
+      justify-content: center;
+    }
+
+    .upload-area {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 3px solid #dee2e6;
+      background: #f8f9fa;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+
+      &:hover:not(.processing) {
+        border-color: #667eea;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.25);
+      }
+
+      &.has-image {
+        border-color: #667eea;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+      }
+    }
+
+    .placeholder-content {
+      i {
+        font-size: 2rem;
+        color: #adb5bd;
+      }
+
+      .placeholder-text {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #495057;
+      }
+
+      .placeholder-hint,
+      .placeholder-size {
+        display: none;
+      }
+    }
+
+    .upload-hints {
+      display: none;
+    }
+
+    .btn-remove {
+      top: 0;
+      right: 0;
+    }
+  }
 }
 
 .card {
@@ -118,6 +172,20 @@
   }
 }
 
+.badge {
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+
+  &.bg-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  }
+
+  &.bg-success {
+    background: linear-gradient(135deg, #00b894 0%, #00a86b 100%) !important;
+  }
+}
+
 // Responsividade
 @media (max-width: 768px) {
   .card-body {
@@ -137,9 +205,22 @@
     }
   }
 
-  .avatar-placeholder {
-    width: 80px !important;
-    height: 80px !important;
-    font-size: 32px !important;
+  .avatar-wrapper {
+    ::ng-deep app-image-upload {
+      .upload-area {
+        width: 100px;
+        height: 100px;
+      }
+
+      .placeholder-content {
+        i {
+          font-size: 1.6rem;
+        }
+
+        .placeholder-text {
+          font-size: 0.7rem;
+        }
+      }
+    }
   }
 }

@@ -1,4 +1,4 @@
-// src/app/shared/components/navbar/navbar.component.ts
+// src/app/shared/components/navbar/navbar.ts
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -9,6 +9,7 @@ import { SearchBar } from '../search-bar/search-bar';
 import { Subscription } from 'rxjs';
 import { Store } from '../../../core/models/store.model';
 import { CartService } from '../../../core/services/cart.service';
+import { User } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-navbar',
@@ -23,8 +24,9 @@ export class Navbar implements OnInit, OnDestroy {
   isLoggedIn = false;
   isScrolled = false;
   userName = '';
+  userAvatar = ''; // 🔥 NOVO: Avatar do usuário
   hasStore = false;
-  storeId: string | null = null; // 🔥 Mudado para string
+  storeId: string | null = null;
 
   private cartSubscription: Subscription = new Subscription();
   private favoritesSubscription: Subscription = new Subscription();
@@ -51,11 +53,13 @@ export class Navbar implements OnInit, OnDestroy {
     });
 
     // Usuário
-    this.userSubscription = this.authService.currentUser$.subscribe((user: any) => {
+    this.userSubscription = this.authService.currentUser$.subscribe((user: User | null) => {
       this.isLoggedIn = !!user;
       this.userName = user?.name || '';
+      this.userAvatar = (user as any)?.avatar || ''; // 🔥 Carregar avatar
 
       console.log('👤 Usuário logado:', user);
+      console.log('📸 Avatar:', this.userAvatar ? 'Sim' : 'Não');
       console.log('📦 hasStore no user:', user?.hasStore);
       console.log('🆔 storeId no user:', user?.storeId);
 
@@ -64,6 +68,7 @@ export class Navbar implements OnInit, OnDestroy {
       } else {
         this.hasStore = false;
         this.storeId = null;
+        this.userAvatar = '';
       }
     });
   }
@@ -100,13 +105,34 @@ export class Navbar implements OnInit, OnDestroy {
     this.authService.logout();
     this.hasStore = false;
     this.storeId = null;
+    this.userAvatar = '';
     this.router.navigate(['/home']);
+  }
+
+  /**
+   * 🔥 Obtém as iniciais do nome para o avatar
+   */
+  getInitials(name: string): string {
+    if (!name) return '?';
+    const words = name.trim().split(' ');
+    if (words.length === 1) {
+      return words[0].charAt(0).toUpperCase();
+    }
+    return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  }
+
+  /**
+   * 🔥 Remove o avatar em caso de erro
+   */
+  onAvatarError(): void {
+    console.warn('⚠️ Erro ao carregar avatar, removendo...');
+    this.userAvatar = '';
   }
 
   /**
    * Verifica se o usuário possui uma loja
    */
-  private checkUserStore(userId: number): void {
+  private checkUserStore(userId: number | string): void {
     if (this.storeSubscription) {
       this.storeSubscription.unsubscribe();
     }
