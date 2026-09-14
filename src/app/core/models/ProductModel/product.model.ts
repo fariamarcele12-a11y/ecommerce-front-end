@@ -1,6 +1,6 @@
 // src/app/core/models/ProductModel/product.model.ts
 export interface Product {
-  id: string; // 🔥 Mudado para string
+  id: string;
   name: string;
   description: string;
   price: number;
@@ -10,12 +10,13 @@ export interface Product {
   category: string;
   condition: 'new' | 'used';
   seller: {
-    id: number | string;
+    id: string; // 🔥 Mudado para string (ID único do usuário)
     name: string;
     rating: number;
     sales: number;
+    memberSince?: string; // 🔥 NOVO: Data de cadastro do vendedor
   };
-  storeId?: string; // 🔥 Mudado para string
+  storeId?: string;
   location: string;
   stock: number;
   freeShipping?: boolean;
@@ -33,7 +34,7 @@ export interface ProductFilters {
   sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'popular';
   page?: number;
   limit?: number;
-  sellerId?: number | string;
+  sellerId?: string; // 🔥 Mudado para string
   location?: string;
   hasDiscount?: boolean;
   freeShipping?: boolean;

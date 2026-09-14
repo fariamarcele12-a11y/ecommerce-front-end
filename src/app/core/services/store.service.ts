@@ -181,30 +181,35 @@ export class StoreService {
       switchMap((store) => {
         const sellerName = store?.storeName || 'Vendedor';
 
+        // 🔥 Buscar o usuário dono da loja para obter o ID
+        const userId = store?.userId || 1;
+        const userIdStr = String(userId);
+
         // 🔥 Gerar ID único para o produto
         const productId = this.idGenerator.generateProductId();
         console.log('🔑 ID único gerado para o produto:', productId);
 
         const newProduct: any = {
-          id: productId, // 🔥 ID único
+          id: productId,
           ...productData,
           storeId: id,
           createdAt: new Date().toISOString(),
           isFavorite: false,
           seller: {
-            id: productData.seller?.id || 1,
+            id: userIdStr, // 🔥 ID do usuário (string)
             name: sellerName,
             rating: productData.seller?.rating || 0,
             sales: productData.seller?.sales || 0,
+            memberSince: store?.createdAt || new Date().toISOString(), // 🔥 Data de cadastro da loja
           },
         };
 
         console.log('📦 Produto com ID único:', newProduct.id);
+        console.log('👤 Seller ID:', newProduct.seller.id);
 
         return this.http.post<Product>(this.productsApiUrl, newProduct).pipe(
           tap((product) => {
             console.log('✅ Produto criado com sucesso com ID:', product.id);
-            // 🔥 Atualizar a lista de produtos
             this.products.push(product);
             this.filteredProducts = [...this.products];
             this.productsSubject.next(this.products);
@@ -235,7 +240,7 @@ export class StoreService {
         tap((product) => {
           console.log('✅ Produto atualizado:', product);
           // 🔥 Atualizar na lista local
-          const index = this.products.findIndex(p => String(p.id) === productId);
+          const index = this.products.findIndex((p) => String(p.id) === productId);
           if (index !== -1) {
             this.products[index] = product;
             this.filteredProducts = [...this.products];
@@ -369,7 +374,8 @@ export class StoreService {
           description: storeData.description,
           category: storeData.category,
           logo: storeData.logo || 'https://via.placeholder.com/200x200/667eea/ffffff?text=Loja',
-          banner: storeData.banner || 'https://via.placeholder.com/1200x400/667eea/ffffff?text=Banner',
+          banner:
+            storeData.banner || 'https://via.placeholder.com/1200x400/667eea/ffffff?text=Banner',
           documentType: user.documentType,
           cpf: user.documentType === 'pf' ? user.document : undefined,
           cnpj: user.documentType === 'pj' ? user.document : undefined,

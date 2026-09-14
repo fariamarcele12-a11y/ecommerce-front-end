@@ -317,7 +317,7 @@ export class ProductForm implements OnInit {
   }
 
   /**
-   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO)
+   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO) - CORRIGIDO
    */
   onSubmit(): void {
     if (!this.validateForm()) {
@@ -327,7 +327,10 @@ export class ProductForm implements OnInit {
     const images = this.imageUrls.filter((url: string) => url.trim() !== '');
     const user = this.authService.getCurrentUser();
     const sellerName = this.storeName || 'Vendedor';
-    const userId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : 1;
+    
+    // 🔥 CORRIGIDO: userId como string (UUID)
+    const userId = user?.id ? String(user.id) : '1';
+    console.log('🔑 ID do usuário (seller):', userId);
 
     // 🔥 CORRIGIDO: Usar o NOME da categoria (não o slug)
     const categoryName = this.product.category;
@@ -350,7 +353,7 @@ export class ProductForm implements OnInit {
         : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'],
       freeShipping: this.product.freeShipping,
       seller: {
-        id: userId,
+        id: userId, // 🔥 ID do usuário (string)
         name: sellerName,
         rating: 0,
         sales: 0,
@@ -362,6 +365,7 @@ export class ProductForm implements OnInit {
     console.log('📦 Dados:', productData);
     console.log('📌 Categoria sendo salva:', productData.category);
     console.log('🏷️ Oferta:', this.isOnSale() ? `Sim (-${this.getDiscountPercentage()}%)` : 'Não');
+    console.log('👤 Seller ID:', productData.seller?.id);
 
     if (this.isEditing && this.productId) {
       this.productService.updateProduct(this.productId, productData).subscribe({
@@ -387,6 +391,7 @@ export class ProductForm implements OnInit {
           this.loading = false;
           console.log('✅ Produto criado:', product);
           console.log('📌 Categoria do produto:', product.category);
+          console.log('👤 Seller ID do produto:', product.seller?.id);
 
           this.alertService.success(
             'Produto criado!',
