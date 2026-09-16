@@ -291,11 +291,9 @@ export class Store implements OnInit {
 
     // 🔥 Lógica para logo
     if (this.logoRemoved) {
-      // Se foi removido, enviar placeholder ou vazio
       updateData.logo = '';
       console.log('📸 Logo sendo REMOVIDA');
     } else if (this.editForm.logo) {
-      // Se tem valor, enviar
       updateData.logo = this.editForm.logo;
       console.log('📸 Logo sendo ATUALIZADA');
     }
@@ -350,11 +348,26 @@ export class Store implements OnInit {
     return this.cepService.formatarCep(value);
   }
 
+  /**
+   * 🔥 Formata telefone COM LIMITE de caracteres
+   * Formatos aceitos:
+   * - Fixo: (00) 0000-0000 (14 caracteres)
+   * - Celular: (00) 00000-0000 (15 caracteres)
+   */
   formatPhone(value: string): string {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length <= 2) return numbers;
-    if (numbers.length <= 7) return numbers.replace(/(\d{2})(\d{1,5})/, '($1) $2');
-    if (numbers.length <= 10) return numbers.replace(/(\d{2})(\d{4})(\d{1,4})/, '($1) $2-$3');
+    // 🔥 Limitar a 11 dígitos (DDD + 9 dígitos)
+    const numbers = value.replace(/\D/g, '').slice(0, 11);
+
+    if (numbers.length === 0) return '';
+    if (numbers.length <= 2) return `(${numbers}`;
+    if (numbers.length <= 6) {
+      return numbers.replace(/(\d{2})(\d{1,4})/, '($1) $2');
+    }
+    if (numbers.length <= 10) {
+      // Telefone fixo: (00) 0000-0000
+      return numbers.replace(/(\d{2})(\d{4})(\d{1,4})/, '($1) $2-$3');
+    }
+    // Celular: (00) 00000-0000
     return numbers.replace(/(\d{2})(\d{5})(\d{1,4})/, '($1) $2-$3');
   }
 
@@ -460,13 +473,11 @@ export class Store implements OnInit {
   }
 
   hasLogo(): boolean {
-    // 🔥 Verificar se não foi removido
     if (this.logoRemoved) return false;
     return !!(this.editForm.logo || (this.store as any)?.logo);
   }
 
   hasBanner(): boolean {
-    // 🔥 Verificar se não foi removido
     if (this.bannerRemoved) return false;
     return !!(this.editForm.banner || (this.store as any)?.banner);
   }
