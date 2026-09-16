@@ -1,4 +1,20 @@
 // src/app/core/models/user.model.ts
+
+export interface UserAddress {
+  id?: string;
+  label?: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  cep: string;
+  country: string;
+  isDefault?: boolean;
+  createdAt?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -8,16 +24,8 @@ export interface User {
   document?: string;
   documentType?: 'pf' | 'pj';
   phone?: string;
-  address?: {
-    street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    cep: string;
-    country: string;
-  };
+  address?: UserAddress;
+  addresses?: UserAddress[];
   hasStore?: boolean;
   storeId?: string | null;
   companyName?: string;
@@ -41,16 +49,7 @@ export interface RegisterCredentials {
   confirmPassword?: string;
   document: string;
   phone: string;
-  address?: {
-    street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    cep: string;
-    country: string;
-  };
+  address?: UserAddress;
   companyName?: string;
   tradeName?: string;
   birthDate?: string;

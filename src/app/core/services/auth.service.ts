@@ -10,7 +10,6 @@ import { IdGeneratorService } from './id-generator.service';
   providedIn: 'root'
 })
 export class AuthService {
-  // 🔥 Usar localhost para desenvolvimento
   private apiUrl = 'http://localhost:3000/users';
 
   private currentUserSubject = new BehaviorSubject<User | null>(null);
@@ -29,31 +28,20 @@ export class AuthService {
     }
   }
 
-  /**
-   * 🔥 Login do usuário
-   */
   login(credentials: LoginCredentials): Observable<AuthResponse> {
-    console.log('🔑 Tentando login...');
-    console.log('📧 Email:', credentials.email);
-
     return this.http.get<User[]>(`${this.apiUrl}?email=${credentials.email}`).pipe(
       map((users) => {
         if (users.length === 0) {
-          console.warn('⚠️ Usuário não encontrado:', credentials.email);
           return { success: false, message: 'Usuário não encontrado.' };
         }
 
         const user = users[0];
-        console.log('👤 Usuário encontrado:', user.id);
-
         if (user.password !== credentials.password) {
-          console.warn('⚠️ Senha incorreta para:', credentials.email);
           return { success: false, message: 'Senha incorreta.' };
         }
 
         const { password, ...userWithoutPassword } = user;
 
-        // 🔥 Garantir que hasStore e storeId existam
         const userToStore = {
           ...userWithoutPassword,
           hasStore: userWithoutPassword.hasStore || false,
@@ -62,15 +50,10 @@ export class AuthService {
 
         if (this.isBrowser) {
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
-          if (credentials.rememberMe) {
-            localStorage.setItem('rememberMe', 'true');
-          }
+          localStorage.setItem('userBackup', JSON.stringify(userToStore));
         }
 
         this.currentUserSubject.next(userToStore as User);
-
-        console.log('✅ Login realizado com sucesso!');
-        console.log('👤 ID do usuário:', user.id);
 
         return {
           success: true,
@@ -82,26 +65,17 @@ export class AuthService {
       }),
       catchError((error) => {
         console.error('❌ Erro no login:', error);
-        return of({ success: false, message: 'Erro ao realizar login. Tente novamente.' });
+        return of({ success: false, message: 'Erro ao realizar login.' });
       })
     );
   }
 
-  /**
-   * 🔥 Registro do usuário com ID ÚNICO
-   */
   register(credentials: RegisterCredentials): Observable<AuthResponse> {
-    console.log('📝 Registrando novo usuário...');
-    console.log('📧 Email:', credentials.email);
-
-    // 🔥 Gerar ID único para o usuário
     const userId = this.idGenerator.generateUUID();
-    console.log('🔑 ID único gerado:', userId);
 
     return this.http.get<User[]>(`${this.apiUrl}?email=${credentials.email}`).pipe(
       switchMap((users) => {
         if (users.length > 0) {
-          console.warn('⚠️ Email já cadastrado:', credentials.email);
           return of({ success: false, message: 'Este email já está cadastrado.' });
         }
 
@@ -110,7 +84,6 @@ export class AuthService {
             const docExists = allUsers.some(user => user.document === credentials.document);
 
             if (docExists) {
-              console.warn('⚠️ Documento já cadastrado:', credentials.document);
               return of({
                 success: false,
                 message: credentials.documentType === 'pf'
@@ -119,15 +92,15 @@ export class AuthService {
               });
             }
 
-            // 🔥 Criar novo usuário com ID único
             const newUser: any = {
-              id: userId, // 🔥 ID único gerado
+              id: userId,
               documentType: credentials.documentType,
               name: credentials.name,
               email: credentials.email,
               password: credentials.password,
               document: credentials.document,
               phone: credentials.phone,
+              avatar: '',
               address: credentials.address || {
                 street: '',
                 number: '',
@@ -138,6 +111,7 @@ export class AuthService {
                 cep: '',
                 country: 'Brasil'
               },
+              addresses: [],
               hasStore: false,
               storeId: null,
               createdAt: new Date().toISOString()
@@ -150,17 +124,13 @@ export class AuthService {
               newUser.birthDate = credentials.birthDate || '';
             }
 
-            console.log('📤 Enviando usuário para API:', { ...newUser, password: '***' });
-
             return this.http.post<User>(this.apiUrl, newUser).pipe(
               map((createdUser) => {
-                console.log('✅ Usuário criado com sucesso:', createdUser.id);
-                console.log('🔑 ID do usuário:', createdUser.id);
-
                 const { password, ...userWithoutPassword } = createdUser;
 
                 if (this.isBrowser) {
                   localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+                  localStorage.setItem('userBackup', JSON.stringify(userWithoutPassword));
                 }
 
                 this.currentUserSubject.next(userWithoutPassword as User);
@@ -179,43 +149,31 @@ export class AuthService {
       }),
       catchError((error) => {
         console.error('❌ Erro no registro:', error);
-        return of({ success: false, message: 'Erro ao realizar cadastro. Tente novamente.' });
+        return of({ success: false, message: 'Erro ao realizar cadastro.' });
       })
     );
   }
 
-  /**
-   * 🔥 Logout do usuário
-   */
   logout(): void {
-    console.log('👋 Realizando logout...');
-
     if (this.isBrowser) {
       localStorage.removeItem('currentUser');
       localStorage.removeItem('currentStore');
       localStorage.removeItem('rememberMe');
+      // 🔥 NÃO remover userBackup (preserva para próxima sessão)
     }
-
     this.currentUserSubject.next(null);
-    console.log('✅ Logout realizado com sucesso!');
   }
 
-  /**
-   * 🔥 Verifica se o usuário está logado
-   */
   isLoggedIn(): boolean {
     return this.currentUserSubject.value !== null;
   }
 
-  /**
-   * 🔥 Retorna o usuário atual
-   */
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
   }
 
   /**
-   * 🔥 Carrega usuário do localStorage
+   * 🔥 Carrega usuário do localStorage COM fallback para backup
    */
   private loadUserFromStorage(): void {
     if (!this.isBrowser) return;
@@ -224,21 +182,25 @@ export class AuthService {
       const userData = localStorage.getItem('currentUser');
       if (userData) {
         const user = JSON.parse(userData);
+        if (user?.id) {
+          if (user.hasStore === undefined) user.hasStore = false;
+          if (user.storeId === undefined) user.storeId = null;
 
-        // 🔥 Garantir que hasStore e storeId existam
-        if (user.hasStore === undefined) {
-          user.hasStore = false;
+          console.log('📦 Usuário carregado do localStorage:', user.name);
+          this.currentUserSubject.next(user);
+          return;
         }
-        if (user.storeId === undefined) {
-          user.storeId = null;
+      }
+
+      // 🔥 Fallback: restaurar do backup
+      const backupData = localStorage.getItem('userBackup');
+      if (backupData) {
+        const backupUser = JSON.parse(backupData);
+        if (backupUser?.id) {
+          console.log('🔄 Restaurando do backup:', backupUser.name);
+          localStorage.setItem('currentUser', JSON.stringify(backupUser));
+          this.currentUserSubject.next(backupUser);
         }
-
-        console.log('📦 Usuário carregado do localStorage:', user);
-        console.log('📦 ID do usuário:', user.id);
-        console.log('📦 hasStore:', user.hasStore);
-        console.log('📦 storeId:', user.storeId);
-
-        this.currentUserSubject.next(user);
       }
     } catch (error) {
       console.error('Erro ao carregar usuário:', error);
@@ -246,43 +208,47 @@ export class AuthService {
   }
 
   /**
-   * 🔥 ATUALIZA O USUÁRIO
+   * 🔥 ATUALIZA O USUÁRIO COM MESCLAGEM SEGURA
    */
   updateUser(userData: Partial<User>): Observable<AuthResponse> {
     const currentUser = this.currentUserSubject.value;
     if (!currentUser) {
-      console.error('❌ Usuário não está logado para atualizar');
       return of({ success: false, message: 'Usuário não está logado.' });
     }
 
-    console.log('🔄 Atualizando usuário com dados:', userData);
-    console.log('👤 Usuário atual antes da atualização:', currentUser);
-    console.log('🔑 ID do usuário:', currentUser.id);
+    console.log('🔄 Atualizando usuário:', userData);
 
     return this.http.patch<User>(`${this.apiUrl}/${currentUser.id}`, {
       ...userData,
       updatedAt: new Date().toISOString()
     }).pipe(
       map((updatedUser) => {
-        console.log('✅ Usuário atualizado na API:', updatedUser);
-
-        // 🔥 Garantir que hasStore e storeId sejam preservados
-        const mergedUser = {
-          ...updatedUser,
-          hasStore: userData.hasStore !== undefined ? userData.hasStore : (updatedUser.hasStore || false),
-          storeId: userData.storeId !== undefined ? userData.storeId : (updatedUser.storeId || null)
+        // 🔥 MESCLAR: preservar TODOS os campos
+        const mergedUser: User = {
+          ...currentUser,   // 🔥 começa com dados atuais
+          ...updatedUser,   // sobrescreve com o que voltou da API
+          // 🔥 GARANTIR campos críticos
+          id: updatedUser.id || currentUser.id,
+          name: updatedUser.name || currentUser.name,
+          email: updatedUser.email || currentUser.email,
+          document: updatedUser.document || currentUser.document,
+          documentType: updatedUser.documentType || currentUser.documentType,
+          phone: updatedUser.phone || currentUser.phone,
+          avatar: updatedUser.avatar !== undefined ? updatedUser.avatar : currentUser.avatar,
+          address: updatedUser.address || currentUser.address,
+          addresses: updatedUser.addresses || currentUser.addresses,
+          hasStore: updatedUser.hasStore !== undefined ? updatedUser.hasStore : currentUser.hasStore,
+          storeId: updatedUser.storeId !== undefined ? updatedUser.storeId : currentUser.storeId,
         };
-
-        console.log('📦 Usuário mesclado:', mergedUser);
 
         const { password, ...userWithoutPassword } = mergedUser;
 
         if (this.isBrowser) {
           localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+          localStorage.setItem('userBackup', JSON.stringify(userWithoutPassword));
         }
 
         this.currentUserSubject.next(userWithoutPassword as User);
-        console.log('✅ Usuário atualizado no Subject:', userWithoutPassword);
 
         return {
           success: true,
@@ -291,130 +257,101 @@ export class AuthService {
         };
       }),
       catchError((error) => {
-        console.error('❌ Erro ao atualizar usuário:', error);
+        console.error('❌ Erro ao atualizar:', error);
 
-        // 🔥 Fallback: mesmo se falhar na API, atualizar localmente
-        const fallbackUser = {
+        // 🔥 Fallback: mesclar localmente
+        const fallbackUser: User = {
           ...currentUser,
           ...userData,
-          hasStore: userData.hasStore !== undefined ? userData.hasStore : (currentUser.hasStore || false),
-          storeId: userData.storeId !== undefined ? userData.storeId : (currentUser.storeId || null)
         };
-
-        console.log('🔄 Fallback: atualizando localmente:', fallbackUser);
 
         if (this.isBrowser) {
           localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
+          localStorage.setItem('userBackup', JSON.stringify(fallbackUser));
         }
         this.currentUserSubject.next(fallbackUser);
 
         return of({
           success: true,
-          message: 'Dados atualizados localmente (fallback)!',
+          message: 'Dados atualizados localmente!',
           user: fallbackUser
         });
       })
     );
   }
 
-  /**
-   * 🔥 Sincroniza o usuário localmente
-   */
   syncUser(user: User): void {
-    console.log('🔄 Sincronizando usuário localmente:', user);
-    console.log('🔑 ID do usuário:', user.id);
-
     if (this.isBrowser) {
       localStorage.setItem('currentUser', JSON.stringify(user));
+      localStorage.setItem('userBackup', JSON.stringify(user));
     }
     this.currentUserSubject.next(user);
   }
 
   /**
-   * 🔥 Força a atualização do usuário no localStorage
+   * 🔥 FORÇA ATUALIZAÇÃO COM MESCLAGEM (NÃO APAGA DADOS!)
    */
-  forceUpdateUser(user: User): void {
-    console.log('🔄 Forçando atualização do usuário:', user);
-    console.log('🔑 ID do usuário:', user.id);
+  forceUpdateUser(user: Partial<User>): void {
+    const currentUser = this.currentUserSubject.value;
 
-    // 🔥 Garantir que storeId seja string ou null
-    const normalizedUser = {
+    // 🔥 MESCLAR com o usuário atual (NUNCA substituir)
+    const mergedUser: User = {
+      ...(currentUser || {}),
       ...user,
-      storeId: user.storeId ? String(user.storeId) : null
-    };
+      // 🔥 GARANTIR campos críticos
+      id: user.id || currentUser?.id || '',
+      name: user.name || currentUser?.name || '',
+      email: user.email || currentUser?.email || '',
+      document: user.document !== undefined ? user.document : currentUser?.document,
+      documentType: user.documentType || currentUser?.documentType,
+      phone: user.phone !== undefined ? user.phone : currentUser?.phone,
+      avatar: user.avatar !== undefined ? user.avatar : currentUser?.avatar,
+      address: user.address !== undefined ? user.address : currentUser?.address,
+      addresses: user.addresses !== undefined ? user.addresses : currentUser?.addresses,
+      hasStore: user.hasStore !== undefined ? user.hasStore : (currentUser?.hasStore || false),
+      storeId: user.storeId !== undefined
+        ? (user.storeId ? String(user.storeId) : null)
+        : (currentUser?.storeId || null),
+    } as User;
+
+    console.log('🔄 Forçando atualização mesclada:', mergedUser.name);
 
     if (this.isBrowser) {
-      localStorage.setItem('currentUser', JSON.stringify(normalizedUser));
+      localStorage.setItem('currentUser', JSON.stringify(mergedUser));
+      localStorage.setItem('userBackup', JSON.stringify(mergedUser));
     }
-    this.currentUserSubject.next(normalizedUser);
-    console.log('✅ Usuário forçado atualizado!');
+    this.currentUserSubject.next(mergedUser);
   }
 
-  /**
-   * 🔥 BUSCA USUÁRIO POR ID
-   */
   getUserById(id: string | number): Observable<User | null> {
     const userId = String(id);
-    console.log(`🔍 Buscando usuário ${userId}...`);
-
     return this.http.get<User>(`${this.apiUrl}/${userId}`).pipe(
       map((user) => {
-        console.log('👤 Usuário encontrado:', user.id);
         const { password, ...userWithoutPassword } = user;
         return userWithoutPassword as User;
       }),
-      catchError((error) => {
-        console.error('❌ Erro ao buscar usuário:', error);
-        return of(null);
-      })
+      catchError(() => of(null))
     );
   }
 
-  /**
-   * 🔥 VERIFICA SE O EMAIL JÁ EXISTE
-   */
   checkEmailExists(email: string): Observable<boolean> {
     return this.http.get<User[]>(`${this.apiUrl}?email=${email}`).pipe(
-      map((users) => {
-        const exists = users && users.length > 0;
-        console.log(`📧 Email ${email} ${exists ? 'já existe' : 'está disponível'}`);
-        return exists;
-      }),
+      map((users) => users && users.length > 0),
       catchError(() => of(false))
     );
   }
 
-  /**
-   * 🔥 BUSCA USUÁRIOS (apenas admin)
-   */
   getAllUsers(): Observable<User[]> {
     return this.http.get<User[]>(this.apiUrl).pipe(
-      map((users) => {
-        return users.map(({ password, ...user }) => user as User);
-      }),
-      catchError((error) => {
-        console.error('❌ Erro ao buscar usuários:', error);
-        return of([]);
-      })
+      map((users) => users.map(({ password, ...user }) => user as User)),
+      catchError(() => of([]))
     );
   }
 
-  /**
-   * 🔥 VERIFICA O STATUS DA API LOCAL
-   */
   checkApiHealth(): Observable<{ status: string; timestamp: string }> {
     return this.http.get<{ status: string; timestamp: string }>(`http://localhost:3000/`).pipe(
-      map(() => ({
-        status: 'online',
-        timestamp: new Date().toISOString()
-      })),
-      catchError((error) => {
-        console.error('❌ API local não está respondendo:', error);
-        return of({
-          status: 'offline',
-          timestamp: new Date().toISOString()
-        });
-      })
+      map(() => ({ status: 'online', timestamp: new Date().toISOString() })),
+      catchError(() => of({ status: 'offline', timestamp: new Date().toISOString() }))
     );
   }
 }

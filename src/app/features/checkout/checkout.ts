@@ -8,13 +8,15 @@ import { CartItem, CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
 import { AlertService } from '../../core/services/alert.service';
 import { CepService, Endereco } from '../../core/services/cep.service';
-import { OnlyNumbersDirective } from '../../shared/directives/only-numbers.directive';
+import { AuthService } from '../../core/services/auth.service';
+import { UserService } from '../../core/services/user.service';
 import { DocumentValidator } from '../../core/utils/validators';
+import { User, UserAddress } from '../../core/models/user.model';
 
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, OnlyNumbersDirective],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './checkout.html',
   styleUrls: ['./checkout.scss'],
 })
@@ -30,21 +32,32 @@ export class Checkout implements OnInit, OnDestroy {
   installments: number = 1;
   maxInstallments: number = 12;
 
+  // 🔥 Dados do usuário
+  currentUser: User | null = null;
+  userAddresses: UserAddress[] = [];
+  selectedAddressId: string | null = null;
+  showAddressModal = false;
+  editingAddress: UserAddress | null = null;
+
   form: any = {
     address: {
-      cep: '',
+      id: '',
+      label: '',
       street: '',
       number: '',
       complement: '',
       neighborhood: '',
       city: '',
       state: '',
+      cep: '',
       country: 'Brasil',
+      isDefault: false,
     },
     paymentMethod: 'credit',
     installments: 1,
     cpfCnpj: '',
     saveAddress: false,
+    updateAsMainAddress: false,
     termsAccepted: false,
   };
 
@@ -53,8 +66,6 @@ export class Checkout implements OnInit, OnDestroy {
   orderId = '';
   paymentError = '';
   isSearchingCep = false;
-
-  // 🔥 Controle de validação do documento
   documentError: string = '';
 
   private subscriptions: Subscription = new Subscription();
@@ -65,16 +76,338 @@ export class Checkout implements OnInit, OnDestroy {
     private router: Router,
     private alertService: AlertService,
     private cepService: CepService,
+    private authService: AuthService,
+    private userService: UserService,
   ) {}
 
   ngOnInit(): void {
+    this.loadUserData();
     this.loadCartData();
     this.paymentMethods = this.orderService.getPaymentMethods();
-    this.loadSavedAddress();
   }
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+  }
+
+  /**
+   * 🔥 Getter para o endereço selecionado (SEMPRE busca da lista)
+   */
+  get selectedAddress(): UserAddress | null {
+    if (!this.selectedAddressId) return null;
+    return this.userAddresses.find((a) => a.id === this.selectedAddressId) || null;
+  }
+
+  /**
+   * 🔥 Verifica se o documento é válido
+   */
+  isDocumentValid(): boolean {
+    if (!this.form.cpfCnpj) return false;
+    const numbers = this.form.cpfCnpj.replace(/\D/g, '');
+
+    if (numbers.length === 11) {
+      return DocumentValidator.isValidCPF(numbers);
+    } else if (numbers.length === 14) {
+      return DocumentValidator.isValidCNPJ(numbers);
+    }
+    return false;
+  }
+
+  /**
+   * 🔥 Carrega dados do usuário (endereço + CPF/CNPJ)
+   */
+  loadUserData(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      this.alertService.warning('Login necessário', 'Faça login para continuar.');
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    this.currentUser = user;
+    console.log('👤 Usuário carregado:', user.name);
+
+    // 🔥 Preencher CPF/CNPJ automaticamente
+    if (user.document) {
+      this.form.cpfCnpj = this.formatCpfCnpj(user.document);
+      console.log('📄 CPF/CNPJ preenchido:', this.form.cpfCnpj);
+    }
+
+    this.loadUserAddresses(user);
+  }
+
+  /**
+   * 🔥 Carrega endereços do usuário
+   */
+  loadUserAddresses(user: User): void {
+    if (user.addresses && user.addresses.length > 0) {
+      // 🔥 Garantir que todos os endereços tenham id
+      this.userAddresses = user.addresses.map((addr) => ({
+        ...addr,
+        id: addr.id || this.generateAddressId(),
+      }));
+
+      // Selecionar endereço principal ou o primeiro
+      const mainAddress = this.userAddresses.find((a) => a.isDefault) || this.userAddresses[0];
+      if (mainAddress && mainAddress.id) {
+        this.selectedAddressId = mainAddress.id;
+        this.form.address = { ...mainAddress };
+      }
+      console.log('✅ Endereços carregados:', this.userAddresses.length);
+    } else if (user.address) {
+      // 🔥 Migrar endereço antigo para o novo formato
+      const newId = this.generateAddressId();
+      const migratedAddress: UserAddress = {
+        id: newId,
+        label: 'Principal',
+        street: user.address.street || '',
+        number: user.address.number || '',
+        complement: user.address.complement || '',
+        neighborhood: user.address.neighborhood || '',
+        city: user.address.city || '',
+        state: user.address.state || '',
+        cep: user.address.cep || '',
+        country: user.address.country || 'Brasil',
+        isDefault: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      this.userAddresses = [migratedAddress];
+      this.selectedAddressId = newId;
+      this.form.address = { ...migratedAddress };
+
+      console.log('✅ Endereço migrado:', migratedAddress);
+    } else {
+      // 🔥 Tentar carregar do localStorage (fallback)
+      const savedAddress = localStorage.getItem('savedAddress');
+      if (savedAddress) {
+        try {
+          const address = JSON.parse(savedAddress);
+          this.form.address = { ...this.form.address, ...address };
+          this.form.saveAddress = true;
+          console.log('✅ Endereço do localStorage:', address);
+        } catch (error) {
+          console.error('Erro ao carregar endereço salvo:', error);
+        }
+      }
+    }
+  }
+
+  /**
+   * 🔥 Gera ID único para endereço
+   */
+  private generateAddressId(): string {
+    return 'ADDR-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 8);
+  }
+
+  /**
+   * 🔥 Seleciona um endereço para entrega
+   */
+  selectAddress(addressId: string): void {
+    const address = this.userAddresses.find((a) => a.id === addressId);
+    if (address) {
+      this.selectedAddressId = addressId;
+      this.form.address = { ...address };
+      console.log('📍 Endereço selecionado:', address);
+    }
+  }
+
+  /**
+   * 🔥 Abre o modal de novo endereço
+   */
+  openNewAddressModal(): void {
+    this.editingAddress = null;
+    this.form.address = {
+      id: this.generateAddressId(),
+      label: '',
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      cep: '',
+      country: 'Brasil',
+      isDefault: this.userAddresses.length === 0,
+    };
+    this.showAddressModal = true;
+  }
+
+  /**
+   * 🔥 Abre o modal para editar endereço existente
+   */
+  editAddress(address: UserAddress, event: Event): void {
+    event.stopPropagation();
+    this.editingAddress = { ...address };
+    this.form.address = { ...address };
+    this.showAddressModal = true;
+  }
+
+  /**
+   * 🔥 Fecha o modal de endereço
+   */
+  closeAddressModal(): void {
+    this.showAddressModal = false;
+    this.editingAddress = null;
+  }
+
+  /**
+   * 🔥 Salva o endereço (novo ou editado)
+   */
+  saveAddress(): void {
+    const address = this.form.address;
+
+    if (!address.cep || address.cep.replace(/\D/g, '').length !== 8) {
+      this.alertService.warning('CEP inválido', 'Informe um CEP válido.');
+      return;
+    }
+    if (
+      !address.street ||
+      !address.number ||
+      !address.neighborhood ||
+      !address.city ||
+      !address.state
+    ) {
+      this.alertService.warning('Campos obrigatórios', 'Preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    if (!address.id) {
+      address.id = this.generateAddressId();
+    }
+
+    if (address.isDefault) {
+      this.userAddresses.forEach((a) => (a.isDefault = false));
+    }
+
+    if (this.editingAddress) {
+      const index = this.userAddresses.findIndex((a) => a.id === address.id);
+      if (index !== -1) {
+        this.userAddresses[index] = { ...address };
+      }
+    } else {
+      this.userAddresses.push({ ...address, createdAt: new Date().toISOString() });
+    }
+
+    this.selectedAddressId = address.id;
+    this.saveAddressesToUser();
+    this.closeAddressModal();
+    this.alertService.success('Endereço salvo!', 'O endereço foi salvo com sucesso.');
+  }
+
+  /**
+   * 🔥 Remove um endereço
+   */
+  removeAddress(addressId: string, event: Event): void {
+    event.stopPropagation();
+
+    if (this.userAddresses.length <= 1) {
+      this.alertService.warning('Ação não permitida', 'Você precisa ter pelo menos um endereço.');
+      return;
+    }
+
+    this.alertService
+      .confirm(
+        'Remover endereço?',
+        'Tem certeza que deseja remover este endereço?',
+        'Sim, remover',
+        'Cancelar',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.userAddresses = this.userAddresses.filter((a) => a.id !== addressId);
+
+          if (this.selectedAddressId === addressId) {
+            const firstAddress = this.userAddresses[0];
+            if (firstAddress && firstAddress.id) {
+              this.selectedAddressId = firstAddress.id;
+              this.form.address = { ...firstAddress };
+            }
+          }
+
+          this.saveAddressesToUser();
+          this.alertService.success('Endereço removido!', 'O endereço foi removido.');
+        }
+      });
+  }
+
+  /**
+   * 🔥 Salva endereços no usuário (API + localStorage)
+   */
+  /**
+   * 🔥 Salva endereços no usuário (PRESERVANDO todos os dados)
+   */
+  private saveAddressesToUser(): void {
+    if (!this.currentUser) return;
+
+    const mainAddress = this.userAddresses.find((a) => a.isDefault) || this.userAddresses[0];
+
+    // 🔥 Enviar APENAS os campos que mudaram
+    const updateData = {
+      addresses: this.userAddresses,
+      address: mainAddress,
+    };
+
+    console.log('📝 Salvando endereços:', updateData);
+
+    this.userService.updateUser(this.currentUser.id, updateData).subscribe({
+      next: (updatedUser) => {
+        console.log('✅ Endereços salvos na API');
+
+        // 🔥 MESCLAR com o currentUser (NÃO SUBSTITUIR!)
+        this.currentUser = {
+          ...this.currentUser,
+          ...updatedUser,
+          // 🔥 Garantir que dados críticos não sejam perdidos
+          id: this.currentUser?.id || updatedUser.id,
+          name: this.currentUser?.name || updatedUser.name,
+          email: this.currentUser?.email || updatedUser.email,
+          document: this.currentUser?.document || updatedUser.document,
+          documentType: this.currentUser?.documentType || updatedUser.documentType,
+          phone: this.currentUser?.phone || updatedUser.phone,
+          avatar: this.currentUser?.avatar || updatedUser.avatar,
+          hasStore: this.currentUser?.hasStore ?? updatedUser.hasStore,
+          storeId: this.currentUser?.storeId ?? updatedUser.storeId,
+        } as User;
+
+        // 🔥 Atualizar no AuthService (que já faz mesclagem segura)
+        this.authService.forceUpdateUser(this.currentUser);
+      },
+      error: (error) => {
+        console.error('❌ Erro ao salvar endereços:', error);
+
+        // 🔥 Fallback: salvar localmente
+        if (this.currentUser) {
+          const updatedUser = {
+            ...this.currentUser,
+            addresses: this.userAddresses,
+            address: mainAddress,
+          };
+          this.currentUser = updatedUser as User;
+          this.authService.forceUpdateUser(updatedUser as User);
+        }
+      },
+    });
+  }
+
+  /**
+   * 🔥 Atualiza endereço principal
+   */
+  setAsMainAddress(addressId: string, event: Event): void {
+    event.stopPropagation();
+
+    this.userAddresses.forEach((a) => (a.isDefault = a.id === addressId));
+
+    const mainAddress = this.userAddresses.find((a) => a.id === addressId);
+    if (mainAddress) {
+      this.form.address = { ...mainAddress };
+    }
+
+    this.saveAddressesToUser();
+    this.alertService.success(
+      'Endereço principal atualizado!',
+      'Este endereço agora é o principal.',
+    );
   }
 
   loadCartData(): void {
@@ -82,10 +415,7 @@ export class Checkout implements OnInit, OnDestroy {
       this.cartService.getCartItems().subscribe((items: CartItem[]) => {
         this.cartItems = items;
         if (items.length === 0) {
-          this.alertService.warning(
-            'Carrinho vazio',
-            'Adicione itens ao carrinho antes de finalizar a compra.'
-          );
+          this.alertService.warning('Carrinho vazio', 'Adicione itens ao carrinho.');
           this.router.navigate(['/carrinho']);
         }
       }),
@@ -126,10 +456,7 @@ export class Checkout implements OnInit, OnDestroy {
     if (cep.length === 8) {
       this.buscarEndereco(cep);
     } else if (cep.length > 0 && cep.length < 8) {
-      this.alertService.warning(
-        'CEP incompleto',
-        'O CEP deve ter 8 dígitos. Verifique e tente novamente.'
-      );
+      this.alertService.warning('CEP incompleto', 'O CEP deve ter 8 dígitos.');
     }
   }
 
@@ -153,12 +480,8 @@ export class Checkout implements OnInit, OnDestroy {
         this.form.address.neighborhood = '';
         this.form.address.city = '';
         this.form.address.state = '';
-        this.form.address.complement = '';
-        this.alertService.warning(
-          'CEP não encontrado',
-          'Não foi possível encontrar o endereço para este CEP. Preencha os dados manualmente.'
-        );
-      }
+        this.alertService.warning('CEP não encontrado', 'Preencha os dados manualmente.');
+      },
     });
   }
 
@@ -193,32 +516,19 @@ export class Checkout implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Valida CPF/CNPJ em tempo real enquanto o usuário digita
-   */
   onCpfCnpjChange(value: string): void {
     this.form.cpfCnpj = this.formatCpfCnpj(value);
 
     const numbers = value.replace(/\D/g, '');
 
     if (numbers.length === 11) {
-      // Validar CPF
-      if (!DocumentValidator.isValidCPF(numbers)) {
-        this.documentError = 'CPF inválido. Verifique os dígitos.';
-      } else {
-        this.documentError = '';
-      }
+      this.documentError = DocumentValidator.isValidCPF(numbers)
+        ? ''
+        : 'CPF inválido. Verifique os dígitos.';
     } else if (numbers.length === 14) {
-      // Validar CNPJ
-      if (!DocumentValidator.isValidCNPJ(numbers)) {
-        this.documentError = 'CNPJ inválido. Verifique os dígitos.';
-      } else {
-        this.documentError = '';
-      }
-    } else if (numbers.length > 0 && numbers.length < 11) {
-      this.documentError = ''; // Ainda não tem tamanho suficiente para validar
-    } else if (numbers.length > 11 && numbers.length < 14) {
-      this.documentError = ''; // Ainda não tem tamanho suficiente para validar CNPJ
+      this.documentError = DocumentValidator.isValidCNPJ(numbers)
+        ? ''
+        : 'CNPJ inválido. Verifique os dígitos.';
     } else {
       this.documentError = '';
     }
@@ -226,48 +536,6 @@ export class Checkout implements OnInit, OnDestroy {
 
   isValidCep(cep: string): boolean {
     return this.cepService.validarCep(cep);
-  }
-
-  /**
-   * 🔥 Valida CPF usando o DocumentValidator
-   */
-  isValidCpf(cpf: string): boolean {
-    return DocumentValidator.isValidCPF(cpf);
-  }
-
-  /**
-   * 🔥 Valida CNPJ usando o DocumentValidator
-   */
-  isValidCnpj(cnpj: string): boolean {
-    return DocumentValidator.isValidCNPJ(cnpj);
-  }
-
-  /**
-   * 🔥 Valida documento (CPF ou CNPJ) automaticamente
-   */
-  isValidDocument(document: string): boolean {
-    return DocumentValidator.isValidDocument(document, this.getDocumentType(document));
-  }
-
-  /**
-   * 🔥 Retorna o tipo do documento baseado no tamanho
-   */
-  private getDocumentType(document: string): 'pf' | 'pj' {
-    const numbers = document.replace(/\D/g, '');
-    return numbers.length <= 11 ? 'pf' : 'pj';
-  }
-
-  loadSavedAddress(): void {
-    const savedAddress = localStorage.getItem('savedAddress');
-    if (savedAddress) {
-      try {
-        const address = JSON.parse(savedAddress);
-        this.form.address = { ...this.form.address, ...address };
-        this.form.saveAddress = true;
-      } catch (error) {
-        console.error('Erro ao carregar endereço salvo:', error);
-      }
-    }
   }
 
   onPaymentMethodChange(methodId: string): void {
@@ -291,69 +559,46 @@ export class Checkout implements OnInit, OnDestroy {
   }
 
   validateForm(): boolean {
-    const address = this.form.address;
-    const cepClean = address.cep.replace(/\D/g, '');
+    const address = this.selectedAddress;
 
-    if (!address.cep || !this.isValidCep(address.cep)) {
-      this.alertService.warning('CEP inválido', 'Por favor, informe um CEP válido com 8 dígitos (ex: 01001-000).');
-      return false;
-    }
-    if (!address.street || address.street.trim() === '') {
-      this.alertService.warning('Rua inválida', 'Por favor, informe a rua.');
-      return false;
-    }
-    if (!address.number || address.number.trim() === '') {
-      this.alertService.warning('Número inválido', 'Por favor, informe o número.');
-      return false;
-    }
-    if (!address.neighborhood || address.neighborhood.trim() === '') {
-      this.alertService.warning('Bairro inválido', 'Por favor, informe o bairro.');
-      return false;
-    }
-    if (!address.city || address.city.trim() === '') {
-      this.alertService.warning('Cidade inválida', 'Por favor, informe a cidade.');
-      return false;
-    }
-    if (!address.state || address.state.trim() === '') {
-      this.alertService.warning('Estado inválido', 'Por favor, selecione o estado.');
+    if (!address) {
+      this.alertService.warning('Endereço obrigatório', 'Selecione um endereço para entrega.');
       return false;
     }
 
-    // 🔥 VALIDAÇÃO COMPLETA DO CPF/CNPJ
-    const cpfClean = this.form.cpfCnpj.replace(/\D/g, '');
-
-    if (!this.form.cpfCnpj || cpfClean.length < 11) {
-      this.alertService.warning('CPF/CNPJ inválido', 'Por favor, informe um CPF/CNPJ válido.');
+    if (!address.cep || !this.isValidCep(address.cep)) {
+      this.alertService.warning('CEP inválido', 'Informe um CEP válido.');
+      return false;
+    }
+    if (!address.street?.trim()) {
+      this.alertService.warning('Rua inválida', 'Informe a rua.');
+      return false;
+    }
+    if (!address.number?.trim()) {
+      this.alertService.warning('Número inválido', 'Informe o número.');
+      return false;
+    }
+    if (!address.neighborhood?.trim()) {
+      this.alertService.warning('Bairro inválido', 'Informe o bairro.');
+      return false;
+    }
+    if (!address.city?.trim()) {
+      this.alertService.warning('Cidade inválida', 'Informe a cidade.');
+      return false;
+    }
+    if (!address.state?.trim()) {
+      this.alertService.warning('Estado inválido', 'Selecione o estado.');
       return false;
     }
 
-    // 🔥 Validar CPF ou CNPJ com base no tamanho
-    if (cpfClean.length === 11) {
-      if (!DocumentValidator.isValidCPF(cpfClean)) {
-        this.alertService.error(
-          'CPF inválido',
-          'O CPF informado não é válido. Verifique os dígitos e tente novamente.'
-        );
-        return false;
-      }
-    } else if (cpfClean.length === 14) {
-      if (!DocumentValidator.isValidCNPJ(cpfClean)) {
-        this.alertService.error(
-          'CNPJ inválido',
-          'O CNPJ informado não é válido. Verifique os dígitos e tente novamente.'
-        );
-        return false;
-      }
-    } else {
-      this.alertService.warning(
-        'Documento inválido',
-        'O documento deve ter 11 dígitos (CPF) ou 14 dígitos (CNPJ).'
-      );
+    // 🔥 Validação do documento
+    if (!this.isDocumentValid()) {
+      this.alertService.error('CPF/CNPJ inválido', 'O documento cadastrado não é válido.');
       return false;
     }
 
     if (!this.form.termsAccepted) {
-      this.alertService.warning('Aceite os termos', 'Você precisa aceitar os termos para continuar.');
+      this.alertService.warning('Aceite os termos', 'Você precisa aceitar os termos.');
       return false;
     }
     return true;
@@ -366,7 +611,15 @@ export class Checkout implements OnInit, OnDestroy {
 
     this.isProcessing = true;
     this.paymentError = '';
-    this.alertService.loading('Processando pagamento...', 'Aguarde enquanto processamos sua compra.');
+    this.alertService.loading(
+      'Processando pagamento...',
+      'Aguarde enquanto processamos sua compra.',
+    );
+
+    if (this.form.updateAsMainAddress && this.selectedAddressId) {
+      this.userAddresses.forEach((a) => (a.isDefault = a.id === this.selectedAddressId));
+      this.saveAddressesToUser();
+    }
 
     setTimeout(() => {
       this.alertService.close();
@@ -375,14 +628,10 @@ export class Checkout implements OnInit, OnDestroy {
       this.orderId = 'ORD-' + Date.now();
       this.cartService.clearCart();
 
-      if (this.form.saveAddress) {
-        localStorage.setItem('savedAddress', JSON.stringify(this.form.address));
-      }
-
       this.alertService.success(
         '🎉 Pedido confirmado!',
         `Seu pedido ${this.orderId} foi realizado com sucesso.`,
-        5000
+        5000,
       );
     }, 2000);
   }
@@ -396,15 +645,17 @@ export class Checkout implements OnInit, OnDestroy {
   }
 
   cancelCheckout(): void {
-    this.alertService.confirm(
-      'Cancelar compra?',
-      'Tem certeza que deseja cancelar a compra? Os itens permanecerão no carrinho.',
-      'Sim, cancelar',
-      'Continuar comprando'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        this.router.navigate(['/carrinho']);
-      }
-    });
+    this.alertService
+      .confirm(
+        'Cancelar compra?',
+        'Tem certeza que deseja cancelar a compra?',
+        'Sim, cancelar',
+        'Continuar comprando',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.router.navigate(['/carrinho']);
+        }
+      });
   }
 }

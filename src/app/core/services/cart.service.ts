@@ -1,7 +1,17 @@
 // src/app/core/services/cart.service.ts
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError, catchError, of, tap, switchMap, forkJoin, map } from 'rxjs';
+import {
+  BehaviorSubject,
+  Observable,
+  throwError,
+  catchError,
+  of,
+  tap,
+  switchMap,
+  forkJoin,
+  map,
+} from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
 
@@ -143,13 +153,26 @@ export class CartService {
   }
 
   clearCart(): void {
+    console.log('🗑️ Limpando APENAS o carrinho...');
+
     this.updateCart([]);
     this.discount.next(0);
     this.couponCode.next('');
-    this.saveToStorageAndServer([]);
+    this.shipping.next(0);
+    this.totalItems.next(0);
+    this.totalPrice.next(0);
+
+    if (this.isBrowser) {
+      localStorage.removeItem('cart');
+      localStorage.removeItem('appliedCoupon');
+    }
+
+    this.saveCartToServer([]);
   }
 
-  applyCoupon(code: string): Observable<{ valid: boolean; message: string; discountAmount?: number }> {
+  applyCoupon(
+    code: string,
+  ): Observable<{ valid: boolean; message: string; discountAmount?: number }> {
     const currentTotal = this.totalPrice.value;
 
     if (currentTotal === 0) {
@@ -433,7 +456,7 @@ export class CartService {
           map(() => {
             console.log('✅ Carrinhos duplicados removidos!');
             return void 0;
-          })
+          }),
         );
       }),
       catchError((error) => {
