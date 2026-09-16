@@ -1,3 +1,4 @@
+// src/app/features/search/search-filters/search-filters.scss
 .search-filters {
   .filter-group {
     border-bottom: 1px solid #f1f1f1;
@@ -8,6 +9,42 @@
     }
   }
 
+  // 🔥 Badges de localização
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+    font-weight: 500;
+  }
+
+  .btn-link {
+    font-size: 0.8rem;
+    text-decoration: none;
+
+    &:hover {
+      color: #dc3545 !important;
+    }
+  }
+
+  // 🔥 Formulários
+  .form-select-sm,
+  .form-control-sm {
+    font-size: 0.85rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+
+    &:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    &:disabled {
+      background-color: #f8f9fa;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+  }
+
+  // Slider de preço
   .price-slider {
     position: relative;
     height: 30px;
@@ -53,8 +90,12 @@
     }
   }
 
+  // Botões de condição
   .btn-group {
     .btn {
+      font-size: 0.8rem;
+      font-weight: 600;
+
       &.active {
         background: #667eea;
         color: white;
@@ -63,12 +104,45 @@
     }
   }
 
+  // Checkboxes
   .form-check {
     margin-bottom: 4px;
 
-    .form-check-input:checked {
-      background-color: #667eea;
-      border-color: #667eea;
+    .form-check-input {
+      cursor: pointer;
+
+      &:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+      }
+
+      &:focus {
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+    }
+
+    .form-check-label {
+      cursor: pointer;
+      user-select: none;
+    }
+  }
+}
+
+// Responsividade
+@media (max-width: 768px) {
+  .search-filters {
+    .filter-group {
+      padding-bottom: 10px;
+    }
+
+    .form-select-sm,
+    .form-control-sm {
+      font-size: 0.8rem;
+    }
+
+    .btn-group .btn {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.5rem;
     }
   }
 }

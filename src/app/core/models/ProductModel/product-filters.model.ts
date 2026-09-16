@@ -1,3 +1,4 @@
+// src/app/core/models/ProductModel/product-filters.model.ts
 export interface ProductFilters {
   category?: string;
   subcategory?: string;
@@ -6,6 +7,8 @@ export interface ProductFilters {
   condition?: 'new' | 'used';
   search?: string;
   location?: string;
+  state?: string;
+  city?: string;
   sellerId?: string;
   sellerName?: string;
   minRating?: number;

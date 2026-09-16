@@ -16,7 +16,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
 import { ProductFilters } from '../models/ProductModel/product-filters.model';
 import { IdGeneratorService } from './id-generator.service';
-import { CategoryService } from './category.service'; // 🔥 IMPORTAR CategoryService
+import { CategoryService } from './category.service';
 
 export interface ProductResponse {
   products: Product[];
@@ -43,18 +43,18 @@ export class ProductService {
   private isBrowser: boolean;
   private readonly http: HttpClient;
   private readonly idGenerator: IdGeneratorService;
-  private readonly categoryService: CategoryService; // 🔥 ADICIONAR
+  private readonly categoryService: CategoryService;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     http: HttpClient,
     idGenerator: IdGeneratorService,
-    categoryService: CategoryService, // 🔥 ADICIONAR no construtor
+    categoryService: CategoryService,
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
     this.http = http;
     this.idGenerator = idGenerator;
-    this.categoryService = categoryService; // 🔥 ATRIBUIR
+    this.categoryService = categoryService;
 
     if (this.isBrowser) {
       this.loadFavoritesFromStorage();
@@ -62,7 +62,7 @@ export class ProductService {
   }
 
   /**
-   * Busca produtos com suporte para forçar recarga
+   * 🔥 Busca produtos com filtros (CORRIGIDO para estado/cidade)
    */
   getProducts(filters?: ProductFilters, useCache: boolean = true): Observable<ProductResponse> {
     const filtersKey = JSON.stringify(filters || {});
@@ -84,6 +84,15 @@ export class ProductService {
     const page = filters?.page || 1;
     const limit = filters?.limit || 12;
 
+    // 🔥 Verificar se tem filtro de localização (state/city)
+    const hasLocationFilter = !!(filters?.state || filters?.city);
+
+    // 🔥 Se tem filtro de localização, buscar TODOS os produtos (sem paginação)
+    // para depois filtrar e paginar manualmente
+    if (hasLocationFilter) {
+      console.log('📍 Filtro de localização detectado - buscando todos os produtos');
+    }
+
     if (filters) {
       if (filters.category) {
         params = params.set('category', filters.category);
@@ -104,6 +113,11 @@ export class ProductService {
       if (filters.location) {
         params = params.set('location', filters.location);
       }
+      if (filters.sellerId) {
+        params = params.set('seller.id', filters.sellerId);
+      }
+
+      // 🔥 Ordenação
       if (filters.sortBy === 'price_asc') {
         params = params.set('_sort', 'price');
         params = params.set('_order', 'asc');
@@ -117,19 +131,27 @@ export class ProductService {
         params = params.set('_sort', 'seller.sales');
         params = params.set('_order', 'desc');
       }
-      if (filters.limit) {
-        params = params.set('_limit', filters.limit.toString());
-      }
-      if (filters.page) {
-        params = params.set('_page', filters.page.toString());
+
+      // 🔥 Paginação do servidor - APENAS se NÃO tiver filtro de localização
+      if (!hasLocationFilter) {
         if (filters.limit) {
           params = params.set('_limit', filters.limit.toString());
+        }
+        if (filters.page) {
+          params = params.set('_page', filters.page.toString());
+          if (filters.limit) {
+            params = params.set('_limit', filters.limit.toString());
+          }
         }
       }
     }
 
-    params = params.set('_page', page.toString());
-    params = params.set('_limit', limit.toString());
+    // 🔥 Paginação padrão - APENAS se NÃO tiver filtro de localização
+    if (!hasLocationFilter) {
+      params = params.set('_page', page.toString());
+      params = params.set('_limit', limit.toString());
+    }
+
     params = params.set('_t', Date.now().toString());
 
     console.log('🌐 URL da requisição:', `${this.apiUrl}?${params.toString()}`);
@@ -147,32 +169,119 @@ export class ProductService {
       .pipe(
         map((response) => {
           let products = response.body || [];
-          const total =
-            parseInt(response.headers.get('X-Total-Count') || '0', 10) || products.length;
+          let total = parseInt(response.headers.get('X-Total-Count') || '0', 10) || products.length;
 
+          console.log(`📦 Produtos recebidos do servidor: ${products.length}`);
+
+          // ============================================
+          // 🔥 FILTROS MANUAIS
+          // ============================================
+
+          // 🔥 1. Filtro por CATEGORIA
           if (filters?.category) {
-            const categoryName = filters.category;
-            products = products.filter((p: Product) => p.category === categoryName);
-            console.log(
-              `🔍 Filtro manual aplicado: "${categoryName}" -> ${products.length} produtos`,
-            );
+            const categoryName = filters.category.toLowerCase().trim();
+            products = products.filter((p: Product) => {
+              const productCategory = (p.category || '').toLowerCase().trim();
+              return productCategory === categoryName;
+            });
+            console.log(`🔍 Filtro categoria "${filters.category}": ${products.length} produtos`);
           }
 
+          // 🔥 2. Filtro por ESTADO (UF)
+          if (filters?.state) {
+            const stateUF = filters.state.toUpperCase().trim();
+            products = products.filter((p: Product) => {
+              const location = (p.location || '').toUpperCase().trim();
+              // 🔥 Buscar por "- RJ", "-RJ" ou terminar com " RJ"
+              return (
+                location.includes(`- ${stateUF}`) ||
+                location.includes(`-${stateUF}`) ||
+                location.endsWith(` ${stateUF}`) ||
+                location.endsWith(stateUF)
+              );
+            });
+            console.log(`🔍 Filtro estado "${filters.state}": ${products.length} produtos`);
+          }
+
+          // 🔥 3. Filtro por CIDADE
+          if (filters?.city) {
+            const city = filters.city.toLowerCase().trim();
+            products = products.filter((p: Product) => {
+              const location = (p.location || '').toLowerCase().trim();
+              return location.includes(city);
+            });
+            console.log(`🔍 Filtro cidade "${filters.city}": ${products.length} produtos`);
+          }
+
+          // 🔥 4. Filtro por DESCONTO
+          if (filters?.hasDiscount) {
+            products = products.filter((p: Product) => {
+              return p.oldPrice && p.oldPrice > p.price;
+            });
+            console.log(`🔍 Filtro desconto: ${products.length} produtos`);
+          }
+
+          // 🔥 5. Filtro por FRETE GRÁTIS
+          if (filters?.freeShipping) {
+            products = products.filter((p: Product) => p.freeShipping === true);
+            console.log(`🔍 Filtro frete grátis: ${products.length} produtos`);
+          }
+
+          // 🔥 6. Filtro por ESTOQUE
+          if (filters?.inStock) {
+            products = products.filter((p: Product) => p.stock > 0);
+            console.log(`🔍 Filtro em estoque: ${products.length} produtos`);
+          }
+
+          // 🔥 7. Filtro por CONDIÇÃO
+          if (filters?.condition) {
+            products = products.filter((p: Product) => p.condition === filters.condition);
+            console.log(`🔍 Filtro condição: ${products.length} produtos`);
+          }
+
+          // 🔥 8. Filtro por PREÇO (garantia manual)
+          if (filters?.minPrice !== undefined && filters?.minPrice !== null) {
+            products = products.filter((p: Product) => p.price >= filters.minPrice!);
+          }
+          if (filters?.maxPrice !== undefined && filters?.maxPrice !== null) {
+            products = products.filter((p: Product) => p.price <= filters.maxPrice!);
+          }
+
+          // 🔥 9. Filtro por BUSCA (search)
+          if (filters?.search) {
+            const search = filters.search.toLowerCase().trim();
+            products = products.filter((p: Product) => {
+              return (
+                (p.name || '').toLowerCase().includes(search) ||
+                (p.description || '').toLowerCase().includes(search) ||
+                (p.category || '').toLowerCase().includes(search)
+              );
+            });
+            console.log(`🔍 Filtro busca "${filters.search}": ${products.length} produtos`);
+          }
+
+          // 🔥 Atualizar favoritos
           const favorites = this.favoritesSubject.value;
           products.forEach((product: Product) => {
             product.isFavorite = favorites.includes(String(product.id));
           });
 
+          // 🔥 Paginação MANUAL (quando tem filtro de localização)
+          if (hasLocationFilter) {
+            total = products.length;
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            products = products.slice(startIndex, endIndex);
+            console.log(`📄 Paginação manual: página ${page}, mostrando ${products.length} de ${total}`);
+          }
+
           const totalPages = Math.ceil(total / limit) || 1;
 
-          console.log(`📦 ${products.length} produtos retornados (Total: ${total})`);
-          console.log('📋 Categorias encontradas:', [
-            ...new Set(products.map((p: Product) => p.category)),
-          ]);
+          console.log(`✅ Resultado final: ${products.length} produtos (Total: ${total}, Páginas: ${totalPages})`);
 
           return {
             products,
-            total: total,
+            total,
             page,
             limit,
             totalPages,
@@ -180,9 +289,7 @@ export class ProductService {
         }),
         tap((response) => {
           this.lastCacheTime = Date.now();
-          console.log(
-            `✅ ${response.products.length} produtos carregados (Total: ${response.total})`,
-          );
+          console.log(`✅ ${response.products.length} produtos carregados (Total: ${response.total})`);
         }),
         shareReplay(1),
         catchError(this.handleError),
@@ -265,6 +372,48 @@ export class ProductService {
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
+  /**
+   * 🔥 Busca produtos por Estado (UF)
+   */
+  getProductsByState(state: string, limit?: number): Observable<Product[]> {
+    let params = new HttpParams().set('location_like', state);
+    if (limit) {
+      params = params.set('_limit', limit.toString());
+    }
+
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
+      map((products) => {
+        const stateUF = state.toUpperCase().trim();
+        return products.filter((p) => {
+          const location = (p.location || '').toUpperCase();
+          return location.includes(`- ${stateUF}`) || location.endsWith(stateUF);
+        });
+      }),
+      catchError(this.handleError),
+    );
+  }
+
+  /**
+   * 🔥 Busca produtos por Cidade
+   */
+  getProductsByCity(city: string, limit?: number): Observable<Product[]> {
+    let params = new HttpParams().set('location_like', city);
+    if (limit) {
+      params = params.set('_limit', limit.toString());
+    }
+
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
+      map((products) => {
+        const cityLower = city.toLowerCase().trim();
+        return products.filter((p) => {
+          const location = (p.location || '').toLowerCase();
+          return location.includes(cityLower);
+        });
+      }),
+      catchError(this.handleError),
+    );
+  }
+
   createProduct(product: Partial<Product>): Observable<Product> {
     const images =
       product.images && Array.isArray(product.images) && product.images.length > 0
@@ -328,12 +477,11 @@ export class ProductService {
   }
 
   /**
-   * 🔥 DELETE PRODUCT - CORRIGIDO
+   * 🔥 DELETE PRODUCT
    */
   deleteProduct(id: string): Observable<void> {
     console.log(`🗑️ Excluindo produto com ID: ${id}`);
 
-    // 🔥 Tentativa direta de exclusão SEM verificação prévia
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
         console.log(`✅ Produto ${id} excluído com sucesso!`);
@@ -342,14 +490,12 @@ export class ProductService {
       catchError((error: HttpErrorResponse) => {
         console.error('❌ Erro ao excluir produto:', error);
 
-        // 🔥 Se for erro 404, produto já foi excluído
         if (error.status === 404) {
           console.warn('⚠️ Produto já foi excluído anteriormente');
           this.invalidateCache();
           return of(void 0);
         }
 
-        // 🔥 Se for erro 500, tentar via PATCH (desativar)
         if (error.status === 500) {
           console.warn('⚠️ Erro 500 no DELETE, tentando desativar produto...');
           return this.deactivateProduct(id);
@@ -376,15 +522,14 @@ export class ProductService {
         map(() => void 0),
         catchError((error: HttpErrorResponse) => {
           console.error('❌ Falha ao desativar produto:', error);
-
-          // 🔥 Último recurso: invalidar cache e retornar sucesso
           this.invalidateCache();
           return of(void 0);
         }),
       );
   }
+
   /**
-   * 🔥 UPDATE CATEGORY PRODUCT COUNT - CORRIGIDO
+   * 🔥 UPDATE CATEGORY PRODUCT COUNT
    */
   private updateCategoryProductCount(categoryName: string, delta: number): void {
     if (!categoryName) {
@@ -396,7 +541,6 @@ export class ProductService {
       `🔄 Atualizando contador da categoria: ${categoryName} (${delta > 0 ? '+' : ''}${delta})`,
     );
 
-    // Buscar a categoria pelo nome usando o categoryService
     this.categoryService.getCategories().subscribe({
       next: (categories: any[]) => {
         const category = categories.find((c: any) => c.name === categoryName);
