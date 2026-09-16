@@ -41,7 +41,6 @@ export class SearchFilters implements OnInit, OnChanges {
     { value: 'used', label: 'Usado' }
   ];
 
-  // 🔥 Lista de estados brasileiros
   states: { uf: string; name: string }[] = [
     { uf: 'AC', name: 'Acre' },
     { uf: 'AL', name: 'Alagoas' },
@@ -72,7 +71,6 @@ export class SearchFilters implements OnInit, OnChanges {
     { uf: 'TO', name: 'Tocantins' },
   ];
 
-  // 🔥 Mapa de cidades por estado
   citiesByState: { [key: string]: string[] } = {
     AC: ['Rio Branco', 'Cruzeiro do Sul', 'Sena Madureira', 'Tarauacá'],
     AL: ['Maceió', 'Arapiraca', 'Palmeira dos Índios', 'Rio Largo'],
@@ -137,8 +135,6 @@ export class SearchFilters implements OnInit, OnChanges {
       ...this.filters
     };
     this.priceRange = [this.filters.minPrice || 0, this.filters.maxPrice || 10000];
-
-    // 🔥 Carregar estado/cidade se existirem
     this.selectedState = this.filters.state || '';
     this.selectedCity = this.filters.city || '';
 
@@ -150,9 +146,6 @@ export class SearchFilters implements OnInit, OnChanges {
     console.log('🔧 Filtros inicializados:', this.filters);
   }
 
-  /**
-   * 🔥 Sincroniza filtros quando o input muda
-   */
   syncFilters(): void {
     this.priceRange = [this.filters.minPrice || 0, this.filters.maxPrice || 10000];
     this.selectedState = this.filters.state || '';
@@ -164,8 +157,6 @@ export class SearchFilters implements OnInit, OnChanges {
     }
   }
 
-  // ===== FILTROS EXISTENTES =====
-
   onFilterChange(): void {
     this.filters = {
       ...this.filters,
@@ -176,9 +167,18 @@ export class SearchFilters implements OnInit, OnChanges {
     this.filtersChange.emit(this.filters);
   }
 
-  onCategoryChange(categoryId: string): void {
-    this.filters.category = categoryId || undefined;
-    console.log('📂 Categoria alterada:', categoryId);
+  /**
+   * 🔥 Categoria alterada - emite o SLUG
+   */
+  onCategoryChange(slug: string): void {
+    console.log('📂 Categoria alterada (slug):', slug);
+
+    if (slug) {
+      this.filters.category = slug;
+    } else {
+      delete this.filters.category;
+    }
+
     this.filtersChange.emit(this.filters);
   }
 
@@ -216,13 +216,7 @@ export class SearchFilters implements OnInit, OnChanges {
     this.filtersChange.emit(this.filters);
   }
 
-  // ===== 🔥 NOVOS: ESTADO E CIDADE =====
-
-  /**
-   * 🔥 Quando o estado muda
-   */
   onStateChange(): void {
-    // Limpar cidade ao mudar estado
     this.selectedCity = '';
 
     if (this.selectedState) {
@@ -232,20 +226,13 @@ export class SearchFilters implements OnInit, OnChanges {
       this.availableCities = [];
     }
 
-    // Aplicar filtros
     this.applyLocationFilter();
   }
 
-  /**
-   * 🔥 Quando a cidade muda
-   */
   onCityChange(): void {
     this.applyLocationFilter();
   }
 
-  /**
-   * 🔥 Aplica filtro de localização
-   */
   private applyLocationFilter(): void {
     this.filters = {
       ...this.filters,
@@ -261,9 +248,6 @@ export class SearchFilters implements OnInit, OnChanges {
     this.filtersChange.emit(this.filters);
   }
 
-  /**
-   * 🔥 Limpa filtro de localização
-   */
   clearLocationFilter(): void {
     this.selectedState = '';
     this.selectedCity = '';
@@ -277,8 +261,6 @@ export class SearchFilters implements OnInit, OnChanges {
 
     this.filtersChange.emit(this.filters);
   }
-
-  // ===== UTILITÁRIOS =====
 
   clearAllFilters(): void {
     this.priceRange = [0, 10000];
@@ -308,8 +290,8 @@ export class SearchFilters implements OnInit, OnChanges {
     if (this.filters.freeShipping) count++;
     if (this.filters.inStock) count++;
     if (this.filters.search) count++;
-    if (this.selectedState) count++;  // 🔥 NOVO
-    if (this.selectedCity) count++;   // 🔥 NOVO
+    if (this.selectedState) count++;
+    if (this.selectedCity) count++;
     return count;
   }
 

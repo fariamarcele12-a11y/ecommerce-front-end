@@ -69,6 +69,9 @@ export class SearchResults implements OnInit, OnDestroy {
         this.itemsPerPage = +params['limit'];
         this.filters.limit = this.itemsPerPage;
       }
+      // 🔥 NOVO: suporte a state e city nos queryParams
+      if (params['state']) this.filters.state = params['state'];
+      if (params['city']) this.filters.city = params['city'];
 
       console.log('🔍 Filtros aplicados:', this.filters);
       this.loadProducts();
@@ -95,7 +98,6 @@ export class SearchResults implements OnInit, OnDestroy {
       this.filterSub.unsubscribe();
     }
 
-    // 🔥 CORRIGIDO: ProductResponse importado
     this.filterSub = this.productService.getProducts(this.filters, false).subscribe({
       next: (response: ProductResponse) => {
         console.log('📦 Resposta recebida:', response);
@@ -136,15 +138,30 @@ export class SearchResults implements OnInit, OnDestroy {
   onFiltersChange(newFilters: ProductFilters): void {
     console.log('🔄 Filtros alterados recebidos:', newFilters);
 
-    this.currentPage = 1;
-    this.filters = {
+    // 🔥 Preservar search/category se não foram alterados
+    const mergedFilters: ProductFilters = {
       ...this.filters,
       ...newFilters,
       page: 1,
       limit: this.itemsPerPage,
     };
 
-    console.log('📋 Filtros mesclados:', this.filters);
+    // 🔥 Remover propriedades undefined/null/vazias
+    Object.keys(mergedFilters).forEach((key) => {
+      const k = key as keyof ProductFilters;
+      if (mergedFilters[k] === undefined || mergedFilters[k] === null || mergedFilters[k] === '') {
+        delete mergedFilters[k];
+      }
+    });
+
+    this.filters = mergedFilters;
+    this.currentPage = 1;
+
+    console.log('📋 Filtros mesclados finais:', this.filters);
+
+    // 🔥 Invalidar cache antes de recarregar
+    this.productService.invalidateCache();
+
     this.updateUrlParams();
     this.loadProducts();
   }
@@ -160,24 +177,19 @@ export class SearchResults implements OnInit, OnDestroy {
       freeShipping: false,
       inStock: false,
     };
+    this.productService.invalidateCache();
     this.updateUrlParams();
     this.loadProducts();
   }
 
   onPageChange(page: number): void {
     console.log('🔄 Mudando para página:', page);
-    console.log('📊 Total de páginas:', this.totalPages);
-    console.log('📊 Página atual:', this.currentPage);
 
     if (page < 1) {
-      console.warn('⚠️ Página menor que 1, redirecionando para página 1');
       page = 1;
     }
 
     if (page > this.totalPages) {
-      console.warn(
-        `⚠️ Página ${page} maior que total (${this.totalPages}), redirecionando para última página`,
-      );
       page = this.totalPages;
     }
 
@@ -200,13 +212,16 @@ export class SearchResults implements OnInit, OnDestroy {
       queryParams['sort'] = this.filters.sortBy;
     }
     if (this.itemsPerPage !== 12) queryParams['limit'] = this.itemsPerPage;
+    // 🔥 NOVO: state e city na URL
+    if (this.filters.state) queryParams['state'] = this.filters.state;
+    if (this.filters.city) queryParams['city'] = this.filters.city;
 
     console.log('🔗 Atualizando URL com params:', queryParams);
 
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams,
-      queryParamsHandling: 'merge',
+      queryParamsHandling: 'replace',
     });
   }
 

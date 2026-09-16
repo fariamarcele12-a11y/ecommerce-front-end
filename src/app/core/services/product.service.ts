@@ -7,7 +7,6 @@ import {
   catchError,
   tap,
   map,
-  shareReplay,
   BehaviorSubject,
   of,
   switchMap,
@@ -62,18 +61,21 @@ export class ProductService {
   }
 
   /**
-   * 🔥 Busca produtos com filtros (CORRIGIDO para estado/cidade)
+   * 🔥 Busca produtos com filtros
    */
   getProducts(filters?: ProductFilters, useCache: boolean = true): Observable<ProductResponse> {
     const filtersKey = JSON.stringify(filters || {});
     const cacheKey = `${filtersKey}`;
 
+    // 🔥 Se filtros mudaram, invalidar cache
     if (this.lastFilters !== cacheKey) {
       console.log('🔄 Filtros mudaram, invalidando cache');
-      this.invalidateCache();
+      this.productsCache$ = null;
+      this.lastCacheTime = 0;
       this.lastFilters = cacheKey;
     }
 
+    // 🔥 Usar cache APENAS se useCache = true
     if (useCache && this.productsCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
       console.log('📦 Usando cache para filtros:', filters);
       return this.productsCache$;
@@ -84,24 +86,31 @@ export class ProductService {
     const page = filters?.page || 1;
     const limit = filters?.limit || 12;
 
-    // 🔥 Verificar se tem filtro de localização (state/city)
+    // 🔥 Detectar filtros que exigem processamento manual
+    const hasCategoryFilter = !!filters?.category;
     const hasLocationFilter = !!(filters?.state || filters?.city);
+    const needsManualProcessing = hasCategoryFilter || hasLocationFilter;
 
-    // 🔥 Se tem filtro de localização, buscar TODOS os produtos (sem paginação)
-    // para depois filtrar e paginar manualmente
-    if (hasLocationFilter) {
-      console.log('📍 Filtro de localização detectado - buscando todos os produtos');
+    console.log('🔍 Filtros recebidos:', {
+      category: filters?.category,
+      state: filters?.state,
+      city: filters?.city,
+      sortBy: filters?.sortBy,
+      needsManualProcessing,
+    });
+
+    // 🔥 Se NÃO precisa de processamento manual, usar paginação do servidor
+    if (!needsManualProcessing) {
+      params = params.set('_page', page.toString());
+      params = params.set('_limit', limit.toString());
     }
 
     if (filters) {
-      if (filters.category) {
-        params = params.set('category', filters.category);
-        console.log(`🔍 Filtrando por categoria: "${filters.category}"`);
-      }
-      if (filters.minPrice !== undefined && filters.minPrice !== null) {
+      // Filtros que funcionam no servidor
+      if (filters.minPrice !== undefined && filters.minPrice !== null && filters.minPrice > 0) {
         params = params.set('price_gte', filters.minPrice.toString());
       }
-      if (filters.maxPrice !== undefined && filters.maxPrice !== null) {
+      if (filters.maxPrice !== undefined && filters.maxPrice !== null && filters.maxPrice < 10000) {
         params = params.set('price_lte', filters.maxPrice.toString());
       }
       if (filters.search) {
@@ -110,51 +119,39 @@ export class ProductService {
       if (filters.condition) {
         params = params.set('condition', filters.condition);
       }
-      if (filters.location) {
-        params = params.set('location', filters.location);
-      }
       if (filters.sellerId) {
         params = params.set('seller.id', filters.sellerId);
       }
 
-      // 🔥 Ordenação
-      if (filters.sortBy === 'price_asc') {
-        params = params.set('_sort', 'price');
-        params = params.set('_order', 'asc');
-      } else if (filters.sortBy === 'price_desc') {
-        params = params.set('_sort', 'price');
-        params = params.set('_order', 'desc');
-      } else if (filters.sortBy === 'newest') {
-        params = params.set('_sort', 'createdAt');
-        params = params.set('_order', 'desc');
-      } else if (filters.sortBy === 'popular') {
-        params = params.set('_sort', 'seller.sales');
-        params = params.set('_order', 'desc');
-      }
-
-      // 🔥 Paginação do servidor - APENAS se NÃO tiver filtro de localização
-      if (!hasLocationFilter) {
-        if (filters.limit) {
-          params = params.set('_limit', filters.limit.toString());
-        }
-        if (filters.page) {
-          params = params.set('_page', filters.page.toString());
-          if (filters.limit) {
-            params = params.set('_limit', filters.limit.toString());
-          }
+      // Ordenação no servidor (só se não precisar processamento manual)
+      if (!needsManualProcessing && filters.sortBy) {
+        switch (filters.sortBy) {
+          case 'price_asc':
+            params = params.set('_sort', 'price');
+            params = params.set('_order', 'asc');
+            break;
+          case 'price_desc':
+            params = params.set('_sort', 'price');
+            params = params.set('_order', 'desc');
+            break;
+          case 'newest':
+            params = params.set('_sort', 'createdAt');
+            params = params.set('_order', 'desc');
+            break;
+          case 'popular':
+            params = params.set('_sort', 'seller.sales');
+            params = params.set('_order', 'desc');
+            break;
         }
       }
-    }
-
-    // 🔥 Paginação padrão - APENAS se NÃO tiver filtro de localização
-    if (!hasLocationFilter) {
-      params = params.set('_page', page.toString());
-      params = params.set('_limit', limit.toString());
     }
 
     params = params.set('_t', Date.now().toString());
 
     console.log('🌐 URL da requisição:', `${this.apiUrl}?${params.toString()}`);
+
+    // 🔥 Guardar o slug em variável local
+    const categorySlug = filters?.category;
 
     const request = this.http
       .get<any>(this.apiUrl, {
@@ -167,136 +164,222 @@ export class ProductService {
         },
       })
       .pipe(
-        map((response) => {
-          let products = response.body || [];
+        switchMap((response) => {
+          let products: Product[] = response.body || [];
           let total = parseInt(response.headers.get('X-Total-Count') || '0', 10) || products.length;
 
           console.log(`📦 Produtos recebidos do servidor: ${products.length}`);
 
-          // ============================================
-          // 🔥 FILTROS MANUAIS
-          // ============================================
+          // 🔥 Se tem filtro de categoria, converter slug → nome
+          if (hasCategoryFilter && categorySlug) {
+            return this.categoryService.getCategories().pipe(
+              map((categories: any[]) => {
+                const category = categories.find((c: any) => c.slug === categorySlug);
+                const categoryName = category?.name || categorySlug;
 
-          // 🔥 1. Filtro por CATEGORIA
-          if (filters?.category) {
-            const categoryName = filters.category.toLowerCase().trim();
-            products = products.filter((p: Product) => {
-              const productCategory = (p.category || '').toLowerCase().trim();
-              return productCategory === categoryName;
-            });
-            console.log(`🔍 Filtro categoria "${filters.category}": ${products.length} produtos`);
+                console.log(`🔄 Slug "${categorySlug}" → Nome "${categoryName}"`);
+
+                products = products.filter((p: Product) => p.category === categoryName);
+
+                console.log(`🔍 Filtro categoria "${categoryName}": ${products.length} produtos`);
+
+                return this.applyAllFilters(products, filters, total, page, limit);
+              }),
+              catchError(() => {
+                // Fallback: filtrar pelo slug também
+                const slug = categorySlug;
+                products = products.filter(
+                  (p: Product) =>
+                    p.category === slug ||
+                    (p.category && p.category.toLowerCase() === slug.toLowerCase()),
+                );
+                return of(this.applyAllFilters(products, filters, total, page, limit));
+              }),
+            );
           }
 
-          // 🔥 2. Filtro por ESTADO (UF)
-          if (filters?.state) {
-            const stateUF = filters.state.toUpperCase().trim();
-            products = products.filter((p: Product) => {
-              const location = (p.location || '').toUpperCase().trim();
-              // 🔥 Buscar por "- RJ", "-RJ" ou terminar com " RJ"
-              return (
-                location.includes(`- ${stateUF}`) ||
-                location.includes(`-${stateUF}`) ||
-                location.endsWith(` ${stateUF}`) ||
-                location.endsWith(stateUF)
-              );
-            });
-            console.log(`🔍 Filtro estado "${filters.state}": ${products.length} produtos`);
-          }
-
-          // 🔥 3. Filtro por CIDADE
-          if (filters?.city) {
-            const city = filters.city.toLowerCase().trim();
-            products = products.filter((p: Product) => {
-              const location = (p.location || '').toLowerCase().trim();
-              return location.includes(city);
-            });
-            console.log(`🔍 Filtro cidade "${filters.city}": ${products.length} produtos`);
-          }
-
-          // 🔥 4. Filtro por DESCONTO
-          if (filters?.hasDiscount) {
-            products = products.filter((p: Product) => {
-              return p.oldPrice && p.oldPrice > p.price;
-            });
-            console.log(`🔍 Filtro desconto: ${products.length} produtos`);
-          }
-
-          // 🔥 5. Filtro por FRETE GRÁTIS
-          if (filters?.freeShipping) {
-            products = products.filter((p: Product) => p.freeShipping === true);
-            console.log(`🔍 Filtro frete grátis: ${products.length} produtos`);
-          }
-
-          // 🔥 6. Filtro por ESTOQUE
-          if (filters?.inStock) {
-            products = products.filter((p: Product) => p.stock > 0);
-            console.log(`🔍 Filtro em estoque: ${products.length} produtos`);
-          }
-
-          // 🔥 7. Filtro por CONDIÇÃO
-          if (filters?.condition) {
-            products = products.filter((p: Product) => p.condition === filters.condition);
-            console.log(`🔍 Filtro condição: ${products.length} produtos`);
-          }
-
-          // 🔥 8. Filtro por PREÇO (garantia manual)
-          if (filters?.minPrice !== undefined && filters?.minPrice !== null) {
-            products = products.filter((p: Product) => p.price >= filters.minPrice!);
-          }
-          if (filters?.maxPrice !== undefined && filters?.maxPrice !== null) {
-            products = products.filter((p: Product) => p.price <= filters.maxPrice!);
-          }
-
-          // 🔥 9. Filtro por BUSCA (search)
-          if (filters?.search) {
-            const search = filters.search.toLowerCase().trim();
-            products = products.filter((p: Product) => {
-              return (
-                (p.name || '').toLowerCase().includes(search) ||
-                (p.description || '').toLowerCase().includes(search) ||
-                (p.category || '').toLowerCase().includes(search)
-              );
-            });
-            console.log(`🔍 Filtro busca "${filters.search}": ${products.length} produtos`);
-          }
-
-          // 🔥 Atualizar favoritos
-          const favorites = this.favoritesSubject.value;
-          products.forEach((product: Product) => {
-            product.isFavorite = favorites.includes(String(product.id));
-          });
-
-          // 🔥 Paginação MANUAL (quando tem filtro de localização)
-          if (hasLocationFilter) {
-            total = products.length;
-            const startIndex = (page - 1) * limit;
-            const endIndex = startIndex + limit;
-            products = products.slice(startIndex, endIndex);
-            console.log(`📄 Paginação manual: página ${page}, mostrando ${products.length} de ${total}`);
-          }
-
-          const totalPages = Math.ceil(total / limit) || 1;
-
-          console.log(`✅ Resultado final: ${products.length} produtos (Total: ${total}, Páginas: ${totalPages})`);
-
-          return {
-            products,
-            total,
-            page,
-            limit,
-            totalPages,
-          } as ProductResponse;
+          return of(this.applyAllFilters(products, filters, total, page, limit));
         }),
         tap((response) => {
           this.lastCacheTime = Date.now();
-          console.log(`✅ ${response.products.length} produtos carregados (Total: ${response.total})`);
+          console.log(`✅ Resposta final: ${response.products.length} produtos`);
         }),
-        shareReplay(1),
         catchError(this.handleError),
       );
 
-    this.productsCache$ = request;
+    // 🔥 Salvar no cache apenas se useCache = true
+    if (useCache) {
+      this.productsCache$ = request;
+    }
+
     return request;
+  }
+
+  /**
+   * 🔥 Aplica TODOS os filtros manuais + ordenação + paginação
+   */
+  private applyAllFilters(
+    products: Product[],
+    filters: ProductFilters | undefined,
+    total: number,
+    page: number,
+    limit: number,
+  ): ProductResponse {
+    if (!filters) {
+      return {
+        products,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      };
+    }
+
+    // 🔥 1. ESTADO
+    if (filters.state) {
+      const stateUF = filters.state.toUpperCase().trim();
+      products = products.filter((p: Product) => {
+        const location = (p.location || '').toUpperCase().trim();
+        return (
+          location.includes(`- ${stateUF}`) ||
+          location.includes(`-${stateUF}`) ||
+          location.endsWith(` ${stateUF}`) ||
+          location.endsWith(stateUF)
+        );
+      });
+      console.log(`🔍 Estado "${filters.state}": ${products.length} produtos`);
+    }
+
+    // 🔥 2. CIDADE
+    if (filters.city) {
+      const city = filters.city.toLowerCase().trim();
+      products = products.filter((p: Product) => {
+        const location = (p.location || '').toLowerCase().trim();
+        return location.includes(city);
+      });
+      console.log(`🔍 Cidade "${filters.city}": ${products.length} produtos`);
+    }
+
+    // 🔥 3. DESCONTO
+    if (filters.hasDiscount) {
+      products = products.filter((p: Product) => p.oldPrice && p.oldPrice > p.price);
+      console.log(`🔍 Desconto: ${products.length} produtos`);
+    }
+
+    // 🔥 4. FRETE GRÁTIS
+    if (filters.freeShipping) {
+      products = products.filter((p: Product) => p.freeShipping === true);
+      console.log(`🔍 Frete grátis: ${products.length} produtos`);
+    }
+
+    // 🔥 5. ESTOQUE
+    if (filters.inStock) {
+      products = products.filter((p: Product) => p.stock > 0);
+      console.log(`🔍 Em estoque: ${products.length} produtos`);
+    }
+
+    // 🔥 6. CONDIÇÃO
+    if (filters.condition) {
+      products = products.filter((p: Product) => p.condition === filters.condition);
+      console.log(`🔍 Condição: ${products.length} produtos`);
+    }
+
+    // 🔥 7. PREÇO
+    if (filters.minPrice !== undefined && filters.minPrice !== null && filters.minPrice > 0) {
+      products = products.filter((p: Product) => p.price >= filters.minPrice!);
+    }
+    if (filters.maxPrice !== undefined && filters.maxPrice !== null && filters.maxPrice < 10000) {
+      products = products.filter((p: Product) => p.price <= filters.maxPrice!);
+    }
+
+    // 🔥 8. BUSCA
+    if (filters.search) {
+      const search = filters.search.toLowerCase().trim();
+      products = products.filter((p: Product) => {
+        return (
+          (p.name || '').toLowerCase().includes(search) ||
+          (p.description || '').toLowerCase().includes(search)
+        );
+      });
+      console.log(`🔍 Busca "${filters.search}": ${products.length} produtos`);
+    }
+
+    // 🔥 9. ORDENAÇÃO (SEMPRE aplicar após todos os filtros)
+    if (filters.sortBy) {
+      products = this.sortProducts(products, filters.sortBy);
+      console.log(`📊 Ordenação "${filters.sortBy}" aplicada`);
+    }
+
+    // 🔥 10. Atualizar favoritos
+    const favorites = this.favoritesSubject.value;
+    products.forEach((product: Product) => {
+      product.isFavorite = favorites.includes(String(product.id));
+    });
+
+    // 🔥 11. Paginação manual
+    total = products.length;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedProducts = products.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    console.log(
+      `📄 Paginação: página ${page}/${totalPages}, mostrando ${paginatedProducts.length} de ${total}`,
+    );
+
+    return {
+      products: paginatedProducts,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
+  /**
+   * 🔥 Ordena produtos
+   */
+  private sortProducts(products: Product[], sortBy: string): Product[] {
+    const sorted = [...products];
+
+    switch (sortBy) {
+      case 'price_asc':
+        return sorted.sort((a, b) => a.price - b.price);
+
+      case 'price_desc':
+        return sorted.sort((a, b) => b.price - a.price);
+
+      case 'newest':
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
+
+      case 'popular':
+        return sorted.sort((a, b) => {
+          const salesA = a.seller?.sales || 0;
+          const salesB = b.seller?.sales || 0;
+          return salesB - salesA;
+        });
+
+      case 'rating':
+        return sorted.sort((a, b) => {
+          const ratingA = a.seller?.rating || 0;
+          const ratingB = b.seller?.rating || 0;
+          return ratingB - ratingA;
+        });
+
+      case 'sales':
+        return sorted.sort((a, b) => {
+          const salesA = a.seller?.sales || 0;
+          const salesB = b.seller?.sales || 0;
+          return salesB - salesA;
+        });
+
+      default:
+        return sorted;
+    }
   }
 
   getProductById(id: string): Observable<Product> {
@@ -372,48 +455,6 @@ export class ProductService {
     return this.http.get<Product[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
-  /**
-   * 🔥 Busca produtos por Estado (UF)
-   */
-  getProductsByState(state: string, limit?: number): Observable<Product[]> {
-    let params = new HttpParams().set('location_like', state);
-    if (limit) {
-      params = params.set('_limit', limit.toString());
-    }
-
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      map((products) => {
-        const stateUF = state.toUpperCase().trim();
-        return products.filter((p) => {
-          const location = (p.location || '').toUpperCase();
-          return location.includes(`- ${stateUF}`) || location.endsWith(stateUF);
-        });
-      }),
-      catchError(this.handleError),
-    );
-  }
-
-  /**
-   * 🔥 Busca produtos por Cidade
-   */
-  getProductsByCity(city: string, limit?: number): Observable<Product[]> {
-    let params = new HttpParams().set('location_like', city);
-    if (limit) {
-      params = params.set('_limit', limit.toString());
-    }
-
-    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
-      map((products) => {
-        const cityLower = city.toLowerCase().trim();
-        return products.filter((p) => {
-          const location = (p.location || '').toLowerCase();
-          return location.includes(cityLower);
-        });
-      }),
-      catchError(this.handleError),
-    );
-  }
-
   createProduct(product: Partial<Product>): Observable<Product> {
     const images =
       product.images && Array.isArray(product.images) && product.images.length > 0
@@ -445,20 +486,12 @@ export class ProductService {
       newProduct.seller = product.seller;
     }
 
-    console.log('📦 Enviando para API:', JSON.stringify(newProduct, null, 2));
-
     return this.http.post<Product>(this.apiUrl, newProduct).pipe(
       tap((response) => {
         console.log('✅ Produto criado com ID:', response.id);
         this.invalidateCache();
       }),
-      catchError((error) => {
-        console.error('❌ Erro detalhado:', error);
-        if (error.error) {
-          console.error('❌ Resposta do servidor:', error.error);
-        }
-        return this.handleError(error);
-      }),
+      catchError(this.handleError),
     );
   }
 
@@ -476,9 +509,6 @@ export class ProductService {
       );
   }
 
-  /**
-   * 🔥 DELETE PRODUCT
-   */
   deleteProduct(id: string): Observable<void> {
     console.log(`🗑️ Excluindo produto com ID: ${id}`);
 
@@ -488,27 +518,19 @@ export class ProductService {
         this.invalidateCache();
       }),
       catchError((error: HttpErrorResponse) => {
-        console.error('❌ Erro ao excluir produto:', error);
-
         if (error.status === 404) {
-          console.warn('⚠️ Produto já foi excluído anteriormente');
           this.invalidateCache();
           return of(void 0);
         }
-
         if (error.status === 500) {
-          console.warn('⚠️ Erro 500 no DELETE, tentando desativar produto...');
           return this.deactivateProduct(id);
         }
-
-        return throwError(() => new Error('Não foi possível excluir o produto. Tente novamente.'));
+        return throwError(() => new Error('Não foi possível excluir o produto.'));
       }),
     );
   }
 
   private deactivateProduct(id: string): Observable<void> {
-    console.log(`🔄 Desativando produto ${id}...`);
-
     return this.http
       .patch<Product>(`${this.apiUrl}/${id}`, {
         active: false,
@@ -516,60 +538,14 @@ export class ProductService {
       })
       .pipe(
         tap(() => {
-          console.log(`✅ Produto ${id} desativado com sucesso!`);
           this.invalidateCache();
         }),
         map(() => void 0),
-        catchError((error: HttpErrorResponse) => {
-          console.error('❌ Falha ao desativar produto:', error);
+        catchError(() => {
           this.invalidateCache();
           return of(void 0);
         }),
       );
-  }
-
-  /**
-   * 🔥 UPDATE CATEGORY PRODUCT COUNT
-   */
-  private updateCategoryProductCount(categoryName: string, delta: number): void {
-    if (!categoryName) {
-      console.warn('⚠️ Categoria não informada, pulando atualização');
-      return;
-    }
-
-    console.log(
-      `🔄 Atualizando contador da categoria: ${categoryName} (${delta > 0 ? '+' : ''}${delta})`,
-    );
-
-    this.categoryService.getCategories().subscribe({
-      next: (categories: any[]) => {
-        const category = categories.find((c: any) => c.name === categoryName);
-        if (category) {
-          const newCount = Math.max(0, (category.productCount || 0) + delta);
-          console.log(`📊 Novo contador: ${newCount} (era ${category.productCount})`);
-
-          this.categoryService
-            .updateCategory(category.id, {
-              productCount: newCount,
-            })
-            .subscribe({
-              next: (updated: any) => {
-                console.log(
-                  `✅ Categoria "${updated.name}" atualizada para ${updated.productCount} produtos`,
-                );
-              },
-              error: (error: any) => {
-                console.error('❌ Erro ao atualizar contador da categoria:', error);
-              },
-            });
-        } else {
-          console.warn(`⚠️ Categoria não encontrada: ${categoryName}`);
-        }
-      },
-      error: (error: any) => {
-        console.error('❌ Erro ao buscar categorias:', error);
-      },
-    });
   }
 
   toggleFavorite(productId: string): Observable<Product> {
@@ -587,8 +563,7 @@ export class ProductService {
         tap(() => {
           this.updateFavorites(productId, newFavoriteStatus);
         }),
-        catchError((error: HttpErrorResponse) => {
-          console.warn('⚠️ Erro ao sincronizar favorito, mantendo estado local:', error);
+        catchError(() => {
           return this.getProductById(productId).pipe(
             map((product: Product) => ({
               ...product,
@@ -618,11 +593,9 @@ export class ProductService {
     let newFavorites: string[];
 
     if (isFavorite) {
-      if (!currentFavorites.includes(productId)) {
-        newFavorites = [...currentFavorites, productId];
-      } else {
-        newFavorites = currentFavorites;
-      }
+      newFavorites = currentFavorites.includes(productId)
+        ? currentFavorites
+        : [...currentFavorites, productId];
     } else {
       newFavorites = currentFavorites.filter((id) => id !== productId);
     }
@@ -671,16 +644,13 @@ export class ProductService {
     } else {
       switch (error.status) {
         case 0:
-          errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão.';
+          errorMessage = 'Não foi possível conectar ao servidor.';
           break;
         case 404:
           errorMessage = 'Produto não encontrado.';
           break;
-        case 409:
-          errorMessage = 'Conflito ao processar a requisição.';
-          break;
         case 500:
-          errorMessage = 'Erro interno do servidor. Tente novamente mais tarde.';
+          errorMessage = 'Erro interno do servidor.';
           break;
         default:
           errorMessage = `Código: ${error.status}, Mensagem: ${error.message}`;
