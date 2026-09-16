@@ -7,7 +7,7 @@ import { StoreService } from '../../../core/services/store.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CepService } from '../../../core/services/cep.service';
-import { StoreForm } from '../../../core/models/store.model';
+import { StoreForm, StoreSocialMedia } from '../../../core/models/store.model';
 import { User } from '../../../core/models/user.model';
 import { Subscription } from 'rxjs';
 
@@ -31,7 +31,7 @@ export class CreateStore implements OnInit, OnDestroy {
   storeData: StoreForm = {
     storeName: '',
     description: '',
-    category: '', // Mantido para compatibilidade, será preenchido com "Outros"
+    category: 'Outros',
     logo: '',
     banner: '',
     phone: '',
@@ -62,6 +62,27 @@ export class CreateStore implements OnInit, OnDestroy {
     private cepService: CepService
   ) {}
 
+  /**
+   * 🔥 Getter que GARANTE que socialMedia sempre existe (para o template)
+   */
+  get socialMedia(): StoreSocialMedia {
+    if (!this.storeData.socialMedia) {
+      this.storeData.socialMedia = {
+        instagram: '',
+        facebook: '',
+        youtube: ''
+      };
+    }
+    return this.storeData.socialMedia;
+  }
+
+  /**
+   * 🔥 Getter que GARANTE que address sempre existe (para o template)
+   */
+  get address() {
+    return this.storeData.address;
+  }
+
   ngOnInit(): void {
     this.subscriptions.add(
       this.authService.currentUser$.subscribe(user => {
@@ -69,7 +90,7 @@ export class CreateStore implements OnInit, OnDestroy {
           this.user = user;
           console.log('👤 Usuário logado:', user);
 
-          const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+          const userId = String(user.id);
           this.checkExistingStore(userId);
           this.preencherDadosUsuario(user);
         } else {
@@ -83,13 +104,13 @@ export class CreateStore implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
-  checkExistingStore(userId: number): void {
+  checkExistingStore(userId: string): void {
     this.checkingStore = true;
     console.log('🔍 Verificando se usuário tem loja...');
 
     this.storeService.hasStore(userId).subscribe({
       next: (hasStore) => {
-        console.log('📦 Usuário tem loja? (resultado)', hasStore);
+        console.log('📦 Usuário tem loja?', hasStore);
 
         if (hasStore) {
           this.hasExistingStore = true;
@@ -188,10 +209,7 @@ export class CreateStore implements OnInit, OnDestroy {
     }
 
     if (this.hasExistingStore) {
-      this.alertService.warning(
-        'Loja existente',
-        'Você já possui uma loja cadastrada.'
-      );
+      this.alertService.warning('Loja existente', 'Você já possui uma loja cadastrada.');
       if (this.existingStoreId) {
         this.router.navigate([`/loja/${this.existingStoreId}`]);
       }
@@ -202,8 +220,6 @@ export class CreateStore implements OnInit, OnDestroy {
       this.alertService.warning('Nome da loja inválido', 'Digite um nome para sua loja (mínimo 3 caracteres).');
       return;
     }
-
-    // 🔥 Categoria removida da validação
 
     if (!this.storeData.description || this.storeData.description.trim().length < 10) {
       this.alertService.warning('Descrição inválida', 'Descreva sua loja (mínimo 10 caracteres).');
@@ -223,13 +239,18 @@ export class CreateStore implements OnInit, OnDestroy {
     this.loading = true;
     this.alertService.info('Criando loja...', 'Por favor, aguarde um momento.');
 
-    // 🔥 Definir categoria padrão
-    const storeDataWithCategory = {
+    // 🔥 Garantir que socialMedia tem valores e category padrão
+    const storeDataWithDefaults: StoreForm = {
       ...this.storeData,
-      category: 'Outros'
+      category: this.storeData.category || 'Outros',
+      socialMedia: {
+        instagram: this.socialMedia.instagram || '',
+        facebook: this.socialMedia.facebook || '',
+        youtube: this.socialMedia.youtube || ''
+      }
     };
 
-    this.storeService.createStore(storeDataWithCategory, this.user).subscribe({
+    this.storeService.createStore(storeDataWithDefaults, this.user).subscribe({
       next: (store) => {
         this.loading = false;
         console.log('✅ Loja criada:', store);
@@ -244,12 +265,9 @@ export class CreateStore implements OnInit, OnDestroy {
         console.error('❌ Erro ao criar loja:', error);
 
         if (error.message?.includes('já possui uma loja')) {
-          this.alertService.warning(
-            'Loja já existente',
-            'Você já possui uma loja cadastrada.'
-          );
+          this.alertService.warning('Loja já existente', 'Você já possui uma loja cadastrada.');
           if (this.user) {
-            const userId = typeof this.user.id === 'string' ? parseInt(this.user.id, 10) : this.user.id;
+            const userId = String(this.user.id);
             this.storeService.getStoreByUser(userId).subscribe({
               next: (store) => {
                 if (store) {
@@ -269,7 +287,7 @@ export class CreateStore implements OnInit, OnDestroy {
     if (this.existingStoreId) {
       this.router.navigate(['/loja', this.existingStoreId]);
     } else if (this.user) {
-      const userId = typeof this.user.id === 'string' ? parseInt(this.user.id, 10) : this.user.id;
+      const userId = String(this.user.id);
       this.storeService.getStoreByUser(userId).subscribe({
         next: (store) => {
           if (store) {

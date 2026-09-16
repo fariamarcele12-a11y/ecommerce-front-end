@@ -92,8 +92,6 @@
               </div>
             </div>
 
-            <!-- 🔥 Categoria REMOVIDA do formulário -->
-
             <!-- Descrição -->
             <div class="form-group mb-3">
               <label class="form-label fw-bold small">
@@ -186,7 +184,7 @@
                     type="text"
                     class="form-control"
                     placeholder="@seuinstagram"
-                    [(ngModel)]="storeData.socialMedia.instagram"
+                    [(ngModel)]="socialMedia.instagram"
                     name="instagram"
                   />
                 </div>
@@ -201,7 +199,7 @@
                     type="text"
                     class="form-control"
                     placeholder="seufacebook"
-                    [(ngModel)]="storeData.socialMedia.facebook"
+                    [(ngModel)]="socialMedia.facebook"
                     name="facebook"
                   />
                 </div>
@@ -216,7 +214,7 @@
                     type="text"
                     class="form-control"
                     placeholder="seucanal"
-                    [(ngModel)]="storeData.socialMedia.youtube"
+                    [(ngModel)]="socialMedia.youtube"
                     name="youtube"
                   />
                 </div>
@@ -236,8 +234,8 @@
                   type="text"
                   class="form-control"
                   placeholder="00000-000"
-                  [(ngModel)]="storeData.address.cep"
-                  (input)="storeData.address.cep = formatCep(storeData.address.cep)"
+                  [(ngModel)]="address.cep"
+                  (input)="address.cep = formatCep(address.cep)"
                   (blur)="onCepBlur()"
                   name="cep"
                   maxlength="9"
@@ -249,7 +247,7 @@
                   type="text"
                   class="form-control"
                   placeholder="Nome da rua"
-                  [(ngModel)]="storeData.address.street"
+                  [(ngModel)]="address.street"
                   name="street"
                 />
               </div>
@@ -259,7 +257,7 @@
                   type="text"
                   class="form-control"
                   placeholder="123"
-                  [(ngModel)]="storeData.address.number"
+                  [(ngModel)]="address.number"
                   name="number"
                 />
               </div>
@@ -269,7 +267,7 @@
                   type="text"
                   class="form-control"
                   placeholder="Apto, Bloco, etc."
-                  [(ngModel)]="storeData.address.complement"
+                  [(ngModel)]="address.complement"
                   name="complement"
                 />
               </div>
@@ -279,7 +277,7 @@
                   type="text"
                   class="form-control"
                   placeholder="Bairro"
-                  [(ngModel)]="storeData.address.neighborhood"
+                  [(ngModel)]="address.neighborhood"
                   name="neighborhood"
                 />
               </div>
@@ -289,12 +287,13 @@
                   type="text"
                   class="form-control"
                   placeholder="Cidade"
-                  [(ngModel)]="storeData.address.city"
+                  [(ngModel)]="address.city"
                   name="city"
                 />
               </div>
               <div class="col-md-3">
-                <select class="form-select" [(ngModel)]="storeData.address.state" name="state">
+                <label class="form-label fw-bold small">Estado</label>
+                <select class="form-select" [(ngModel)]="address.state" name="state">
                   <option value="">UF</option>
                   <option value="AC">AC</option>
                   <option value="AL">AL</option>
