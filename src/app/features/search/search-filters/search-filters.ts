@@ -160,7 +160,6 @@ export class SearchFilters implements OnInit, OnChanges {
       minPrice: this.priceRange[0],
       maxPrice: this.priceRange[1]
     };
-    console.log('💰 Filtro de preço alterado:', this.filters);
     this.filtersChange.emit(this.filters);
   }
 
@@ -260,7 +259,6 @@ export class SearchFilters implements OnInit, OnChanges {
       inStock: false
     };
 
-    console.log('🧹 Filtros limpos');
     this.clearFilters.emit();
     this.filtersChange.emit(this.filters);
   }

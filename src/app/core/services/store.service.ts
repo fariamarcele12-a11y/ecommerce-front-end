@@ -115,16 +115,11 @@ export class StoreService {
     );
   }
 
-  /**
-   * Busca loja por ID
-   */
   getStoreById(id: string | number): Observable<Store | null> {
     const storeId = String(id);
     return this.http.get<Store>(`${this.apiUrl}/${storeId}`).pipe(
       tap((store) => {
         console.log('🏪 Loja encontrada:', store?.storeName);
-        console.log('📸 Logo:', store?.logo ? 'Sim' : 'Não');
-        console.log('🖼️ Banner:', store?.banner ? 'Sim' : 'Não');
       }),
       catchError((error) => {
         console.error('❌ Erro ao buscar loja:', error);
@@ -133,15 +128,10 @@ export class StoreService {
     );
   }
 
-  /**
-   * Busca produtos de uma loja
-   */
   getStoreProducts(storeId: string | number): Observable<Product[]> {
     const id = String(storeId);
-    console.log(`🔍 Buscando produtos da loja ${id}...`);
     return this.http.get<Product[]>(`${this.productsApiUrl}?storeId=${id}`).pipe(
       map((products) => {
-        console.log(`📦 ${products.length} produtos encontrados na loja`);
         this.products = products;
         this.filteredProducts = products;
         this.productsSubject.next(products);
@@ -155,13 +145,8 @@ export class StoreService {
     );
   }
 
-  /**
-   * 🔥 CRIA UM PRODUTO NA LOJA
-   */
   createStoreProduct(storeId: string | number, productData: Partial<Product>): Observable<Product> {
     const id = String(storeId);
-    console.log(`📝 Criando produto na loja ${id}:`, productData);
-
     return this.getStoreById(id).pipe(
       switchMap((store) => {
         const sellerName = store?.storeName || 'Vendedor';
@@ -169,7 +154,6 @@ export class StoreService {
         const userIdStr = String(userId);
 
         const productId = this.idGenerator.generateProductId();
-        console.log('🔑 ID único gerado para o produto:', productId);
 
         const newProduct: any = {
           id: productId,
@@ -188,14 +172,12 @@ export class StoreService {
 
         return this.http.post<Product>(this.productsApiUrl, newProduct).pipe(
           tap((product) => {
-            console.log('✅ Produto criado com ID:', product.id);
             this.products.push(product);
             this.filteredProducts = [...this.products];
             this.productsSubject.next(this.products);
             this.filteredProductsSubject.next(this.filteredProducts);
           }),
           catchError((error) => {
-            console.error('❌ Erro ao criar produto:', error);
             return throwError(() => new Error('Erro ao criar produto. Tente novamente.'));
           }),
         );
@@ -203,9 +185,6 @@ export class StoreService {
     );
   }
 
-  /**
-   * Atualiza um produto
-   */
   updateStoreProduct(productId: string, productData: Partial<Product>): Observable<Product> {
     return this.http
       .patch<Product>(`${this.productsApiUrl}/${productId}`, {
@@ -214,7 +193,6 @@ export class StoreService {
       })
       .pipe(
         tap((product) => {
-          console.log('✅ Produto atualizado:', product);
           const index = this.products.findIndex((p) => String(p.id) === productId);
           if (index !== -1) {
             this.products[index] = product;
@@ -230,12 +208,7 @@ export class StoreService {
       );
   }
 
-  /**
-   * DELETE PRODUCT
-   */
   deleteProduct(productId: string): void {
-    console.log(`🗑️ Solicitando exclusão do produto: ${productId}`);
-
     const productToDelete = this.products.find((p) => String(p.id) === productId);
     if (!productToDelete) {
       this.alertService.warning('Produto não encontrado', 'Este produto não está mais disponível.');
@@ -282,16 +255,8 @@ export class StoreService {
       });
   }
 
-  /**
-   * 🔥 CRIA UMA NOVA LOJA COM LOGO E BANNER
-   */
   createStore(storeData: StoreForm, user: User): Observable<Store> {
-    console.log('📝 Criando loja para usuário:', user.id);
-    console.log('📸 Logo:', storeData.logo ? `${storeData.logo.length} caracteres` : 'Não');
-    console.log('🖼️ Banner:', storeData.banner ? `${storeData.banner.length} caracteres` : 'Não');
-
     const storeId = this.idGenerator.generateStoreId();
-    console.log('🔑 ID único gerado para a loja:', storeId);
 
     return this.hasStore(user.id).pipe(
       switchMap((hasStore) => {
@@ -322,14 +287,8 @@ export class StoreService {
           createdAt: new Date().toISOString(),
         };
 
-        console.log('📤 Enviando loja para API:');
-        console.log('  - Logo:', newStore.logo?.substring(0, 50) + '...');
-        console.log('  - Banner:', newStore.banner?.substring(0, 50) + '...');
-
         return this.http.post<Store>(this.apiUrl, newStore).pipe(
           switchMap((store) => {
-            console.log('✅ Loja criada:', store.id);
-
             const storeIdString = String(store.id);
 
             return this.http.patch<User>(`${this.usersApiUrl}/${user.id}`, {
@@ -383,22 +342,14 @@ export class StoreService {
     );
   }
 
-  /**
-   * 🔥 ATUALIZA A LOJA COM LOGO E BANNER
-   */
   updateStore(id: string | number, storeData: Partial<Store>): Observable<Store> {
     const storeId = String(id);
-    console.log('📝 Atualizando loja:', storeId);
-    console.log('📸 Logo:', storeData.logo ? `${storeData.logo.length} caracteres` : 'Não enviado');
-    console.log('🖼️ Banner:', storeData.banner ? `${storeData.banner.length} caracteres` : 'Não enviado');
 
-    // 🔥 Preparar dados - garantir que logo e banner sejam enviados
     const updateData: any = {
       ...storeData,
       updatedAt: new Date().toISOString(),
     };
 
-    // 🔥 Garantir que logo e banner sejam strings válidas
     if (storeData.logo !== undefined) {
       updateData.logo = storeData.logo || '';
     }
@@ -406,18 +357,8 @@ export class StoreService {
       updateData.banner = storeData.banner || '';
     }
 
-    console.log('📤 Enviando para API:', {
-      ...updateData,
-      logo: updateData.logo?.substring(0, 50) + '...',
-      banner: updateData.banner?.substring(0, 50) + '...',
-    });
-
     return this.http.patch<Store>(`${this.apiUrl}/${storeId}`, updateData).pipe(
       tap((store) => {
-        console.log('✅ Loja atualizada:', store.id);
-        console.log('📸 Logo salva:', store.logo ? 'Sim' : 'Não');
-        console.log('🖼️ Banner salvo:', store.banner ? 'Sim' : 'Não');
-
         if (this.isBrowser) {
           localStorage.setItem('currentStore', JSON.stringify(store));
         }
@@ -437,7 +378,6 @@ export class StoreService {
       if (storeData) {
         const store = JSON.parse(storeData);
         this.currentStoreSubject.next(store);
-        console.log('🏪 Loja carregada do localStorage:', store.storeName);
       }
     } catch (error) {
       console.error('Erro ao carregar loja:', error);

@@ -104,7 +104,6 @@ export class CreateStore implements OnInit, OnDestroy {
 
   checkExistingStore(userId: string): void {
     this.checkingStore = true;
-    console.log('🔍 Verificando se usuário tem loja...');
 
     this.storeService.hasStore(userId).subscribe({
       next: (hasStore) => {

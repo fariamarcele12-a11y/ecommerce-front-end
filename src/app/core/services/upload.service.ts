@@ -141,7 +141,6 @@ export class UploadService {
 
     try {
       const base64 = await this.resizeAndConvertToBase64(file, 1200, 400);
-      console.log('✅ Banner convertido para Base64');
       return base64;
     } catch (error) {
       console.error('❌ Erro ao processar banner:', error);
@@ -149,9 +148,6 @@ export class UploadService {
     }
   }
 
-  /**
-   * 🔥 Upload genérico com progresso (para servidor real)
-   */
   uploadFile(file: File, endpoint: string): Observable<UploadProgress> {
     const formData = new FormData();
     formData.append('file', file);

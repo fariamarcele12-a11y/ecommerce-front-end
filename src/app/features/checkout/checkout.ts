@@ -116,7 +116,6 @@ export class Checkout implements OnInit, OnDestroy {
     }
 
     this.currentUser = user;
-    console.log('👤 Usuário carregado:', user.name, '| id:', user.id);
 
     if (user.document) {
       this.form.cpfCnpj = this.formatCpfCnpj(user.document);
@@ -137,7 +136,6 @@ export class Checkout implements OnInit, OnDestroy {
         this.selectedAddressId = mainAddress.id;
         this.form.address = { ...mainAddress };
       }
-      console.log('✅ Endereços carregados:', this.userAddresses.length);
     } else if (user.address) {
       const newId = this.generateAddressId();
       const migratedAddress: UserAddress = {
@@ -158,8 +156,6 @@ export class Checkout implements OnInit, OnDestroy {
       this.userAddresses = [migratedAddress];
       this.selectedAddressId = newId;
       this.form.address = { ...migratedAddress };
-
-      console.log('✅ Endereço migrado:', migratedAddress);
     } else {
       const savedAddress = localStorage.getItem('savedAddress');
       if (savedAddress) {
@@ -300,12 +296,8 @@ export class Checkout implements OnInit, OnDestroy {
       address: mainAddress,
     };
 
-    console.log('📝 Salvando endereços:', updateData);
-
     this.userService.updateUser(this.currentUser.id, updateData).subscribe({
       next: (updatedUser) => {
-        console.log('✅ Endereços salvos na API');
-
         this.currentUser = {
           ...this.currentUser,
           ...updatedUser,
@@ -363,13 +355,9 @@ export class Checkout implements OnInit, OnDestroy {
           this.alertService.warning('Carrinho vazio', 'Adicione itens ao carrinho.');
           this.router.navigate(['/carrinho']);
         } else {
-          // 🔥 LOG: verifica se os sellers estão certos
-          console.log('🛒 Itens do carrinho:');
           items.forEach((item) => {
             console.log({
               produto: item.product.name,
-              sellerId: item.product.seller?.id,
-              sellerName: item.product.seller?.name,
             });
           });
         }
@@ -558,9 +546,6 @@ export class Checkout implements OnInit, OnDestroy {
     return true;
   }
 
-  /**
-   * 🔥 SUBMIT REAL: cria pedido, processa pagamento e notifica comprador + vendedor
-   */
   async onSubmit(): Promise<void> {
     if (!this.validateForm()) {
       return;
@@ -587,12 +572,8 @@ export class Checkout implements OnInit, OnDestroy {
       const selectedAddress = this.selectedAddress;
       if (!selectedAddress) throw new Error('Endereço não selecionado');
 
-      // 🔥 USA O HELPER DO CARTSERVICE — já vem com sellerId correto!
       const checkoutItems = this.cartService.getCheckoutItems();
 
-      console.log('🛒 Itens prontos para o pedido:', checkoutItems);
-
-      // Converte para OrderItem
       const mappedItems: OrderItem[] = checkoutItems.map((item) => ({
         productId: Number(item.productId) || 0,
         productName: item.productName,
@@ -604,9 +585,6 @@ export class Checkout implements OnInit, OnDestroy {
         sellerName: item.sellerName,
       }));
 
-      console.log('📦 OrderItems mapeados:', mappedItems);
-
-      // 🔥 Monta o pedido
       const orderData: Partial<Order> = {
         userId: String(this.currentUser.id),
         buyerName: this.currentUser.name,
@@ -638,17 +616,11 @@ export class Checkout implements OnInit, OnDestroy {
         createdAt: new Date(),
       };
 
-      // 🔥 1) Cria o pedido (OrderService dispara as notificações de compra/venda)
       const createdOrder = await firstValueFrom(
         this.orderService.createOrder(orderData)
       );
-
-      console.log('✅ Pedido criado:', createdOrder.id);
-
-      // 🔥 2) Processa pagamento (simulado) — o status vai para 'processing'
       await firstValueFrom(this.orderService.processPayment(createdOrder));
 
-      // ✅ Sucesso
       this.alertService.close();
       this.isProcessing = false;
       this.orderConfirmed = true;
@@ -661,7 +633,6 @@ export class Checkout implements OnInit, OnDestroy {
         5000,
       );
 
-      console.log('✅ Checkout finalizado com notificações enviadas');
     } catch (error: any) {
       console.error('❌ Erro no checkout:', error);
       this.alertService.close();

@@ -62,13 +62,10 @@ export class ProductDetail implements OnInit, OnDestroy {
     const user = this.authService.getCurrentUser();
     if (user) {
       this.currentUserId = String(user.id);
-      console.log('👤 ID do usuário logado:', this.currentUserId);
     }
 
     this.routeSub = this.route.params.subscribe((params) => {
       const id = params['id'];
-      console.log('🔍 ID do produto na rota:', id);
-
       if (id) {
         this.loadProduct(String(id));
       }
@@ -83,7 +80,6 @@ export class ProductDetail implements OnInit, OnDestroy {
 
   loadProduct(id: string): void {
     this.loading = true;
-    console.log(`🔍 Buscando produto com ID: ${id}`);
 
     this.productService.getProductById(id).subscribe({
       next: (product: Product) => {
@@ -93,7 +89,6 @@ export class ProductDetail implements OnInit, OnDestroy {
 
           if (product.seller) {
             this.sellerId = String(product.seller.id);
-            console.log('🆔 Seller ID do produto:', this.sellerId);
           }
 
           this.loadCategorySlug(product.category);
@@ -101,7 +96,6 @@ export class ProductDetail implements OnInit, OnDestroy {
           this.loadRelatedProducts(product.category, String(product.id));
           this.checkOwnership(product);
         } else {
-          console.log('❌ Produto não encontrado');
           this.router.navigate(['/home']);
         }
         this.loading = false;
@@ -118,21 +112,17 @@ export class ProductDetail implements OnInit, OnDestroy {
    * Busca o slug da categoria pelo nome
    */
   loadCategorySlug(categoryName: string): void {
-    console.log(`🔍 Buscando slug para categoria: "${categoryName}"`);
-
     this.categoryService.getCategories().subscribe({
       next: (categories) => {
         const category = categories.find(c => c.name === categoryName);
         if (category && category.slug) {
           this.categorySlug = category.slug;
-          console.log(`✅ Slug encontrado: "${this.categorySlug}"`);
         } else {
           this.categorySlug = categoryName
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
             .replace(/[^a-z0-9]+/g, '-');
-          console.log(`⚠️ Slug gerado: "${this.categorySlug}"`);
         }
       },
       error: (error) => {
@@ -146,42 +136,24 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * 🔥 Carrega informações do vendedor E BUSCA A LOJA PARA OBTER A LOGO
-   */
   loadSellerInfo(product: Product): void {
-    console.log('🔍 Carregando informações do vendedor...');
-    console.log('📦 Produto:', product);
-    console.log('👤 Seller atual:', product.seller);
-    console.log('🏪 Store ID:', product.storeId);
-
-    // 🔥 SEMPRE buscar a loja para obter a logo
     if (product.storeId) {
-      console.log('🔍 Buscando loja para storeId:', product.storeId);
       this.storeService.getStoreById(product.storeId).subscribe({
         next: (store) => {
-          console.log('🏪 Loja encontrada:', store);
           if (store) {
             this.store = store;
             this.storeLogo = store.logo || '';
             this.storeBanner = store.banner || '';
             this.sellerName = store.storeName || 'Vendedor';
 
-            console.log('📸 Logo da loja:', this.storeLogo ? 'Sim' : 'Não');
-            console.log('🖼️ Banner da loja:', this.storeBanner ? 'Sim' : 'Não');
-
-            // Verificar se é o dono
             const storeUserId = String(store.userId);
             this.isOwner = storeUserId === this.currentUserId;
-            console.log('👤 É o dono da loja?', this.isOwner);
 
-            // Buscar data de cadastro
             if (store.createdAt) {
               const date = new Date(store.createdAt);
               const month = String(date.getMonth() + 1).padStart(2, '0');
               const year = date.getFullYear();
               this.sellerMemberSince = `${month}/${year}`;
-              console.log('📅 Data de cadastro:', this.sellerMemberSince);
             } else {
               this.loadSellerMemberSince(storeUserId);
             }
@@ -193,29 +165,21 @@ export class ProductDetail implements OnInit, OnDestroy {
         },
       });
     } else {
-      // Sem storeId: usar dados do seller
       this.loadSellerFallback(product);
     }
   }
 
-  /**
-   * 🔥 Fallback: usar dados do seller quando não tiver loja
-   */
   private loadSellerFallback(product: Product): void {
-    console.log('⚠️ Usando fallback do seller');
-    
     if (product.seller) {
       const sellerId = String(product.seller.id);
       this.isOwner = sellerId === this.currentUserId;
       this.sellerName = product.seller.name || 'Vendedor';
 
-      // Verificar se o seller tem memberSince
       if (product.seller.memberSince) {
         const date = new Date(product.seller.memberSince);
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         this.sellerMemberSince = `${month}/${year}`;
-        console.log('📅 Data do seller:', this.sellerMemberSince);
       } else {
         this.loadSellerMemberSince(sellerId);
       }
@@ -226,12 +190,7 @@ export class ProductDetail implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Busca data de cadastro do vendedor
-   */
   loadSellerMemberSince(userId: string): void {
-    console.log(`📅 Buscando data de cadastro do usuário ${userId}...`);
-
     this.userService.getUserById(userId).subscribe({
       next: (user) => {
         if (user?.createdAt) {
@@ -239,7 +198,6 @@ export class ProductDetail implements OnInit, OnDestroy {
           const month = String(date.getMonth() + 1).padStart(2, '0');
           const year = date.getFullYear();
           this.sellerMemberSince = `${month}/${year}`;
-          console.log(`📅 Data de cadastro do vendedor: ${this.sellerMemberSince}`);
         } else {
           this.loadMemberSinceFromStore(userId);
         }
@@ -251,9 +209,6 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * 🔥 Busca data de cadastro da loja (fallback)
-   */
   private loadMemberSinceFromStore(userId: string): void {
     this.storeService.getStoreByUser(userId).subscribe({
       next: (store) => {
@@ -293,8 +248,6 @@ export class ProductDetail implements OnInit, OnDestroy {
       },
     });
   }
-
-  // ===== MÉTODOS DE EXIBIÇÃO =====
 
   getConditionClass(): string {
     return this.product?.condition === 'new' ? 'bg-success' : 'bg-warning';
@@ -371,30 +324,20 @@ export class ProductDetail implements OnInit, OnDestroy {
   goToStore(): void {
     const storeId = this.getStoreId();
     if (storeId) {
-      console.log(`🏪 Navegando para a loja ID: ${storeId}`);
       this.router.navigate(['/loja', storeId]);
     } else {
       this.alertService.warning('Loja não encontrada', 'Não foi possível encontrar a loja do vendedor.');
     }
   }
 
-  /**
-   * 🔥 Obtém a logo da loja
-   */
   getStoreLogo(): string {
     return this.storeLogo || '';
   }
 
-  /**
-   * 🔥 Verifica se tem logo
-   */
   hasLogo(): boolean {
     return !!this.storeLogo;
   }
 
-  /**
-   * 🔥 Obtém as iniciais do nome para fallback
-   */
   getInitials(name: string): string {
     if (!name) return '?';
     const words = name.trim().split(' ');
@@ -404,15 +347,10 @@ export class ProductDetail implements OnInit, OnDestroy {
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
-  /**
-   * 🔥 Trata erro ao carregar logo
-   */
   onLogoError(): void {
     console.warn('⚠️ Erro ao carregar logo da loja');
     this.storeLogo = '';
   }
-
-  // ===== MÉTODOS DE AÇÃO =====
 
   addToCart(): void {
     if (this.product) {
