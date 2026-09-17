@@ -62,9 +62,6 @@ export class CreateStore implements OnInit, OnDestroy {
     private cepService: CepService
   ) {}
 
-  /**
-   * 🔥 Getter que GARANTE que socialMedia sempre existe (para o template)
-   */
   get socialMedia(): StoreSocialMedia {
     if (!this.storeData.socialMedia) {
       this.storeData.socialMedia = {
@@ -76,9 +73,6 @@ export class CreateStore implements OnInit, OnDestroy {
     return this.storeData.socialMedia;
   }
 
-  /**
-   * 🔥 Getter que GARANTE que address sempre existe (para o template)
-   */
   get address() {
     return this.storeData.address;
   }
@@ -232,7 +226,6 @@ export class CreateStore implements OnInit, OnDestroy {
     this.loading = true;
     this.alertService.info('Criando loja...', 'Por favor, aguarde um momento.');
 
-    // 🔥 Garantir que socialMedia tem valores e category padrão
     const storeDataWithDefaults: StoreForm = {
       ...this.storeData,
       category: this.storeData.category || 'Outros',

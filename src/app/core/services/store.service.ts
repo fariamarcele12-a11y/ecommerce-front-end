@@ -76,9 +76,6 @@ export class StoreService {
     );
   }
 
-  /**
-   * Busca a loja do usuário
-   */
   getStoreByUser(userId: number | string): Observable<Store | null> {
     const id = String(userId);
     return this.http.get<Store[]>(`${this.apiUrl}?userId=${id}`).pipe(
@@ -270,7 +267,6 @@ export class StoreService {
           storeName: storeData.storeName,
           description: storeData.description,
           category: storeData.category,
-          // 🔥 LOGO E BANNER - Garantir que sejam salvos
           logo: storeData.logo || 'https://via.placeholder.com/200x200/667eea/ffffff?text=Loja',
           banner: storeData.banner || 'https://via.placeholder.com/1200x400/667eea/ffffff?text=Banner',
           documentType: user.documentType,

@@ -16,7 +16,6 @@ export class CookieConsent implements OnInit, OnDestroy {
   showBanner = false;
   showPreferences = false;
 
-  // 🔥 Usando CookieConsentSettings em vez de CookieConsent
   consent: CookieConsentSettings = {
     necessary: true,
     preferences: false,
@@ -51,36 +50,24 @@ export class CookieConsent implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
-  /**
-   * 🔥 Aceita todos os cookies
-   */
   acceptAll(): void {
     this.cookieService.acceptAll();
     this.showBanner = false;
     this.showPreferences = false;
   }
 
-  /**
-   * 🔥 Recusa todos os cookies (exceto necessários)
-   */
   rejectAll(): void {
     this.cookieService.rejectAll();
     this.showBanner = false;
     this.showPreferences = false;
   }
 
-  /**
-   * 🔥 Salva preferências personalizadas
-   */
   savePreferences(): void {
     this.cookieService.savePreferences(this.consent);
     this.showBanner = false;
     this.showPreferences = false;
   }
 
-  /**
-   * 🔥 Abre o modal de preferências
-   */
   openPreferences(): void {
     const currentConsent = this.cookieService.getConsent();
     if (currentConsent) {
@@ -89,16 +76,10 @@ export class CookieConsent implements OnInit, OnDestroy {
     this.showPreferences = true;
   }
 
-  /**
-   * 🔥 Fecha o modal de preferências
-   */
   closePreferences(): void {
     this.showPreferences = false;
   }
 
-  /**
-   * 🔥 Verifica se o cookie de uma categoria é permitido
-   */
   isCategoryAllowed(category: 'necessary' | 'preferences' | 'analytics' | 'marketing'): boolean {
     return this.cookieService.isCategoryAllowed(category);
   }

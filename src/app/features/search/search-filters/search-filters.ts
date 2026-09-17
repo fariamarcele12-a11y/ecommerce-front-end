@@ -163,9 +163,6 @@ export class SearchFilters implements OnInit, OnChanges {
     this.filtersChange.emit(this.filters);
   }
 
-  /**
-   * 🔥 Categoria alterada - emite o SLUG
-   */
   onCategoryChange(slug: string): void {
     if (slug) {
       this.filters.category = slug;

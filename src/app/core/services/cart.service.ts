@@ -38,9 +38,6 @@ export interface ServerCart {
   }[];
 }
 
-/**
- * 🔥 Estrutura pronta para o checkout (com sellerId)
- */
 export interface CheckoutItem {
   productId: string;
   productName: string;
@@ -106,9 +103,6 @@ export class CartService {
     return this.couponCode.asObservable();
   }
 
-  /**
-   * 🔥 Retorna os itens formatados para o checkout (com sellerId)
-   */
   getCheckoutItems(): CheckoutItem[] {
     return this.cartItems.value.map((item) => {
       const product = item.product;
@@ -335,13 +329,6 @@ export class CartService {
     return item ? item.quantity : 0;
   }
 
-  // ============================================
-  // 🔥 HELPERS PARA O CHECKOUT (sellerId)
-  // ============================================
-
-  /**
-   * 🔥 Extrai o sellerId do PRODUTO (lida com seller.id aninhado)
-   */
   private getSellerIdFromProduct(product: Product): string {
     const p: any = product || {};
     return String(
@@ -354,37 +341,24 @@ export class CartService {
     );
   }
 
-  /**
-   * 🔥 Extrai o sellerName do PRODUTO (lida com seller.name aninhado)
-   */
   private getSellerNameFromProduct(product: Product): string {
     const p: any = product || {};
     return (
-      p.seller?.name ||     // 🔥 SEU CASO: seller.name
-      p.sellerName ||       // fallback 1
-      p.storeName ||        // fallback 2
-      p.ownerName ||        // fallback 3
-      'Vendedor'            // último recurso
+      p.seller?.name ||
+      p.sellerName ||
+      p.storeName ||
+      p.ownerName ||
+      'Vendedor'
     );
   }
 
-  /**
-   * 🔥 Extrai o sellerId de um ITEM do carrinho
-   */
   private getSellerIdFromItem(item: CartItem): string {
     return this.getSellerIdFromProduct(item.product);
   }
 
-  /**
-   * 🔥 Extrai o sellerName de um ITEM do carrinho
-   */
   private getSellerNameFromItem(item: CartItem): string {
     return this.getSellerNameFromProduct(item.product);
   }
-
-  // ============================================
-  // MÉTODOS PRIVADOS
-  // ============================================
 
   private updateCart(items: CartItem[]): void {
     items.forEach((item) => {
@@ -411,7 +385,6 @@ export class CartService {
 
   private saveCartToStorage(items: CartItem[]): void {
     try {
-      // 🔥 Salva o produto COMPLETO (inclui seller aninhado) + quantity
       const cartData = items.map((item) => ({
         product: item.product,
         quantity: item.quantity,

@@ -112,9 +112,6 @@ export class Navbar implements OnInit, OnDestroy {
     this.isScrolled = window.scrollY > 50;
   }
 
-  /**
-   * 🔥 Fecha notificações ao clicar fora
-   */
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (!target.closest('.notifications-dropdown')) {
@@ -126,7 +123,6 @@ export class Navbar implements OnInit, OnDestroy {
     event.stopPropagation();
     this.showNotifications = !this.showNotifications;
 
-    // 🔥 Recarregar ao abrir (força atualização)
     if (this.showNotifications) {
       this.notificationService.loadNotifications(true);
     }
@@ -141,7 +137,6 @@ export class Navbar implements OnInit, OnDestroy {
 
     this.showNotifications = false;
 
-    // 🔥 Navegar para o link
     if (notification.link) {
       this.router.navigateByUrl(notification.link);
     }

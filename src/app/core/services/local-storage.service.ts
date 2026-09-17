@@ -20,7 +20,6 @@ export class LocalStorageService {
     const platformId = inject(PLATFORM_ID);
     this.isBrowser = isPlatformBrowser(platformId);
 
-    // 🔥 Escutar mudanças de storage entre abas/janelas
     if (this.isBrowser) {
       window.addEventListener('storage', (event) => {
         this.storageChanges.next({
@@ -32,16 +31,10 @@ export class LocalStorageService {
     }
   }
 
-  /**
-   * 🔥 Observable para escutar mudanças no storage
-   */
   getStorageChanges(): Observable<StorageChangeEvent | null> {
     return this.storageChanges.asObservable();
   }
 
-  /**
-   * Obtém um item do localStorage
-   */
   getItem(key: string): string | null {
     if (this.isBrowser) {
       return localStorage.getItem(key);
@@ -49,9 +42,6 @@ export class LocalStorageService {
     return null;
   }
 
-  /**
-   * Define um item no localStorage
-   */
   setItem(key: string, value: string): void {
     if (this.isBrowser) {
       const oldValue = localStorage.getItem(key);
@@ -65,9 +55,6 @@ export class LocalStorageService {
     }
   }
 
-  /**
-   * Remove um item do localStorage
-   */
   removeItem(key: string): void {
     if (this.isBrowser) {
       const oldValue = localStorage.getItem(key);
@@ -80,9 +67,6 @@ export class LocalStorageService {
     }
   }
 
-  /**
-   * Limpa todos os itens do localStorage
-   */
   clear(): void {
     if (this.isBrowser) {
       localStorage.clear();
@@ -94,9 +78,6 @@ export class LocalStorageService {
     }
   }
 
-  /**
-   * Verifica se existe um item no localStorage
-   */
   hasItem(key: string): boolean {
     if (this.isBrowser) {
       return localStorage.getItem(key) !== null;
@@ -104,9 +85,6 @@ export class LocalStorageService {
     return false;
   }
 
-  /**
-   * Obtém um item do localStorage e faz parse como JSON
-   */
   getJSON<T>(key: string): T | null {
     const item = this.getItem(key);
     if (item) {
@@ -120,9 +98,6 @@ export class LocalStorageService {
     return null;
   }
 
-  /**
-   * Define um item no localStorage como JSON
-   */
   setJSON<T>(key: string, value: T): void {
     try {
       const oldValue = this.getItem(key);
@@ -133,17 +108,11 @@ export class LocalStorageService {
     }
   }
 
-  /**
-   * Obtém um item do localStorage com fallback
-   */
   getItemWithFallback<T>(key: string, fallback: T): T {
     const item = this.getJSON<T>(key);
     return item !== null ? item : fallback;
   }
 
-  /**
-   * 🔥 Obtém todos os itens do localStorage como objeto
-   */
   getAll(): Record<string, string> {
     if (!this.isBrowser) return {};
 
@@ -157,9 +126,6 @@ export class LocalStorageService {
     return result;
   }
 
-  /**
-   * 🔥 Obtém todos os itens do localStorage como JSON
-   */
   getAllJSON(): Record<string, unknown> {
     const items = this.getAll();
     const result: Record<string, unknown> = {};
@@ -173,16 +139,10 @@ export class LocalStorageService {
     return result;
   }
 
-  /**
-   * 🔥 Remove múltiplos itens do localStorage
-   */
   removeItems(keys: string[]): void {
     keys.forEach(key => this.removeItem(key));
   }
 
-  /**
-   * 🔥 Verifica se o localStorage está disponível
-   */
   isAvailable(): boolean {
     if (!this.isBrowser) return false;
 
@@ -196,9 +156,6 @@ export class LocalStorageService {
     }
   }
 
-  /**
-   * 🔥 Obtém o espaço utilizado no localStorage (em bytes)
-   */
   getUsedSpace(): number {
     if (!this.isBrowser) return 0;
 
@@ -213,16 +170,10 @@ export class LocalStorageService {
     return total;
   }
 
-  /**
-   * 🔥 Prefixa uma chave (útil para namespaces)
-   */
   prefixedKey(prefix: string, key: string): string {
     return `${prefix}:${key}`;
   }
 
-  /**
-   * 🔥 Busca todas as chaves com um prefixo específico
-   */
   getKeysWithPrefix(prefix: string): string[] {
     if (!this.isBrowser) return [];
 
@@ -236,17 +187,11 @@ export class LocalStorageService {
     return keys;
   }
 
-  /**
-   * 🔥 Remove todos os itens com um prefixo específico
-   */
   removeItemsWithPrefix(prefix: string): void {
     const keys = this.getKeysWithPrefix(prefix);
     this.removeItems(keys);
   }
 
-  /**
-   * 🔥 Obtém itens com um prefixo específico
-   */
   getItemsWithPrefix<T>(prefix: string): Record<string, T> {
     const keys = this.getKeysWithPrefix(prefix);
     const result: Record<string, T> = {};

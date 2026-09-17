@@ -219,9 +219,6 @@ export class Store implements OnInit {
     this.logoRemoved = true;
   }
 
-  /**
-   * 🔥 Quando o banner é atualizado
-   */
   onBannerUploaded(base64: string): void {
     this.editForm.banner = base64;
     this.bannerRemoved = false;
@@ -306,14 +303,7 @@ export class Store implements OnInit {
     return this.cepService.formatarCep(value);
   }
 
-  /**
-   * 🔥 Formata telefone COM LIMITE de caracteres
-   * Formatos aceitos:
-   * - Fixo: (00) 0000-0000 (14 caracteres)
-   * - Celular: (00) 00000-0000 (15 caracteres)
-   */
   formatPhone(value: string): string {
-    // 🔥 Limitar a 11 dígitos (DDD + 9 dígitos)
     const numbers = value.replace(/\D/g, '').slice(0, 11);
 
     if (numbers.length === 0) return '';
@@ -322,10 +312,8 @@ export class Store implements OnInit {
       return numbers.replace(/(\d{2})(\d{1,4})/, '($1) $2');
     }
     if (numbers.length <= 10) {
-      // Telefone fixo: (00) 0000-0000
       return numbers.replace(/(\d{2})(\d{4})(\d{1,4})/, '($1) $2-$3');
     }
-    // Celular: (00) 00000-0000
     return numbers.replace(/(\d{2})(\d{5})(\d{1,4})/, '($1) $2-$3');
   }
 

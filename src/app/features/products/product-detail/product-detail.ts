@@ -108,9 +108,6 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Busca o slug da categoria pelo nome
-   */
   loadCategorySlug(categoryName: string): void {
     this.categoryService.getCategories().subscribe({
       next: (categories) => {

@@ -26,10 +26,9 @@ export class NotificationService implements OnDestroy {
   private isBrowser: boolean;
   private pollingInterval: any = null;
 
-  // 🔥 Evita chamadas repetidas desnecessárias
   private isLoading = false;
   private lastLoadTime = 0;
-  private readonly MIN_LOAD_INTERVAL = 2000; // 2 segundos entre cargas
+  private readonly MIN_LOAD_INTERVAL = 2000;
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -45,13 +44,6 @@ export class NotificationService implements OnDestroy {
     this.stopPolling();
   }
 
-  // ============================================
-  // 🔥 CARREGAR NOTIFICAÇÕES
-  // ============================================
-
-  /**
-   * 🔥 Carrega notificações do usuário logado
-   */
   loadNotifications(force: boolean = false): void {
     const user = this.authService.getCurrentUser();
 
@@ -61,7 +53,6 @@ export class NotificationService implements OnDestroy {
       return;
     }
 
-    // 🔥 Evitar spam de requisições (a menos que force = true)
     const now = Date.now();
     if (!force && (this.isLoading || now - this.lastLoadTime < this.MIN_LOAD_INTERVAL)) {
       return;
@@ -70,7 +61,6 @@ export class NotificationService implements OnDestroy {
     this.isLoading = true;
     this.lastLoadTime = now;
 
-    // 🔥 AJUSTE 1: força String(user.id) para bater com o userId salvo (sempre string)
     this.http
       .get<Notification[]>(
         `${this.apiUrl}?userId=${String(user.id)}&_sort=createdAt&_order=desc&_limit=20`
@@ -79,7 +69,6 @@ export class NotificationService implements OnDestroy {
         map((notifications) => {
           if (!Array.isArray(notifications)) return [];
 
-          // 🔥 Ordenar: não lidas primeiro, depois por data (mais recentes)
           return notifications.sort((a, b) => {
             if (a.read !== b.read) return a.read ? 1 : -1;
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -99,13 +88,6 @@ export class NotificationService implements OnDestroy {
       });
   }
 
-  // ============================================
-  // 🔥 CRIAR NOTIFICAÇÃO
-  // ============================================
-
-  /**
-   * 🔥 Cria uma nova notificação
-   */
   createNotification(
     userId: string,
     type: 'message' | 'order' | 'sale' | 'review' | 'system',
@@ -174,7 +156,6 @@ export class NotificationService implements OnDestroy {
 
     if (unread.length === 0) return;
 
-    // 🔥 Atualizar localmente IMEDIATAMENTE (otimista)
     const updated = this.notificationsSubject.value.map((n) => ({
       ...n,
       read: true,
@@ -182,7 +163,6 @@ export class NotificationService implements OnDestroy {
     this.notificationsSubject.next(updated);
     this.unreadCountSubject.next(0);
 
-    // 🔥 Enviar para a API em paralelo
     const requests = unread.map((n) =>
       this.http.patch(`${this.apiUrl}/${n.id}`, { read: true }).pipe(
         catchError((error) => {
@@ -198,15 +178,7 @@ export class NotificationService implements OnDestroy {
     });
   }
 
-  // ============================================
-  // 🔥 REMOVER NOTIFICAÇÃO
-  // ============================================
-
-  /**
-   * 🔥 Remove uma notificação
-   */
   deleteNotification(notificationId: string): Observable<void> {
-    // 🔥 Remover localmente IMEDIATAMENTE (otimista)
     const previous = this.notificationsSubject.value;
     const updated = previous.filter((n) => n.id !== notificationId);
 
@@ -217,7 +189,6 @@ export class NotificationService implements OnDestroy {
       catchError((error) => {
         console.error('❌ Erro ao remover notificação:', error);
 
-        // 🔥 Restaurar em caso de erro (exceto 404)
         if (error.status !== 404) {
           this.notificationsSubject.next(previous);
           this.unreadCountSubject.next(
@@ -229,18 +200,13 @@ export class NotificationService implements OnDestroy {
     );
   }
 
-  /**
-   * 🔥 Remove todas as notificações
-   */
   clearAll(): void {
     const current = this.notificationsSubject.value;
     if (current.length === 0) return;
 
-    // 🔥 Limpar localmente IMEDIATAMENTE
     this.notificationsSubject.next([]);
     this.unreadCountSubject.next(0);
 
-    // 🔥 Enviar deletes em paralelo
     const requests = current.map((n) =>
       this.http.delete(`${this.apiUrl}/${n.id}`).pipe(
         catchError((error) => {
@@ -256,12 +222,8 @@ export class NotificationService implements OnDestroy {
     });
   }
 
-  // ============================================
-  // 🔥 MÉTODOS ESPECÍFICOS POR TIPO
-  // ============================================
-
   /**
-   * 🔥 Cria notificação de NOVA MENSAGEM
+   * Cria notificação de NOVA MENSAGEM
    * @param sellerId - quem VAI RECEBER (dono do produto)
    * @param buyerId - quem ENVIOU
    * @param buyerName - nome de quem enviou
@@ -280,7 +242,6 @@ export class NotificationService implements OnDestroy {
       return;
     }
 
-    // 🔥 Notificar o VENDEDOR
     this.createNotification(
       String(sellerId),
       'message',
@@ -291,9 +252,6 @@ export class NotificationService implements OnDestroy {
     ).subscribe();
   }
 
-  /**
-   * 🔥 Cria notificação de NOVA VENDA (para o vendedor)
-   */
   notifyNewSale(
     sellerId: string,
     buyerName: string,
@@ -306,7 +264,6 @@ export class NotificationService implements OnDestroy {
       return;
     }
 
-    // 🔥 AJUSTE 2: força String(sellerId) para bater com o userId salvo (sempre string)
     this.createNotification(
       String(sellerId),
       'sale',
@@ -317,9 +274,6 @@ export class NotificationService implements OnDestroy {
     ).subscribe();
   }
 
-  /**
-   * 🔥 Cria notificação de COMPRA CONFIRMADA (para o comprador)
-   */
   notifyOrderConfirmed(
     buyerId: string,
     productName: string,
@@ -341,9 +295,6 @@ export class NotificationService implements OnDestroy {
     ).subscribe();
   }
 
-  /**
-   * 🔥 Cria notificação de NOVA AVALIAÇÃO (para o vendedor)
-   */
   notifyNewReview(
     sellerId: string,
     reviewerName: string,
@@ -365,9 +316,6 @@ export class NotificationService implements OnDestroy {
     ).subscribe();
   }
 
-  /**
-   * 🔥 Cria notificação de SISTEMA (mensagens genéricas)
-   */
   notifySystem(
     userId: string,
     title: string,
@@ -377,13 +325,6 @@ export class NotificationService implements OnDestroy {
     this.createNotification(String(userId), 'system', title, message, link).subscribe();
   }
 
-  // ============================================
-  // 🔥 HELPERS
-  // ============================================
-
-  /**
-   * 🔥 Retorna o ícone baseado no tipo
-   */
   private getIconByType(type: string): string {
     switch (type) {
       case 'message':
@@ -401,9 +342,6 @@ export class NotificationService implements OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Formata preço
-   */
   private formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -411,21 +349,11 @@ export class NotificationService implements OnDestroy {
     }).format(price);
   }
 
-  /**
-   * 🔥 Limpa todas as notificações do subject (útil no logout)
-   */
   clearLocal(): void {
     this.notificationsSubject.next([]);
     this.unreadCountSubject.next(0);
   }
 
-  // ============================================
-  // 🔥 POLLING
-  // ============================================
-
-  /**
-   * 🔥 Inicia polling para novas notificações (a cada 30s)
-   */
   private startPolling(): void {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
@@ -436,12 +364,9 @@ export class NotificationService implements OnDestroy {
       if (user?.id) {
         this.loadNotifications(true);
       }
-    }, 30000); // 30 segundos
+    }, 30000);
   }
 
-  /**
-   * 🔥 Para o polling (chamar no ngOnDestroy)
-   */
   private stopPolling(): void {
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);

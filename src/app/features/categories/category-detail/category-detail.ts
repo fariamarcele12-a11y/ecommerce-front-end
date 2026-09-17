@@ -82,9 +82,6 @@ export class CategoryDetail implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * 🔥 Atualiza a contagem de produtos da categoria
-   */
   private updateCategoryCount(category: Category): void {
     if (this.isUpdatingCount) return;
     this.isUpdatingCount = true;
@@ -99,7 +96,6 @@ export class CategoryDetail implements OnInit, OnDestroy {
       error: (error) => {
         this.isUpdatingCount = false;
         console.error('❌ Erro ao atualizar contagem:', error);
-        // Não mostrar erro para o usuário, apenas log
       }
     });
   }

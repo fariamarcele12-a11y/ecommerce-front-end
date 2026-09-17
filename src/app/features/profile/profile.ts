@@ -63,9 +63,6 @@ export class Profile implements OnInit {
     this.loadUserData();
   }
 
-  /**
-   * 🔥 Carrega os dados do usuário
-   */
   loadUserData(): void {
     this.loading = true;
     const user = this.authService.getCurrentUser();
@@ -80,14 +77,13 @@ export class Profile implements OnInit {
     this.user = user;
     this.hasStore = user.hasStore || false;
 
-    // 🔥 Preencher o formulário
     this.profileData = {
       name: user.name || '',
       email: user.email || '',
       phone: user.phone || '',
       document: user.document || '',
       documentType: user.documentType || 'pf',
-      avatar: (user as any).avatar || '', // 🔥 Carregar avatar
+      avatar: (user as any).avatar || '',
       address: {
         street: user.address?.street || '',
         number: user.address?.number || '',
@@ -100,7 +96,6 @@ export class Profile implements OnInit {
       },
     };
 
-    // 🔥 Dados específicos
     if (user.documentType === 'pf') {
       this.birthDate = user.birthDate || '';
       this.companyName = '';
@@ -112,7 +107,6 @@ export class Profile implements OnInit {
       this.profileData.name = user.name || user.companyName || '';
     }
 
-    // 🔥 Buscar dados da loja se tiver
     if (this.hasStore && user.storeId) {
       this.storeService.getStoreById(user.storeId).subscribe({
         next: (store) => {

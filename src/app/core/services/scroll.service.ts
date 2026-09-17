@@ -7,7 +7,6 @@ import { filter } from 'rxjs/operators';
 })
 export class ScrollService {
   constructor(private router: Router) {
-    // Scroll para o topo em toda navegação
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {
@@ -15,16 +14,10 @@ export class ScrollService {
     });
   }
 
-  /**
-   * Scroll para o topo da página
-   */
   scrollToTop(behavior: ScrollBehavior = 'smooth'): void {
     window.scrollTo({ top: 0, behavior });
   }
 
-  /**
-   * Scroll para um elemento específico
-   */
   scrollToElement(elementId: string, behavior: ScrollBehavior = 'smooth'): void {
     const element = document.getElementById(elementId);
     if (element) {
@@ -32,9 +25,6 @@ export class ScrollService {
     }
   }
 
-  /**
-   * Scroll para uma posição específica
-   */
   scrollToPosition(y: number, behavior: ScrollBehavior = 'smooth'): void {
     window.scrollTo({ top: y, behavior });
   }

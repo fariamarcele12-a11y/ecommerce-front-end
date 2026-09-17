@@ -40,10 +40,8 @@ export class Register {
     }
   };
 
-  // Campos específicos PF
   birthDate = '';
 
-  // Campos específicos PJ
   companyName = '';
   tradeName = '';
 
@@ -53,10 +51,8 @@ export class Register {
   showConfirmPassword = false;
   formSubmitted = false;
 
-  // 🔥 Controle de validação do documento
   documentError: string = '';
 
-  // 🔥 Getter com asserção de não-nulo
   get address() {
     return this.credentials.address!;
   }
@@ -81,15 +77,11 @@ export class Register {
     }
   }
 
-  /**
-   * 🔥 Valida o documento enquanto o usuário digita
-   */
   onDocumentChange(value: string): void {
     this.credentials.document = this.formatDocument(value);
 
     const cleanDoc = value.replace(/\D/g, '');
 
-    // Só valida quando tiver o tamanho completo
     if (this.documentType === 'pf' && cleanDoc.length === 11) {
       const isValid = DocumentValidator.isValidCPF(cleanDoc);
       if (!isValid) {

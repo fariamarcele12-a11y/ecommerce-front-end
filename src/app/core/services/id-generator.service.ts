@@ -6,9 +6,6 @@ import { Injectable } from '@angular/core';
 })
 export class IdGeneratorService {
 
-  /**
-   * 🔥 Gera um ID único no formato UUID v4
-   */
   generateUUID(): string {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       const r = Math.random() * 16 | 0;
@@ -17,9 +14,6 @@ export class IdGeneratorService {
     });
   }
 
-  /**
-   * 🔥 Gera um ID curto (8 caracteres) para exibição
-   */
   generateShortId(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
@@ -29,54 +23,36 @@ export class IdGeneratorService {
     return result;
   }
 
-  /**
-   * 🔥 Gera um ID para produto
-   */
   generateProductId(): string {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 8);
     return `PROD-${timestamp}-${random}`;
   }
 
-  /**
-   * 🔥 Gera um ID para loja
-   */
   generateStoreId(): string {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 6);
     return `STR-${timestamp}-${random}`;
   }
 
-  /**
-   * 🔥 Gera um ID para mensagens do chat
-   */
   generateMessageId(): string {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 6);
     return `MSG-${timestamp}-${random}`;
   }
 
-  /**
-   * 🔥 Gera um ID para pedidos
-   */
   generateOrderId(): string {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 4);
     return `ORD-${timestamp}-${random}`;
   }
 
-  /**
-   * 🔥 Gera um ID para categorias
-   */
   generateCategoryId(): string {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 6);
     return `CAT-${timestamp}-${random}`;
   }
 
-  /**
-   * 🔥 Gera um ID para cupons
-   */
   generateCouponId(): string {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 6);

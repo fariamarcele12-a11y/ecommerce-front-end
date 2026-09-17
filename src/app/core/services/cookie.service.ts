@@ -38,9 +38,6 @@ export class CookieService {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
 
-  /**
-   * 🔥 Define um cookie
-   */
   setCookie(name: string, value: string, options?: CookieOptions): void {
     if (!this.isBrowser) return;
 
@@ -76,9 +73,6 @@ export class CookieService {
     document.cookie = cookieString;
   }
 
-  /**
-   * 🔥 Obtém um cookie
-   */
   getCookie(name: string): string | null {
     if (!this.isBrowser) return null;
 
@@ -92,9 +86,6 @@ export class CookieService {
     return null;
   }
 
-  /**
-   * 🔥 Remove um cookie
-   */
   deleteCookie(name: string, path?: string): void {
     if (!this.isBrowser) return;
 
@@ -106,16 +97,10 @@ export class CookieService {
     this.setCookie(name, '', options);
   }
 
-  /**
-   * 🔥 Verifica se um cookie existe
-   */
   hasCookie(name: string): boolean {
     return this.getCookie(name) !== null;
   }
 
-  /**
-   * 🔥 Salva o consentimento do usuário
-   */
   saveConsent(consent: CookieConsentSettings): void {
     const value = JSON.stringify(consent);
     const options: CookieOptions = {
@@ -125,9 +110,6 @@ export class CookieService {
     this.setCookie(this.CONSENT_COOKIE_NAME, value, options);
   }
 
-  /**
-   * 🔥 Obtém o consentimento do usuário
-   */
   getConsent(): CookieConsentSettings | null {
     const consent = this.getCookie(this.CONSENT_COOKIE_NAME);
     if (consent) {
@@ -141,17 +123,11 @@ export class CookieService {
     return null;
   }
 
-  /**
-   * 🔥 Verifica se o usuário aceitou os cookies
-   */
   hasConsent(): boolean {
     const consent = this.getConsent();
     return consent?.accepted || false;
   }
 
-  /**
-   * 🔥 Verifica se uma categoria específica de cookie é permitida
-   */
   isCategoryAllowed(category: 'necessary' | 'preferences' | 'analytics' | 'marketing'): boolean {
     const consent = this.getConsent();
     if (!consent) return false;
@@ -161,9 +137,6 @@ export class CookieService {
     return consent[category] || false;
   }
 
-  /**
-   * 🔥 Aceita todos os cookies
-   */
   acceptAll(): void {
     const consent: CookieConsentSettings = {
       necessary: true,
@@ -176,9 +149,6 @@ export class CookieService {
     this.saveConsent(consent);
   }
 
-  /**
-   * 🔥 Recusa todos os cookies (exceto os necessários)
-   */
   rejectAll(): void {
     const consent: CookieConsentSettings = {
       necessary: true,
@@ -191,9 +161,6 @@ export class CookieService {
     this.saveConsent(consent);
   }
 
-  /**
-   * 🔥 Salva preferências personalizadas
-   */
   savePreferences(preferences: Partial<CookieConsentSettings>): void {
     const currentConsent = this.getConsent() || {
       necessary: true,

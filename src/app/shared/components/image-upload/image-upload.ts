@@ -37,9 +37,6 @@ export class ImageUpload implements OnInit, OnChanges {
     this.previewUrl = this.currentImage || this.placeholder;
   }
 
-  /**
-   * 🔥 Detecta mudanças no currentImage
-   */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['currentImage']) {
       const newValue = changes['currentImage'].currentValue;

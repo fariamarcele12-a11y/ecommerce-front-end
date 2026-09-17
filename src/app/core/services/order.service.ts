@@ -25,15 +25,11 @@ export class OrderService {
     const platformId = inject(PLATFORM_ID);
     this.isBrowser = isPlatformBrowser(platformId);
 
-    // Carregar pedidos do localStorage apenas no navegador
     if (this.isBrowser) {
       this.loadOrdersFromStorage();
     }
   }
 
-  /**
-   * Busca todos os pedidos do usuário
-   */
   getOrders(filters?: OrderFilter): Observable<Order[]> {
     let url = this.apiUrl;
     const params: string[] = [];
@@ -74,9 +70,6 @@ export class OrderService {
     );
   }
 
-  /**
-   * Busca pedidos do usuário atual
-   */
   getMyOrders(userId: string): Observable<Order[]> {
     return this.http
       .get<Order[]>(`${this.apiUrl}?userId=${userId}&_sort=createdAt&_order=desc`)
@@ -91,9 +84,6 @@ export class OrderService {
       );
   }
 
-  /**
-   * 🔥 Busca pedidos onde o usuário é VENDEDOR (para tela "Minhas Vendas")
-   */
   getSellerOrders(sellerId: string): Observable<Order[]> {
     // JSON Server não faz query aninhada em arrays, então filtramos no cliente
     return this.http.get<Order[]>(`${this.apiUrl}?_sort=createdAt&_order=desc`).pipe(
@@ -108,9 +98,6 @@ export class OrderService {
     );
   }
 
-  /**
-   * Busca pedido por ID
-   */
   getOrderById(orderId: string): Observable<Order | undefined> {
     const cachedOrder = this.orders.value.find((o) => o.id === orderId);
     if (cachedOrder) {
@@ -135,9 +122,6 @@ export class OrderService {
     );
   }
 
-  /**
-   * 🔥 Cria um novo pedido E dispara notificações para comprador e vendedor
-   */
   createOrder(orderData: Partial<Order>): Observable<Order> {
     const newOrder: Order = {
       id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -165,16 +149,12 @@ export class OrderService {
           this.saveOrdersToStorage([createdOrder, ...currentOrders]);
         }
 
-        // 🔥 DISPARA NOTIFICAÇÕES PARA COMPRADOR E VENDEDOR
         this.dispatchOrderNotifications(createdOrder);
       }),
       catchError(this.handleError),
     );
   }
 
-  /**
-   * 🔔 Dispara notificações de compra/venda usando o NotificationService
-   */
   private dispatchOrderNotifications(order: Order): void {
     const items: any[] = order.items || [];
 
@@ -213,7 +193,6 @@ export class OrderService {
         sellerTotal
       );
 
-      // 🔔 Notifica VENDEDOR
       this.notificationService.notifyNewSale(
         sellerId,
         buyerName,
@@ -295,7 +274,6 @@ export class OrderService {
 
     const msgs = statusMessages[status];
 
-    // 🔔 Comprador
     this.notificationService
       .createNotification(
         buyerId,
@@ -307,7 +285,6 @@ export class OrderService {
       )
       .subscribe();
 
-    // 🔔 Vendedor
     this.notificationService
       .createNotification(
         sellerId,
@@ -320,9 +297,6 @@ export class OrderService {
       .subscribe();
   }
 
-  /**
-   * Adiciona número de rastreio ao pedido
-   */
   addTrackingCode(orderId: string, trackingCode: string): Observable<Order> {
     return this.http
       .patch<Order>(`${this.apiUrl}/${orderId}`, {
@@ -332,30 +306,18 @@ export class OrderService {
       .pipe(catchError(this.handleError));
   }
 
-  /**
-   * Cancela um pedido
-   */
   cancelOrder(orderId: string): Observable<Order> {
     return this.updateOrderStatus(orderId, 'cancelled');
   }
 
-  /**
-   * Busca o pedido atual
-   */
   getCurrentOrder(): Observable<Order | null> {
     return this.currentOrder.asObservable();
   }
 
-  /**
-   * Limpa o pedido atual
-   */
   clearCurrentOrder(): void {
     this.currentOrder.next(null);
   }
 
-  /**
-   * Remove um pedido (apenas admin)
-   */
   deleteOrder(orderId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${orderId}`).pipe(
       tap(() => {
@@ -369,9 +331,6 @@ export class OrderService {
     );
   }
 
-  /**
-   * Retorna os métodos de pagamento disponíveis
-   */
   getPaymentMethods(): PaymentMethod[] {
     return [
       {
@@ -402,9 +361,6 @@ export class OrderService {
     ];
   }
 
-  /**
-   * Processa o pagamento (simulação)
-   */
   processPayment(
     order: Order,
   ): Observable<{ success: boolean; message: string; transactionId?: string }> {
@@ -418,7 +374,6 @@ export class OrderService {
             transactionId: `TXN-${Date.now()}`,
           });
 
-          // Atualizar status do pedido (isso já dispara notificações)
           this.updateOrderStatus(order.id, 'processing').subscribe();
         } else {
           observer.next({
@@ -431,9 +386,6 @@ export class OrderService {
     });
   }
 
-  /**
-   * Simula pagamento com cartão
-   */
   processCardPayment(
     order: Order,
     cardData: CardData,
@@ -462,9 +414,6 @@ export class OrderService {
     return this.processPayment(order);
   }
 
-  /**
-   * Simula pagamento com PIX
-   */
   processPixPayment(
     order: Order,
   ): Observable<{ success: boolean; message: string; qrCode?: string; transactionId?: string }> {
@@ -481,9 +430,6 @@ export class OrderService {
     return of(result);
   }
 
-  /**
-   * Simula pagamento com Boleto
-   */
   processBoletoPayment(
     order: Order,
   ): Observable<{ success: boolean; message: string; boletoUrl?: string; transactionId?: string }> {
@@ -499,9 +445,6 @@ export class OrderService {
     return of(result);
   }
 
-  /**
-   * Salva pedidos no localStorage
-   */
   private saveOrdersToStorage(orders: Order[]): void {
     if (!this.isBrowser) return;
 
@@ -512,9 +455,6 @@ export class OrderService {
     }
   }
 
-  /**
-   * Carrega pedidos do localStorage
-   */
   private loadOrdersFromStorage(): void {
     if (!this.isBrowser) return;
 
@@ -529,9 +469,6 @@ export class OrderService {
     }
   }
 
-  /**
-   * Tratamento de erros
-   */
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'Ocorreu um erro ao processar sua requisição.';
 
@@ -560,9 +497,6 @@ export class OrderService {
     return throwError(() => new Error(errorMessage));
   }
 
-  /**
-   * Obtém estatísticas dos pedidos
-   */
   getOrderStats(
     userId?: string,
   ): Observable<{
@@ -590,9 +524,6 @@ export class OrderService {
     );
   }
 
-  /**
-   * 🔥 Verifica o status da API local
-   */
   checkApiHealth(): Observable<{ status: string; timestamp: string }> {
     return this.http
       .get<{ status: string; timestamp: string }>(`http://localhost:3000/`)

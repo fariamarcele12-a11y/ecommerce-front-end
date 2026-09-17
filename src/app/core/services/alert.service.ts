@@ -8,9 +8,6 @@ export type AlertType = 'success' | 'error' | 'warning' | 'info' | 'question';
 })
 export class AlertService {
 
-  /**
-   * Alerta de sucesso
-   */
   success(title: string, message?: string, timer = 3000): Promise<unknown> {
     return Swal.fire({
       icon: 'success',
@@ -24,9 +21,6 @@ export class AlertService {
     });
   }
 
-  /**
-   * Alerta de erro
-   */
   error(title: string, message?: string, timer = 5000): Promise<unknown> {
     return Swal.fire({
       icon: 'error',
@@ -40,9 +34,6 @@ export class AlertService {
     });
   }
 
-  /**
-   * Alerta de aviso
-   */
   warning(title: string, message?: string): Promise<any> {
     return Swal.fire({
       icon: 'warning',
@@ -56,9 +47,6 @@ export class AlertService {
     });
   }
 
-  /**
-   * Alerta de informação
-   */
   info(title: string, message?: string, timer: number = 3000): Promise<any> {
     return Swal.fire({
       icon: 'info',
@@ -72,9 +60,6 @@ export class AlertService {
     });
   }
 
-  /**
-   * Alerta de confirmação (sim/não)
-   */
   confirm(
     title: string,
     message?: string,
@@ -93,9 +78,6 @@ export class AlertService {
     });
   }
 
-  /**
-   * Alerta com input de texto
-   */
   prompt(
     title: string,
     message?: string,
@@ -118,9 +100,6 @@ export class AlertService {
     });
   }
 
-  /**
-   * Alerta com select (dropdown)
-   */
   select(
     title: string,
     options: { value: string; label: string }[],
@@ -151,9 +130,6 @@ export class AlertService {
     });
   }
 
-  /**
-   * Alerta de loading
-   */
   loading(title: string = 'Aguarde...', message?: string): void {
     Swal.fire({
       title,
@@ -166,16 +142,10 @@ export class AlertService {
     });
   }
 
-  /**
-   * Fecha o alerta atual
-   */
   close(): void {
     Swal.close();
   }
 
-  /**
-   * Alerta toast (notificação pequena)
-   */
   toast(
     title: string,
     icon: SweetAlertIcon = 'success',
@@ -192,9 +162,6 @@ export class AlertService {
     });
   }
 
-  /**
-   * Alerta customizado
-   */
   custom(options: SweetAlertOptions): Promise<any> {
     return Swal.fire(options);
   }

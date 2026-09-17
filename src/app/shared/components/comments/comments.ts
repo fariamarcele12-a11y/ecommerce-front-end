@@ -53,9 +53,6 @@ export class Comments implements OnInit {
     this.loadComments();
   }
 
-  /**
-   * 🔥 Gera URL do avatar (SEMPRE com fallback)
-   */
   getAvatarUrl(userName: string, userAvatar?: string, isSeller = false): string {
     if (userAvatar && userAvatar.trim() !== '' && userAvatar !== 'null' && userAvatar !== 'undefined') {
       return userAvatar;
@@ -162,9 +159,6 @@ export class Comments implements OnInit {
     });
   }
 
-  /**
-   * 🔥 Garante avatares em TODOS os lugares
-   */
   private ensureAvatars(comment: Comment): Comment {
     const updatedComment = { ...comment };
 

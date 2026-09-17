@@ -8,18 +8,13 @@ import { Coupon, CouponValidation, CouponFilter } from '../models/coupon.model';
   providedIn: 'root'
 })
 export class CouponService {
-  // 🔥 URL da API local apenas
   private apiUrl = 'http://localhost:3000/coupons';
   //private apiUrl = 'https://ecommerce-api-mf.vercel.app/coupons';
 
-  // Cache local de cupons válidos
   private validCoupons = new BehaviorSubject<Coupon[]>([]);
 
   constructor(private http: HttpClient) {}
 
-  /**
-   * Busca todos os cupons
-   */
   getCoupons(filters?: CouponFilter): Observable<Coupon[]> {
     let url = this.apiUrl;
     const params: string[] = [];
@@ -44,9 +39,6 @@ export class CouponService {
     );
   }
 
-  /**
-   * Busca cupom por código
-   */
   getCouponByCode(code: string): Observable<Coupon | null> {
     const upperCode = code.toUpperCase().trim();
     return this.http.get<Coupon[]>(`${this.apiUrl}?code=${upperCode}`).pipe(
@@ -58,9 +50,6 @@ export class CouponService {
     );
   }
 
-  /**
-   * Valida um cupom para um carrinho
-   */
   validateCoupon(code: string, subtotal: number, category?: string, productId?: number): Observable<CouponValidation> {
     // Buscar cupom pelo código
     return this.getCouponByCode(code).pipe(
@@ -69,12 +58,10 @@ export class CouponService {
           return { valid: false, message: 'Cupom inválido ou não encontrado.' };
         }
 
-        // Verificar se o cupom está ativo
         if (!coupon.active) {
           return { valid: false, message: 'Este cupom não está mais ativo.' };
         }
 
-        // Verificar se o cupom já expirou
         const now = new Date();
         const startDate = new Date(coupon.startDate);
         const endDate = new Date(coupon.endDate);
@@ -87,12 +74,10 @@ export class CouponService {
           return { valid: false, message: 'Este cupom já expirou.' };
         }
 
-        // Verificar limite de uso
         if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
           return { valid: false, message: 'Este cupom já atingiu o limite de uso.' };
         }
 
-        // Verificar valor mínimo de compra
         if (coupon.minPurchase && subtotal < coupon.minPurchase) {
           return {
             valid: false,
@@ -100,7 +85,6 @@ export class CouponService {
           };
         }
 
-        // Verificar categorias aplicáveis
         if (coupon.applicableCategories && coupon.applicableCategories.length > 0) {
           if (category && !coupon.applicableCategories.includes(category)) {
             return {
@@ -110,7 +94,6 @@ export class CouponService {
           }
         }
 
-        // Verificar produtos excluídos
         if (coupon.excludedProducts && productId && coupon.excludedProducts.includes(productId)) {
           return {
             valid: false,
@@ -118,7 +101,6 @@ export class CouponService {
           };
         }
 
-        // Calcular desconto
         let discountAmount = 0;
         if (coupon.discountType === 'percentage') {
           discountAmount = (subtotal * coupon.discountValue) / 100;
@@ -129,7 +111,6 @@ export class CouponService {
           discountAmount = coupon.discountValue;
         }
 
-        // Não permitir desconto maior que o subtotal
         if (discountAmount > subtotal) {
           discountAmount = subtotal;
         }
@@ -148,9 +129,6 @@ export class CouponService {
     );
   }
 
-  /**
-   * Aplica um cupom ao carrinho
-   */
   applyCoupon(code: string, subtotal: number): Observable<CouponValidation> {
     return this.validateCoupon(code, subtotal).pipe(
       tap((validation) => {
@@ -162,9 +140,6 @@ export class CouponService {
     );
   }
 
-  /**
-   * Incrementa o uso de um cupom
-   */
   incrementCouponUsage(couponId: number): Observable<Coupon> {
     return this.http.patch<Coupon>(`${this.apiUrl}/${couponId}`, {
       usedCount: 1,
@@ -177,9 +152,6 @@ export class CouponService {
     );
   }
 
-  /**
-   * Cria um novo cupom
-   */
   createCoupon(coupon: Partial<Coupon>): Observable<Coupon> {
     const newCoupon: Coupon = {
       id: Date.now(),
@@ -207,9 +179,6 @@ export class CouponService {
     );
   }
 
-  /**
-   * Atualiza um cupom
-   */
   updateCoupon(id: number, coupon: Partial<Coupon>): Observable<Coupon> {
     return this.http.patch<Coupon>(`${this.apiUrl}/${id}`, {
       ...coupon,
@@ -220,9 +189,6 @@ export class CouponService {
     );
   }
 
-  /**
-   * Remove um cupom
-   */
   deleteCoupon(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => this.getCoupons().subscribe()),
@@ -230,16 +196,10 @@ export class CouponService {
     );
   }
 
-  /**
-   * Obtém cupons válidos do cache
-   */
   getValidCoupons(): Observable<Coupon[]> {
     return this.validCoupons.asObservable();
   }
 
-  /**
-   * Verifica se um cupom é válido
-   */
   private isCouponValid(coupon: Coupon): boolean {
     const now = new Date();
     const startDate = new Date(coupon.startDate);
@@ -251,9 +211,6 @@ export class CouponService {
            (!coupon.usageLimit || coupon.usedCount < coupon.usageLimit);
   }
 
-  /**
-   * Formata preço para exibição
-   */
   private formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -261,17 +218,11 @@ export class CouponService {
     }).format(price);
   }
 
-  /**
-   * Tratamento de erros
-   */
   private handleError(error: any) {
     console.error('❌ Erro no CouponService:', error);
     return throwError(() => new Error('Erro ao processar cupom.'));
   }
 
-  /**
-   * 🔥 Verifica o status da API local
-   */
   checkApiHealth(): Observable<{ status: string; timestamp: string }> {
     return this.http
       .get<{ status: string; timestamp: string }>(`http://localhost:3000/`)

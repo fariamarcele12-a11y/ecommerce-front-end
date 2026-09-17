@@ -796,9 +796,6 @@
   animation: slideInDown 0.3s ease-out;
 }
 
-// ============================================
-// 17. ESTILOS ADICIONAIS PARA CATEGORIAS MOBILE
-// ============================================
 .categories-mobile-scroll {
   display: flex;
   gap: 8px;
@@ -822,9 +819,6 @@
   }
 }
 
-// ============================================
-// 18. MELHORIAS PARA FAVORITOS E CARRINHO
-// ============================================
 @keyframes badgePop {
   0% {
     transform: scale(0);
@@ -865,9 +859,6 @@
   }
 }
 
-// ============================================
-// 19. SCROLLBAR GLOBAL
-// ============================================
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

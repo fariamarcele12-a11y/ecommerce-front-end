@@ -1,6 +1,5 @@
 // src/app/features/checkout/checkout.scss
 
-// ===== ANIMAÇÃO DE LOADING =====
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -9,8 +8,6 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-
-// ===== CONFIRMAÇÃO =====
 .confirmation-card {
   background: white;
   border-radius: 16px;
@@ -23,9 +20,6 @@
   }
 }
 
-// ============================================
-// 🔥 LISTA DE ENDEREÇOS
-// ============================================
 .addresses-list {
   display: flex;
   flex-direction: column;
@@ -85,9 +79,6 @@
   }
 }
 
-// ============================================
-// 🔥 MODAL DE ENDEREÇO
-// ============================================
 .modal-overlay {
   position: fixed;
   top: 0;

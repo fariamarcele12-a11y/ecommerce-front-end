@@ -59,9 +59,6 @@ export class PasswordResetService {
     );
   }
 
-  /**
-   * 🔥 Valida token de reset
-   */
   validateToken(token: string): Observable<{ valid: boolean; message: string; userId?: string | number }> {
     return this.http.get<PasswordResetToken[]>(`${this.resetTokensUrl}?token=${token}`).pipe(
       map((tokens) => {
@@ -71,12 +68,10 @@ export class PasswordResetService {
 
         const tokenData = tokens[0];
 
-        // 🔥 Verificar se o token foi usado
         if (tokenData.used) {
           return { valid: false, message: 'Este token já foi utilizado.' };
         }
 
-        // 🔥 Verificar se o token expirou
         const expiresAt = new Date(tokenData.expiresAt);
         if (expiresAt < new Date()) {
           return { valid: false, message: 'Token expirado. Solicite um novo reset.' };
@@ -152,9 +147,6 @@ export class PasswordResetService {
     );
   }
 
-  /**
-   * 🔥 Gera token aleatório
-   */
   private generateToken(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let token = '';

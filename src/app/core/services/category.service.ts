@@ -8,27 +8,21 @@ import { Category, CategoryFilter } from '../models/category.model';
   providedIn: 'root',
 })
 export class CategoryService {
-  // 🔥 URL da API local apenas
   private apiUrl = 'http://localhost:3000/categories';
   //private apiUrl = 'https://ecommerce-api-mf.vercel.app/categories';
 
-  // Cache para categorias
   private categoriesCache$: Observable<Category[]> | null = null;
   private cacheDuration = 5 * 60 * 1000; // 5 minutos
   private lastCacheTime = 0;
 
   private readonly http = inject(HttpClient);
 
-  /**
-   * Busca todas as categorias com opção de usar cache
-   */
   getCategories(useCache = true): Observable<Category[]> {
     // Se usar cache e tiver cache válido
     if (useCache && this.categoriesCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
       return this.categoriesCache$;
     }
 
-    // Buscar do servidor local
     const request = this.http.get<Category[]>(this.apiUrl).pipe(
       tap(() => {
         this.lastCacheTime = Date.now();
@@ -41,9 +35,6 @@ export class CategoryService {
     return request;
   }
 
-  /**
-   * Busca categorias com filtros
-   */
   getCategoriesWithFilters(filters?: CategoryFilter): Observable<Category[]> {
     let url = this.apiUrl;
     const params: string[] = [];
@@ -78,16 +69,10 @@ export class CategoryService {
     return this.http.get<Category[]>(url).pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca categoria por ID
-   */
   getCategoryById(id: string | number): Observable<Category> {
     return this.http.get<Category>(`${this.apiUrl}/${id}`).pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca categoria por slug
-   */
   getCategoryBySlug(slug: string): Observable<Category | null> {
     return this.http.get<Category[]>(`${this.apiUrl}?slug=${slug}`).pipe(
       map((categories) => {
@@ -100,45 +85,30 @@ export class CategoryService {
     );
   }
 
-  /**
-   * Busca subcategorias de uma categoria pai
-   */
   getSubcategories(parentId: number): Observable<Category[]> {
     return this.http
       .get<Category[]>(`${this.apiUrl}?parentId=${parentId}`)
       .pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca categorias populares (com mais produtos)
-   */
   getPopularCategories(limit = 6): Observable<Category[]> {
     return this.http
       .get<Category[]>(`${this.apiUrl}?_sort=productCount&_order=desc&_limit=${limit}`)
       .pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca categorias com ícones
-   */
   getCategoriesWithIcons(): Observable<Category[]> {
     return this.http
       .get<Category[]>(`${this.apiUrl}?icon_ne=&icon_nnull=true`)
       .pipe(catchError(this.handleError));
   }
 
-  /**
-   * Busca categorias ativas
-   */
   getActiveCategories(): Observable<Category[]> {
     return this.http
       .get<Category[]>(`${this.apiUrl}?active=true`)
       .pipe(catchError(this.handleError));
   }
 
-  /**
-   * Cria uma nova categoria
-   */
   createCategory(category: Partial<Category>): Observable<Category> {
     return this.http
       .post<Category>(this.apiUrl, {
@@ -155,9 +125,6 @@ export class CategoryService {
       );
   }
 
-  /**
-   * Atualiza uma categoria
-   */
   updateCategory(id: string | number, category: Partial<Category>): Observable<Category> {
     return this.http
       .patch<Category>(`${this.apiUrl}/${id}`, {
@@ -175,9 +142,6 @@ export class CategoryService {
       );
   }
 
-  /**
-   * Remove uma categoria
-   */
   deleteCategory(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
@@ -188,42 +152,28 @@ export class CategoryService {
     );
   }
 
-  /**
-   * Busca categorias por nome (busca textual)
-   */
   searchCategories(searchTerm: string): Observable<Category[]> {
     return this.http
       .get<Category[]>(`${this.apiUrl}?q=${searchTerm}`)
       .pipe(catchError(this.handleError));
   }
 
-  /**
-   * Invalida o cache de categorias
-   */
   invalidateCache(): void {
     this.categoriesCache$ = null;
     this.lastCacheTime = 0;
   }
 
-  /**
-   * Força a atualização do cache
-   */
   refreshCategories(): Observable<Category[]> {
     this.invalidateCache();
     return this.getCategories(false);
   }
 
-  /**
-   * Tratamento de erros
-   */
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'Ocorreu um erro ao processar sua requisição.';
 
     if (error.error instanceof ErrorEvent) {
-      // Erro do lado do cliente
       errorMessage = `Erro: ${error.error.message}`;
     } else {
-      // Erro do lado do servidor
       switch (error.status) {
         case 0:
           errorMessage =
@@ -244,11 +194,7 @@ export class CategoryService {
     return throwError(() => new Error(errorMessage));
   }
 
-  /**
-   * 🔥 Verifica o status da API local
-   */
   checkApiHealth(): Observable<{ status: string; timestamp: string }> {
-    // Para JSON Server, verificar se a raiz responde
     return this.http.get<{ status: string; timestamp: string }>(`http://localhost:3000/`).pipe(
       map(() => ({
         status: 'online',

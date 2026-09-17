@@ -104,9 +104,6 @@ export class ChatService {
       );
   }
 
-  /**
-   * 🔥 Envia uma nova mensagem com ID único
-   */
   sendMessage(message: Partial<Message>): Observable<Message> {
     const newMessage: Message = {
       id: this.idGenerator.generateMessageId(), // 🔥 ID único

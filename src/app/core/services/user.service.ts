@@ -14,13 +14,9 @@ export class UserService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
 
-  /**
-   * 🔥 Busca um usuário pelo ID
-   */
   getUserById(id: string | number): Observable<User | null> {
     const userId = String(id);
 
-    // 🔥 Se for o usuário atual, retorna do cache
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && String(currentUser.id) === userId) {
       return of(currentUser);
@@ -38,9 +34,6 @@ export class UserService {
     );
   }
 
-  /**
-   * 🔥 Atualiza usuário (PATCH - preserva dados não enviados)
-   */
   updateUser(id: string | number, data: Partial<User>): Observable<User> {
     const userId = String(id);
     console.log('📝 UserService.updateUser:', userId, data);
@@ -60,9 +53,6 @@ export class UserService {
     );
   }
 
-  /**
-   * 🔥 Busca a data de cadastro formatada
-   */
   getMemberSince(userId: string | number): Observable<string> {
     return this.getUserById(userId).pipe(
       map((user) => {

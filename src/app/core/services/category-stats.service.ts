@@ -13,9 +13,6 @@ export class CategoryStatsService {
     private productService: ProductService
   ) {}
 
-  /**
-   * 🔥 Atualiza a contagem de produtos para todas as categorias
-   */
   updateAllCategoryCounts(): Observable<any> {
     return this.categoryService.getCategories().pipe(
       switchMap((categories) => {
@@ -42,9 +39,6 @@ export class CategoryStatsService {
     );
   }
 
-  /**
-   * 🔥 Atualiza a contagem de uma categoria específica
-   */
   updateCategoryCount(categoryId: string | number): Observable<any> {
     return this.categoryService.getCategoryById(categoryId).pipe(
       switchMap((category) => {
@@ -66,9 +60,6 @@ export class CategoryStatsService {
     );
   }
 
-  /**
-   * 🔥 Atualiza a contagem de uma categoria pelo nome
-   */
   updateCategoryCountByName(categoryName: string): Observable<any> {
 
     return this.categoryService.getCategories().pipe(
@@ -92,9 +83,6 @@ export class CategoryStatsService {
     );
   }
 
-  /**
-   * 🔥 Incrementa a contagem de uma categoria (quando um produto é adicionado)
-   */
   incrementCategoryCount(categoryName: string): Observable<any> {
     return this.categoryService.getCategories().pipe(
       switchMap((categories) => {
@@ -113,9 +101,6 @@ export class CategoryStatsService {
     );
   }
 
-  /**
-   * 🔥 Decrementa a contagem de uma categoria (quando um produto é removido)
-   */
   decrementCategoryCount(categoryName: string): Observable<any> {
     return this.categoryService.getCategories().pipe(
       switchMap((categories) => {

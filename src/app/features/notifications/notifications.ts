@@ -34,11 +34,9 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
   totalCount = 0;
   loading = false;
 
-  // 🔥 Filtros
   activeFilter: FilterType = 'all';
   searchTerm: string = '';
 
-  // 🔥 Opções de filtro
   filterOptions: { value: FilterType; label: string; icon: string; count?: number }[] = [
     { value: 'all', label: 'Todas', icon: 'bi-bell-fill' },
     { value: 'unread', label: 'Não lidas', icon: 'bi-envelope-fill' },
@@ -66,11 +64,9 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // 🔥 Carrega com força (ignora cache)
     this.loading = true;
     this.notificationService.loadNotifications(true);
 
-    // 🔥 Assina as notificações e o contador
     this.subs.add(
       combineLatest([
         this.notificationService.notifications$,
@@ -93,10 +89,6 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
     this.subs.unsubscribe();
   }
 
-  // ============================================
-  // 🔥 FILTROS
-  // ============================================
-
   setFilter(filter: FilterType): void {
     this.activeFilter = filter;
     this.applyFilters();
@@ -114,7 +106,6 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
   private applyFilters(): void {
     let filtered = [...this.notifications];
 
-    // 🔥 Filtro por tipo / status
     switch (this.activeFilter) {
       case 'unread':
         filtered = filtered.filter((n) => !n.read);
@@ -128,11 +119,9 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
         break;
       case 'all':
       default:
-        // sem filtro
         break;
     }
 
-    // 🔥 Busca por texto
     const term = this.searchTerm.trim().toLowerCase();
     if (term) {
       filtered = filtered.filter(
@@ -176,10 +165,6 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
 
     return groups.filter((g) => g.notifications.length > 0);
   }
-
-  // ============================================
-  // 🔥 AÇÕES
-  // ============================================
 
   markAsRead(notification: Notification, event?: Event): void {
     if (event) event.stopPropagation();
@@ -244,24 +229,15 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * 🔥 Navega para o link da notificação (ex: /pedidos/ORD-123)
-   */
   openNotification(notification: Notification): void {
-    // Marca como lida automaticamente
     if (!notification.read) {
       this.notificationService.markAsRead(notification.id).subscribe();
     }
 
-    // Navega se tiver link
     if (notification.link) {
       this.router.navigateByUrl(notification.link);
     }
   }
-
-  // ============================================
-  // 🔥 HELPERS DE UI
-  // ============================================
 
   getIcon(type: string): string {
     switch (type) {
@@ -327,12 +303,10 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
     return this.notifications.filter((n) => n.type === type).length;
   }
 
-  // 🔥 trackBy para os GRUPOS (item: GroupedNotifications)
   trackByGroup(index: number, group: GroupedNotifications): string {
     return group.label;
   }
 
-  // 🔥 trackBy para as NOTIFICAÇÕES (item: Notification)
   trackByNotificationId(index: number, item: Notification): string {
     return item.id;
   }

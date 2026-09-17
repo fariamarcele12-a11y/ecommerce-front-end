@@ -28,9 +28,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * 🔥 Login
-   */
   login(credentials: LoginCredentials): Observable<AuthResponse> {
     return this.http.get<User[]>(`${this.apiUrl}?email=${credentials.email}`).pipe(
       map((users) => {
@@ -75,9 +72,6 @@ export class AuthService {
     );
   }
 
-  /**
-   * 🔥 Registro
-   */
   register(credentials: RegisterCredentials): Observable<AuthResponse> {
     const userId = this.idGenerator.generateUUID();
 
@@ -162,9 +156,6 @@ export class AuthService {
     );
   }
 
-  /**
-   * 🔥 Logout (COM LIMPEZA DE NOTIFICAÇÕES)
-   */
   logout(): void {
     if (this.isBrowser) {
       localStorage.removeItem('currentUser');
@@ -184,9 +175,6 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
-  /**
-   * 🔥 Carrega usuário do localStorage COM fallback para backup
-   */
   private loadUserFromStorage(): void {
     if (!this.isBrowser) return;
 
@@ -203,7 +191,6 @@ export class AuthService {
         }
       }
 
-      // 🔥 Fallback: restaurar do backup
       const backupData = localStorage.getItem('userBackup');
       if (backupData) {
         const backupUser = JSON.parse(backupData);
@@ -217,9 +204,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * 🔥 ATUALIZA O USUÁRIO COM MESCLAGEM SEGURA
-   */
   updateUser(userData: Partial<User>): Observable<AuthResponse> {
     const currentUser = this.currentUserSubject.value;
     if (!currentUser) {
@@ -231,7 +215,6 @@ export class AuthService {
       updatedAt: new Date().toISOString()
     }).pipe(
       map((updatedUser) => {
-        // 🔥 MESCLAR: preservar TODOS os campos
         const mergedUser: User = {
           ...currentUser,
           ...updatedUser,
@@ -295,9 +278,6 @@ export class AuthService {
     this.currentUserSubject.next(user);
   }
 
-  /**
-   * 🔥 FORÇA ATUALIZAÇÃO COM MESCLAGEM (NÃO APAGA DADOS!)
-   */
   forceUpdateUser(user: Partial<User>): void {
     const currentUser = this.currentUserSubject.value;
 

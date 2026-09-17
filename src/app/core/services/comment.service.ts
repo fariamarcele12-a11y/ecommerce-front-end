@@ -18,24 +18,17 @@ export class CommentService {
   private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
 
-  /**
-   * 🔥 Gera URL do avatar (SEMPRE usa avatar real ou fallback com iniciais)
-   */
   private generateAvatarUrl(userName: string, userAvatar?: string, isSeller = false): string {
     // Se tem avatar real, usar
     if (userAvatar && userAvatar.trim() !== '' && userAvatar !== 'null' && userAvatar !== 'undefined') {
       return userAvatar;
     }
 
-    // Fallback: ui-avatars.com com iniciais do nome
     const name = encodeURIComponent(userName || 'Usuário');
     const bgColor = isSeller ? '28a745' : '667eea';
     return `https://ui-avatars.com/api/?name=${name}&background=${bgColor}&color=fff&size=80&bold=true`;
   }
 
-  /**
-   * 🔥 Busca comentários de um produto COM AVATARES DOS USUÁRIOS
-   */
   getCommentsByProduct(productId: string): Observable<Comment[]> {
 
     return this.http.get<Comment[]>(`${this.apiUrl}?productId=${productId}&_sort=createdAt&_order=desc`).pipe(

@@ -60,14 +60,10 @@ export class ProductService {
     }
   }
 
-  /**
-   * 🔥 Busca produtos com filtros
-   */
   getProducts(filters?: ProductFilters, useCache: boolean = true): Observable<ProductResponse> {
     const filtersKey = JSON.stringify(filters || {});
     const cacheKey = `${filtersKey}`;
 
-    // 🔥 Se filtros mudaram, invalidar cache
     if (this.lastFilters !== cacheKey) {
       this.productsCache$ = null;
       this.lastCacheTime = 0;

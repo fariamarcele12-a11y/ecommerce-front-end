@@ -15,7 +15,6 @@ import { Category } from '../../core/models/category.model';
   styleUrls: ['./vender.scss'],
 })
 export class Vender implements OnInit {
-  // Dados do formulário
   product = {
     name: '',
     description: '',
@@ -34,7 +33,6 @@ export class Vender implements OnInit {
   submitted = false;
   imageUrls: string[] = [''];
 
-  // Para upload de imagens
   selectedFiles: (File | null)[] = [null];
   imagePreviews: (string | null)[] = [null];
   isUploading = false;
@@ -61,8 +59,6 @@ export class Vender implements OnInit {
       },
     });
   }
-
-  // ===== MÉTODOS PARA IMAGENS =====
 
   addImageField(): void {
     if (this.imageUrls.length < 5) {
@@ -92,7 +88,6 @@ export class Vender implements OnInit {
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
 
-      // Validar tipo de arquivo
       if (!file.type.startsWith('image/')) {
         this.alertService.warning(
           'Arquivo inválido',
@@ -102,7 +97,6 @@ export class Vender implements OnInit {
         return;
       }
 
-      // Validar tamanho (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         this.alertService.warning('Arquivo muito grande', 'A imagem deve ter no máximo 5MB.');
         input.value = '';
@@ -111,11 +105,9 @@ export class Vender implements OnInit {
 
       this.selectedFiles[index] = file;
 
-      // Criar preview
       const reader = new FileReader();
       reader.onload = (e) => {
         this.imagePreviews[index] = e.target?.result as string;
-        // Limpar a URL se houver
         this.imageUrls[index] = '';
       };
       reader.readAsDataURL(file);
@@ -129,7 +121,6 @@ export class Vender implements OnInit {
   }
 
   getImageSource(index: number): string | null {
-    // Prioridade: preview do upload > URL digitada
     if (this.imagePreviews[index]) {
       return this.imagePreviews[index];
     }
@@ -138,8 +129,6 @@ export class Vender implements OnInit {
     }
     return null;
   }
-
-  // ===== FIM MÉTODOS PARA IMAGENS =====
 
   onSubmit(): void {
     this.submitted = true;
@@ -151,7 +140,6 @@ export class Vender implements OnInit {
     this.loading = true;
     this.isUploading = true;
 
-    // Filtrar imagens válidas - REMOVER URLs vazias
     const images: string[] = [];
     this.imageUrls.forEach((url) => {
       if (url && url.trim() !== '' && url.trim() !== 'https://') {
@@ -159,7 +147,6 @@ export class Vender implements OnInit {
       }
     });
 
-    // Adicionar imagens selecionadas (upload)
     const uploadPromises: Promise<string>[] = [];
     this.selectedFiles.forEach((file) => {
       if (file) {
@@ -173,20 +160,16 @@ export class Vender implements OnInit {
       }
     });
 
-    // Aguardar todos os uploads
     Promise.all(uploadPromises)
       .then((uploadedUrls) => {
-        // Combinar URLs manuais + URLs de upload
         const allImages = [...images, ...uploadedUrls];
 
-        // Se não tiver imagens, usar placeholder
         if (allImages.length === 0) {
           allImages.push('https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem');
         }
 
         this.isUploading = false;
 
-        // Preparar dados do produto
         const productData = {
           name: this.product.name.trim(),
           description: this.product.description.trim(),
@@ -198,7 +181,6 @@ export class Vender implements OnInit {
           images: allImages, // Garantir que é um array
         };
 
-        // Adicionar oldPrice se for maior que 0
         if (this.product.oldPrice > 0) {
           (productData as any).oldPrice = Number(this.product.oldPrice);
         }
@@ -268,7 +250,6 @@ export class Vender implements OnInit {
       return false;
     }
 
-    // Validar se tem pelo menos uma imagem (URL ou arquivo)
     const hasImage =
       this.imageUrls.some((url) => url && url.trim() !== '') ||
       this.selectedFiles.some((file) => file !== null);
@@ -287,7 +268,6 @@ export class Vender implements OnInit {
   onImageUrlChange(index: number, event: Event): void {
     const input = event.target as HTMLInputElement;
     this.imageUrls[index] = input.value;
-    // Se adicionar URL, limpar o preview do upload
     if (input.value && input.value.trim() !== '') {
       this.selectedFiles[index] = null;
       this.imagePreviews[index] = null;
@@ -306,9 +286,6 @@ export class Vender implements OnInit {
     return category ? category.name : slug;
   }
 
-  /**
-   * Retorna a quantidade de imagens válidas (URLs + uploads)
-   */
   getValidImageCount(): number {
     const validUrls = this.imageUrls.filter(
       (url) => url && url.trim() !== '' && url.trim() !== 'https://',
