@@ -148,6 +148,15 @@ export const routes: Routes = [
       }),
   },
 
+  {
+    path: 'notificacoes',
+    loadComponent: () =>
+      import('./features/notifications/notifications').then(
+        (m) => m.NotificationsPageComponent
+      ),
+    title: 'Notificações',
+  },
+
   // ============================================
   // PERFIL DO USUÁRIO
   // ============================================

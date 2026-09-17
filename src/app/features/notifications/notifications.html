@@ -1,0 +1,159 @@
+<!-- src/app/features/notifications/notifications.html -->
+<div class="notifications-page">
+  <!-- 🔥 Cabeçalho -->
+  <header class="notif-header">
+    <div class="header-left">
+      <button class="btn-back" routerLink="/" title="Voltar">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <div class="header-title">
+        <h1>
+          <i class="bi bi-bell-fill"></i>
+          Notificações
+          <span class="badge-count" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+        </h1>
+        <p class="subtitle">
+          {{ totalCount }} notificaç{{ totalCount === 1 ? 'ão' : 'ões' }} no total
+        </p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button
+        class="btn-action"
+        (click)="markAllAsRead()"
+        [disabled]="unreadCount === 0"
+        title="Marcar todas como lidas">
+        <i class="bi bi-check2-all"></i>
+        <span class="hide-mobile">Marcar todas</span>
+      </button>
+
+      <button
+        class="btn-action btn-danger"
+        (click)="clearAll()"
+        [disabled]="notifications.length === 0"
+        title="Limpar todas">
+        <i class="bi bi-trash3"></i>
+        <span class="hide-mobile">Limpar</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 🔥 Barra de busca -->
+  <div class="search-bar">
+    <i class="bi bi-search"></i>
+    <input
+      type="text"
+      placeholder="Buscar notificações..."
+      [(ngModel)]="searchTerm"
+      (input)="onSearchChange()" />
+    <button
+      class="btn-clear-search"
+      *ngIf="searchTerm"
+      (click)="clearSearch()"
+      title="Limpar busca">
+      <i class="bi bi-x-circle-fill"></i>
+    </button>
+  </div>
+
+  <!-- 🔥 Filtros -->
+  <div class="filters-bar">
+    <button
+      *ngFor="let filter of filterOptions"
+      class="filter-chip"
+      [class.active]="activeFilter === filter.value"
+      (click)="setFilter(filter.value)">
+      <i class="bi" [ngClass]="filter.icon"></i>
+      <span>{{ filter.label }}</span>
+      <span class="chip-count" *ngIf="getCountByType(filter.value) > 0">
+        {{ getCountByType(filter.value) }}
+      </span>
+    </button>
+  </div>
+
+  <!-- 🔥 Loading -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Carregando notificações...</p>
+  </div>
+
+  <!-- 🔥 Estado vazio -->
+  <div class="empty-state" *ngIf="!loading && filteredNotifications.length === 0">
+    <div class="empty-icon">
+      <i class="bi" [ngClass]="searchTerm ? 'bi-search' : 'bi-bell-slash'"></i>
+    </div>
+    <h2>
+      {{ searchTerm ? 'Nenhum resultado encontrado' : 'Nenhuma notificação' }}
+    </h2>
+    <p *ngIf="searchTerm">
+      Tente buscar por outro termo.
+    </p>
+    <p *ngIf="!searchTerm && activeFilter === 'unread'">
+      Você não tem notificações não lidas. 🎉
+    </p>
+    <p *ngIf="!searchTerm && activeFilter !== 'unread'">
+      Quando você receber notificações, elas aparecerão aqui.
+    </p>
+    <button
+      class="btn-primary"
+      *ngIf="searchTerm"
+      (click)="clearSearch()">
+      Limpar busca
+    </button>
+  </div>
+
+  <!-- 🔥 Lista agrupada -->
+  <div class="notif-groups" *ngIf="!loading && filteredNotifications.length > 0">
+    <section
+      class="notif-group"
+      *ngFor="let group of groupedNotifications; trackBy: trackByGroup">
+
+      <header class="group-header">
+        <i class="bi" [ngClass]="group.icon"></i>
+        <h3>{{ group.label }}</h3>
+        <span class="group-count">{{ group.notifications.length }}</span>
+      </header>
+
+      <ul class="notif-list">
+        <li
+          *ngFor="let notif of group.notifications; trackBy: trackByNotificationId"
+          class="notif-item"
+          [class.unread]="!notif.read"
+          [class]="getTypeClass(notif.type)"
+          (click)="openNotification(notif)">
+
+          <div class="notif-icon">
+            <i class="bi" [ngClass]="getIcon(notif.type)"></i>
+          </div>
+
+          <div class="notif-content">
+            <div class="notif-top">
+              <span class="type-badge">{{ getTypeLabel(notif.type) }}</span>
+              <span class="notif-time">{{ getRelativeTime(notif.createdAt) }}</span>
+            </div>
+            <h4 class="notif-title">{{ notif.title }}</h4>
+            <p class="notif-message">{{ notif.message }}</p>
+          </div>
+
+          <div class="notif-actions">
+            <button
+              *ngIf="!notif.read"
+              class="btn-icon"
+              title="Marcar como lida"
+              (click)="markAsRead(notif, $event)">
+              <i class="bi bi-check2"></i>
+            </button>
+            <button
+              class="btn-icon btn-icon-danger"
+              title="Remover"
+              (click)="deleteNotification(notif, $event)">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </div>
+
+          <span class="unread-dot" *ngIf="!notif.read"></span>
+        </li>
+      </ul>
+    </section>
+  </div>
+</div>
