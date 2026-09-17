@@ -29,16 +29,13 @@ export class Store implements OnInit {
   storeId: string | null = null;
   deletingProduct = false;
 
-  // 🔥 Modal de edição da loja
   showEditModal = false;
   saving = false;
   isSearchingCep = false;
 
-  // 🔥 Controle de remoção
   logoRemoved = false;
   bannerRemoved = false;
 
-  // 🔥 Dados do formulário de edição
   editForm: any = {
     storeName: '',
     description: '',
@@ -97,7 +94,6 @@ export class Store implements OnInit {
   ngOnInit(): void {
     this.route.params.subscribe((params) => {
       const id = params['id'];
-      console.log('🔍 ID da loja na rota:', id);
 
       if (id) {
         this.storeId = id;
@@ -172,9 +168,6 @@ export class Store implements OnInit {
     }
   }
 
-  /**
-   * 🔥 Abre o modal de edição da loja
-   */
   openEditModal(): void {
     if (!this.store) return;
 
@@ -207,37 +200,21 @@ export class Store implements OnInit {
         country: this.store.address?.country || 'Brasil'
       }
     };
-
-    console.log('📸 Logo carregada no form:', this.editForm.logo ? 'Sim' : 'Não');
-    console.log('🖼️ Banner carregado no form:', this.editForm.banner ? 'Sim' : 'Não');
-
     this.showEditModal = true;
   }
 
-  /**
-   * 🔥 Fecha o modal de edição
-   */
   closeEditModal(): void {
     this.showEditModal = false;
-    // 🔥 Resetar flags
     this.logoRemoved = false;
     this.bannerRemoved = false;
   }
 
-  /**
-   * 🔥 Quando o logo é atualizado
-   */
   onLogoUploaded(base64: string): void {
-    console.log('✅ Logo atualizada:', base64.length, 'caracteres');
     this.editForm.logo = base64;
     this.logoRemoved = false;
   }
 
-  /**
-   * 🔥 Quando o logo é removido
-   */
   onLogoRemoved(): void {
-    console.log('🗑️ Logo removida');
     this.editForm.logo = '';
     this.logoRemoved = true;
   }
@@ -246,23 +223,15 @@ export class Store implements OnInit {
    * 🔥 Quando o banner é atualizado
    */
   onBannerUploaded(base64: string): void {
-    console.log('✅ Banner atualizado:', base64.length, 'caracteres');
     this.editForm.banner = base64;
     this.bannerRemoved = false;
   }
 
-  /**
-   * 🔥 Quando o banner é removido
-   */
   onBannerRemoved(): void {
-    console.log('🗑️ Banner removido');
     this.editForm.banner = '';
     this.bannerRemoved = true;
   }
 
-  /**
-   * 🔥 Salva as alterações da loja
-   */
   saveStore(): void {
     if (!this.store || !this.storeId) return;
 
@@ -272,11 +241,7 @@ export class Store implements OnInit {
     }
 
     this.saving = true;
-    console.log('📤 Salvando alterações da loja...');
-    console.log('📸 Logo:', this.editForm.logo ? `${this.editForm.logo.length} caracteres` : 'Vazio');
-    console.log('🖼️ Banner:', this.editForm.banner ? `${this.editForm.banner.length} caracteres` : 'Vazio');
 
-    // 🔥 Montar dados de atualização
     const updateData: any = {
       storeName: this.editForm.storeName,
       description: this.editForm.description,
@@ -289,22 +254,16 @@ export class Store implements OnInit {
       updatedAt: new Date().toISOString()
     };
 
-    // 🔥 Lógica para logo
     if (this.logoRemoved) {
       updateData.logo = '';
-      console.log('📸 Logo sendo REMOVIDA');
     } else if (this.editForm.logo) {
       updateData.logo = this.editForm.logo;
-      console.log('📸 Logo sendo ATUALIZADA');
     }
 
-    // 🔥 Lógica para banner
     if (this.bannerRemoved) {
       updateData.banner = '';
-      console.log('🖼️ Banner sendo REMOVIDO');
     } else if (this.editForm.banner) {
       updateData.banner = this.editForm.banner;
-      console.log('🖼️ Banner sendo ATUALIZADO');
     }
 
     this.storeService.updateStore(this.storeId, updateData).subscribe({
@@ -313,7 +272,6 @@ export class Store implements OnInit {
         this.store = updatedStore;
         this.logoRemoved = false;
         this.bannerRemoved = false;
-        console.log('✅ Loja atualizada com sucesso!');
         this.alertService.success('Loja atualizada!', 'Suas alterações foram salvas com sucesso. 🎉');
         this.closeEditModal();
       },

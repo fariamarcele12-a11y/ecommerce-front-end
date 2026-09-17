@@ -37,17 +37,14 @@ export class CommentService {
    * 🔥 Busca comentários de um produto COM AVATARES DOS USUÁRIOS
    */
   getCommentsByProduct(productId: string): Observable<Comment[]> {
-    console.log(`🔍 Buscando comentários do produto ${productId}...`);
 
     return this.http.get<Comment[]>(`${this.apiUrl}?productId=${productId}&_sort=createdAt&_order=desc`).pipe(
       switchMap((comments) => {
-        console.log(`📦 ${comments.length} comentários encontrados`);
 
         if (comments.length === 0) {
           return of([]);
         }
 
-        // 🔥 Coletar todos os IDs de usuários (comentários + respostas)
         const userIds = new Set<string>();
 
         comments.forEach(comment => {
@@ -60,13 +57,10 @@ export class CommentService {
           }
         });
 
-        console.log(`👥 ${userIds.size} usuários únicos encontrados`);
-
         if (userIds.size === 0) {
           return of(this.applyAvatarFallback(comments, {}, {}));
         }
 
-        // 🔥 Buscar TODOS os usuários (cliente E vendedor)
         const userRequests = Array.from(userIds).map(userId =>
           this.userService.getUserById(userId).pipe(
             catchError(() => of(null))
@@ -87,8 +81,6 @@ export class CommentService {
               }
             });
 
-            console.log('📸 Avatares encontrados:', Object.keys(userAvatarMap).length);
-
             return this.applyAvatarFallback(comments, userAvatarMap, userNameMap);
           })
         );
@@ -100,9 +92,6 @@ export class CommentService {
     );
   }
 
-  /**
-   * 🔥 Aplica avatar do USUÁRIO em comentários e respostas
-   */
   private applyAvatarFallback(
     comments: Comment[],
     userAvatarMap: { [key: string]: string },
@@ -112,7 +101,6 @@ export class CommentService {
       const updatedComment = { ...comment };
       const commentUserId = String(comment.userId);
 
-      // 🔥 Nome do usuário
       if (userNameMap[commentUserId]) {
         updatedComment.userName = userNameMap[commentUserId];
       }
@@ -125,14 +113,11 @@ export class CommentService {
         false
       );
 
-      // 🔥 Atualizar respostas
       if (updatedComment.replies && updatedComment.replies.length > 0) {
         updatedComment.replies = updatedComment.replies.map(reply => {
           const updatedReply = { ...reply };
           const replyUserId = String(reply.userId);
 
-          // 🔥 IMPORTANTE: SEMPRE usar nome/avatar do USUÁRIO
-          // O badge "Vendedor" é controlado pela flag isFromSeller
           if (userNameMap[replyUserId]) {
             updatedReply.userName = userNameMap[replyUserId];
           }
@@ -152,9 +137,6 @@ export class CommentService {
     });
   }
 
-  /**
-   * 🔥 Cria um novo comentário
-   */
   createComment(commentData: CreateComment): Observable<Comment> {
     const user = this.authService.getCurrentUser();
     if (!user) {
@@ -188,18 +170,11 @@ export class CommentService {
     );
   }
 
-  /**
-   * 🔥 Adiciona uma resposta - USA AVATAR DO USUÁRIO (não da loja)
-   */
   addReply(commentId: string, replyData: CreateReply): Observable<Comment> {
     const user = this.authService.getCurrentUser();
     if (!user) {
       return throwError(() => new Error('Usuário não autenticado.'));
     }
-
-    console.log(`📝 Adicionando resposta ao comentário ${commentId}...`);
-    console.log('👤 Usuário:', user.name);
-    console.log('📸 Avatar do usuário:', (user as any).avatar ? 'Sim' : 'Não');
 
     const replyId = this.idGenerator.generateMessageId();
     const isFromSeller = replyData.isFromSeller || false;
@@ -240,9 +215,6 @@ export class CommentService {
     );
   }
 
-  /**
-   * 🔥 Remove uma resposta
-   */
   deleteReply(commentId: string, replyId: string): Observable<Comment> {
     return this.http.get<Comment>(`${this.apiUrl}/${commentId}`).pipe(
       switchMap((comment) => {
@@ -264,9 +236,6 @@ export class CommentService {
     );
   }
 
-  /**
-   * 🔥 Remove um comentário
-   */
   deleteComment(id: string): Observable<void> {
     if (!id || id === 'null' || id === 'undefined') {
       return throwError(() => new Error('ID do comentário inválido.'));
@@ -295,9 +264,6 @@ export class CommentService {
     );
   }
 
-  /**
-   * 🔥 Alterna like
-   */
   toggleLike(id: string): Observable<Comment> {
     return this.http.get<Comment>(`${this.apiUrl}/${id}`).pipe(
       switchMap((comment) => {

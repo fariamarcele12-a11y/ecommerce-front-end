@@ -47,8 +47,6 @@ export class SearchResults implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParams.subscribe((params) => {
-      console.log('📋 Query params recebidos:', params);
-
       this.filters = {
         sortBy: 'newest',
         limit: this.itemsPerPage,
@@ -73,7 +71,6 @@ export class SearchResults implements OnInit, OnDestroy {
       if (params['state']) this.filters.state = params['state'];
       if (params['city']) this.filters.city = params['city'];
 
-      console.log('🔍 Filtros aplicados:', this.filters);
       this.loadProducts();
     });
   }
@@ -82,7 +79,6 @@ export class SearchResults implements OnInit, OnDestroy {
     this.routeSub.unsubscribe();
     this.filterSub.unsubscribe();
     this.productService.invalidateCache();
-    console.log('🧹 Filtros limpos ao sair da página');
   }
 
   loadProducts(): void {
@@ -91,28 +87,18 @@ export class SearchResults implements OnInit, OnDestroy {
     this.filters.page = this.currentPage;
     this.filters.limit = this.itemsPerPage;
 
-    console.log('🚀 Carregando produtos com filtros:', this.filters);
-    console.log('🔢 Página atual:', this.currentPage);
-
     if (this.filterSub) {
       this.filterSub.unsubscribe();
     }
 
     this.filterSub = this.productService.getProducts(this.filters, false).subscribe({
       next: (response: ProductResponse) => {
-        console.log('📦 Resposta recebida:', response);
-
         this.products = response.products;
         this.totalProducts = response.total;
         this.totalPages = response.totalPages;
         this.currentPage = response.page;
         this.itemsPerPage = response.limit;
         this.loading = false;
-
-        console.log(
-          `✅ ${this.products.length} produtos carregados (Total: ${this.totalProducts})`,
-        );
-        console.log(`📄 Página ${this.currentPage} de ${this.totalPages}`);
 
         if (this.currentPage > this.totalPages && this.totalPages > 0) {
           console.warn(
@@ -136,9 +122,6 @@ export class SearchResults implements OnInit, OnDestroy {
   }
 
   onFiltersChange(newFilters: ProductFilters): void {
-    console.log('🔄 Filtros alterados recebidos:', newFilters);
-
-    // 🔥 Preservar search/category se não foram alterados
     const mergedFilters: ProductFilters = {
       ...this.filters,
       ...newFilters,
@@ -146,7 +129,6 @@ export class SearchResults implements OnInit, OnDestroy {
       limit: this.itemsPerPage,
     };
 
-    // 🔥 Remover propriedades undefined/null/vazias
     Object.keys(mergedFilters).forEach((key) => {
       const k = key as keyof ProductFilters;
       if (mergedFilters[k] === undefined || mergedFilters[k] === null || mergedFilters[k] === '') {
@@ -157,9 +139,6 @@ export class SearchResults implements OnInit, OnDestroy {
     this.filters = mergedFilters;
     this.currentPage = 1;
 
-    console.log('📋 Filtros mesclados finais:', this.filters);
-
-    // 🔥 Invalidar cache antes de recarregar
     this.productService.invalidateCache();
 
     this.updateUrlParams();
@@ -167,7 +146,6 @@ export class SearchResults implements OnInit, OnDestroy {
   }
 
   onClearFilters(): void {
-    console.log('🧹 Limpando filtros');
     this.currentPage = 1;
     this.filters = {
       sortBy: 'newest',
@@ -183,8 +161,6 @@ export class SearchResults implements OnInit, OnDestroy {
   }
 
   onPageChange(page: number): void {
-    console.log('🔄 Mudando para página:', page);
-
     if (page < 1) {
       page = 1;
     }
@@ -215,8 +191,6 @@ export class SearchResults implements OnInit, OnDestroy {
     // 🔥 NOVO: state e city na URL
     if (this.filters.state) queryParams['state'] = this.filters.state;
     if (this.filters.city) queryParams['city'] = this.filters.city;
-
-    console.log('🔗 Atualizando URL com params:', queryParams);
 
     this.router.navigate([], {
       relativeTo: this.route,

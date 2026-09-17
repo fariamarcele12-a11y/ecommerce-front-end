@@ -88,8 +88,6 @@ export class CreateStore implements OnInit, OnDestroy {
       this.authService.currentUser$.subscribe(user => {
         if (user) {
           this.user = user;
-          console.log('👤 Usuário logado:', user);
-
           const userId = String(user.id);
           this.checkExistingStore(userId);
           this.preencherDadosUsuario(user);
@@ -110,8 +108,6 @@ export class CreateStore implements OnInit, OnDestroy {
 
     this.storeService.hasStore(userId).subscribe({
       next: (hasStore) => {
-        console.log('📦 Usuário tem loja?', hasStore);
-
         if (hasStore) {
           this.hasExistingStore = true;
 
@@ -120,7 +116,6 @@ export class CreateStore implements OnInit, OnDestroy {
               this.checkingStore = false;
               if (store) {
                 this.existingStoreId = String(store.id);
-                console.log('🏪 Loja existente ID:', this.existingStoreId);
                 this.showStoreExistsAlert();
               }
             },
@@ -132,7 +127,6 @@ export class CreateStore implements OnInit, OnDestroy {
         } else {
           this.checkingStore = false;
           this.hasExistingStore = false;
-          console.log('✅ Usuário não tem loja, pode criar');
         }
       },
       error: (error) => {
@@ -253,7 +247,6 @@ export class CreateStore implements OnInit, OnDestroy {
     this.storeService.createStore(storeDataWithDefaults, this.user).subscribe({
       next: (store) => {
         this.loading = false;
-        console.log('✅ Loja criada:', store);
         this.alertService.success(
           '🎉 Loja criada com sucesso!',
           `A loja "${store.storeName}" foi criada e está pronta para vender.`

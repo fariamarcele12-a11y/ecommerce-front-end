@@ -17,8 +17,6 @@ export class CategoryStatsService {
    * 🔥 Atualiza a contagem de produtos para todas as categorias
    */
   updateAllCategoryCounts(): Observable<any> {
-    console.log('🔄 Atualizando contagem de todas as categorias...');
-
     return this.categoryService.getCategories().pipe(
       switchMap((categories) => {
         const updateObservables = categories.map((category) => {
@@ -48,8 +46,6 @@ export class CategoryStatsService {
    * 🔥 Atualiza a contagem de uma categoria específica
    */
   updateCategoryCount(categoryId: string | number): Observable<any> {
-    console.log(`🔄 Atualizando contagem da categoria ${categoryId}...`);
-
     return this.categoryService.getCategoryById(categoryId).pipe(
       switchMap((category) => {
         if (!category) {
@@ -60,7 +56,6 @@ export class CategoryStatsService {
         return this.productService.getProductsByCategory(category.name).pipe(
           switchMap((products) => {
             const count = products.length;
-            console.log(`📊 Categoria "${category.name}" tem ${count} produtos`);
 
             return this.categoryService.updateCategory(categoryId, {
               productCount: count
@@ -75,7 +70,6 @@ export class CategoryStatsService {
    * 🔥 Atualiza a contagem de uma categoria pelo nome
    */
   updateCategoryCountByName(categoryName: string): Observable<any> {
-    console.log(`🔄 Atualizando contagem da categoria "${categoryName}"...`);
 
     return this.categoryService.getCategories().pipe(
       switchMap((categories) => {
@@ -88,7 +82,6 @@ export class CategoryStatsService {
         return this.productService.getProductsByCategory(category.name).pipe(
           switchMap((products) => {
             const count = products.length;
-            console.log(`📊 Categoria "${category.name}" tem ${count} produtos`);
 
             return this.categoryService.updateCategory(category.id, {
               productCount: count
@@ -103,8 +96,6 @@ export class CategoryStatsService {
    * 🔥 Incrementa a contagem de uma categoria (quando um produto é adicionado)
    */
   incrementCategoryCount(categoryName: string): Observable<any> {
-    console.log(`📈 Incrementando contagem da categoria "${categoryName}"...`);
-
     return this.categoryService.getCategories().pipe(
       switchMap((categories) => {
         const category = categories.find(c => c.name === categoryName);
@@ -114,7 +105,6 @@ export class CategoryStatsService {
         }
 
         const newCount = (category.productCount || 0) + 1;
-        console.log(`📊 Nova contagem: ${newCount}`);
 
         return this.categoryService.updateCategory(category.id, {
           productCount: newCount
@@ -127,8 +117,6 @@ export class CategoryStatsService {
    * 🔥 Decrementa a contagem de uma categoria (quando um produto é removido)
    */
   decrementCategoryCount(categoryName: string): Observable<any> {
-    console.log(`📉 Decrementando contagem da categoria "${categoryName}"...`);
-
     return this.categoryService.getCategories().pipe(
       switchMap((categories) => {
         const category = categories.find(c => c.name === categoryName);
@@ -138,7 +126,6 @@ export class CategoryStatsService {
         }
 
         const newCount = Math.max(0, (category.productCount || 0) - 1);
-        console.log(`📊 Nova contagem: ${newCount}`);
 
         return this.categoryService.updateCategory(category.id, {
           productCount: newCount

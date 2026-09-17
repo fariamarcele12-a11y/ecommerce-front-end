@@ -134,9 +134,7 @@ export class NotificationService implements OnDestroy {
 
     return this.http.post<Notification>(this.apiUrl, notification).pipe(
       tap(() => {
-        console.log(`✅ Notificação criada [${type}]: ${title} → userId=${notification.userId}`);
 
-        // 🔥 Se for do próprio usuário, recarregar
         const currentUser = this.authService.getCurrentUser();
         if (currentUser && String(currentUser.id) === String(userId)) {
           this.loadNotifications(true);
@@ -149,13 +147,6 @@ export class NotificationService implements OnDestroy {
     );
   }
 
-  // ============================================
-  // 🔥 MARCAR COMO LIDA
-  // ============================================
-
-  /**
-   * 🔥 Marca uma notificação como lida
-   */
   markAsRead(notificationId: string): Observable<Notification | null> {
     return this.http
       .patch<Notification>(`${this.apiUrl}/${notificationId}`, { read: true })
@@ -175,9 +166,6 @@ export class NotificationService implements OnDestroy {
       );
   }
 
-  /**
-   * 🔥 Marca todas como lidas (usa forkJoin para eficiência)
-   */
   markAllAsRead(): void {
     const user = this.authService.getCurrentUser();
     if (!user?.id) return;
@@ -301,10 +289,6 @@ export class NotificationService implements OnDestroy {
       '/chat',
       { buyerId, productName }
     ).subscribe();
-
-    console.log(
-      `📨 Notificando vendedor ${sellerId} sobre mensagem de ${buyerName}`
-    );
   }
 
   /**
@@ -331,10 +315,6 @@ export class NotificationService implements OnDestroy {
       `/pedidos/${orderId}`,
       { orderId, buyerName, productName, total }
     ).subscribe();
-
-    console.log(
-      `💰 Notificando vendedor ${sellerId} sobre venda de ${productName}`
-    );
   }
 
   /**
@@ -359,10 +339,6 @@ export class NotificationService implements OnDestroy {
       `/pedidos/${orderId}`,
       { orderId, productName, total }
     ).subscribe();
-
-    console.log(
-      `📦 Notificando comprador ${buyerId} sobre pedido ${orderId}`
-    );
   }
 
   /**
@@ -387,10 +363,6 @@ export class NotificationService implements OnDestroy {
       undefined,
       { reviewerName, productName, rating }
     ).subscribe();
-
-    console.log(
-      `⭐ Notificando vendedor ${sellerId} sobre avaliação de ${productName}`
-    );
   }
 
   /**
@@ -462,7 +434,6 @@ export class NotificationService implements OnDestroy {
     this.pollingInterval = setInterval(() => {
       const user = this.authService.getCurrentUser();
       if (user?.id) {
-        console.log('🔄 Polling: verificando novas notificações...');
         this.loadNotifications(true);
       }
     }, 30000); // 30 segundos

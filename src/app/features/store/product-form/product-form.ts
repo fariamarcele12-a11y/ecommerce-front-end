@@ -11,8 +11,6 @@ import { ProductService } from '../../../core/services/product.service';
 import { Category } from '../../../core/models/category.model';
 import { Product } from '../../../core/models/ProductModel/product.model';
 
-console.log('📦 ProductForm MODULE CARREGADO!');
-
 @Component({
   selector: 'app-product-form',
   standalone: true,
@@ -53,23 +51,13 @@ export class ProductForm implements OnInit {
     private categoryService: CategoryService,
     private productService: ProductService,
   ) {
-    console.log('🏗️ ProductForm CONSTRUTOR chamado!');
-    console.log('🔍 StoreId recebido no construtor:', this.route.snapshot.params['storeId']);
   }
 
   ngOnInit(): void {
-    console.log('🚀 ProductForm OnInit iniciado!');
-    console.log('📋 Parâmetros da rota:', this.route.snapshot.params);
-    console.log('📍 URL atual:', this.router.url);
-
     this.route.params.subscribe((params) => {
       this.storeId = params['storeId'];
       this.productId = params['id'] ? String(params['id']) : null;
       this.isEditing = !!this.productId;
-
-      console.log('📝 ProductForm - storeId da URL:', this.storeId);
-      console.log('📝 ProductForm - productId:', this.productId);
-      console.log('📝 ProductForm - isEditing:', this.isEditing);
 
       if (!this.storeId) {
         console.error('❌ StoreId não encontrado!');
@@ -94,7 +82,6 @@ export class ProductForm implements OnInit {
       next: (store) => {
         if (store) {
           this.storeName = store.storeName;
-          console.log('🏪 Nome da loja:', this.storeName);
         }
       },
       error: (error) => {
@@ -105,12 +92,9 @@ export class ProductForm implements OnInit {
 
   loadProductForEdit(productId: string): void {
     this.loading = true;
-    console.log(`🔍 Buscando produto para edição: ${productId}`);
 
     this.productService.getProductById(productId).subscribe({
       next: (product) => {
-        console.log('📦 Produto carregado para edição:', product);
-
         if (product) {
           this.product = {
             name: product.name,
@@ -132,8 +116,6 @@ export class ProductForm implements OnInit {
           }
 
           this.imageUrls = product.images && product.images.length > 0 ? [...product.images] : [''];
-
-          console.log('✅ Formulário preenchido:', this.product);
         } else {
           console.error('❌ Produto não encontrado');
           this.alertService.error('Erro', 'Produto não encontrado.');
@@ -152,11 +134,9 @@ export class ProductForm implements OnInit {
 
   checkStoreOwnership(): void {
     const user = this.authService.getCurrentUser();
-    console.log('👤 Usuário atual:', user);
 
     this.storeService.getStoreById(this.storeId).subscribe({
       next: (store) => {
-        console.log('🏪 Loja:', store);
         if (store && String(store.userId) !== String(user?.id)) {
           console.error('❌ Usuário não é o dono da loja!');
           this.alertService.error('Acesso negado', 'Você não é o dono desta loja.');
@@ -172,12 +152,9 @@ export class ProductForm implements OnInit {
   }
 
   loadCategories(): void {
-    console.log('📂 Carregando categorias...');
     this.categoryService.getCategories().subscribe({
       next: (categories: Category[]) => {
         this.categories = categories.filter((cat) => cat.active);
-        console.log('📦 Categorias carregadas:', this.categories.length);
-
         if (this.isEditing && this.product.category) {
           const category = this.categories.find(c => c.name === this.product.category);
           if (category) {
@@ -271,9 +248,6 @@ export class ProductForm implements OnInit {
     }
   }
 
-  /**
-   * 🔥 CORRIGIDO: Salvar o NOME da categoria em vez do slug
-   */
   onCategorySelect(event: Event): void {
     const select = event.target as HTMLSelectElement;
     const slug = select.value;
@@ -282,23 +256,16 @@ export class ProductForm implements OnInit {
     if (category) {
       this.product.category = category.name;
       this.product.categorySlug = slug;
-      console.log(`📌 Categoria selecionada: "${category.name}" (slug: ${slug})`);
     } else {
       this.product.category = '';
       this.product.categorySlug = '';
     }
   }
 
-  /**
-   * 🔥 NOVO: Verifica se o produto está em oferta
-   */
   isOnSale(): boolean {
     return this.product.oldPrice > 0 && this.product.oldPrice > this.product.price;
   }
 
-  /**
-   * 🔥 NOVO: Calcula o percentual de desconto
-   */
   getDiscountPercentage(): number {
     if (this.isOnSale()) {
       return Math.round(((this.product.oldPrice - this.product.price) / this.product.oldPrice) * 100);
@@ -306,9 +273,6 @@ export class ProductForm implements OnInit {
     return 0;
   }
 
-  /**
-   * 🔥 NOVO: Formata preço para exibição
-   */
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -316,9 +280,6 @@ export class ProductForm implements OnInit {
     }).format(price);
   }
 
-  /**
-   * 🔥 Envia o formulário (CRIAÇÃO OU EDIÇÃO) - CORRIGIDO
-   */
   onSubmit(): void {
     if (!this.validateForm()) {
       return;
@@ -327,16 +288,11 @@ export class ProductForm implements OnInit {
     const images = this.imageUrls.filter((url: string) => url.trim() !== '');
     const user = this.authService.getCurrentUser();
     const sellerName = this.storeName || 'Vendedor';
-    
-    // 🔥 CORRIGIDO: userId como string (UUID)
+
     const userId = user?.id ? String(user.id) : '1';
-    console.log('🔑 ID do usuário (seller):', userId);
 
-    // 🔥 CORRIGIDO: Usar o NOME da categoria (não o slug)
     const categoryName = this.product.category;
-    console.log(`📌 Salvando produto na categoria: "${categoryName}"`);
 
-    // 🔥 Se não houver oferta, remover oldPrice
     const oldPrice = this.isOnSale() ? this.product.oldPrice : undefined;
 
     const productData: Partial<Product> = {
@@ -361,18 +317,11 @@ export class ProductForm implements OnInit {
     };
 
     this.loading = true;
-    console.log(`📤 ${this.isEditing ? 'Atualizando' : 'Criando'} produto:`);
-    console.log('📦 Dados:', productData);
-    console.log('📌 Categoria sendo salva:', productData.category);
-    console.log('🏷️ Oferta:', this.isOnSale() ? `Sim (-${this.getDiscountPercentage()}%)` : 'Não');
-    console.log('👤 Seller ID:', productData.seller?.id);
 
     if (this.isEditing && this.productId) {
       this.productService.updateProduct(this.productId, productData).subscribe({
         next: (product: Product) => {
           this.loading = false;
-          console.log('✅ Produto atualizado:', product);
-          console.log('📌 Categoria salva:', product.category);
           this.alertService.success(
             'Produto atualizado!',
             'O produto foi atualizado com sucesso! 🎉',
@@ -389,9 +338,6 @@ export class ProductForm implements OnInit {
       this.storeService.createStoreProduct(this.storeId, productData).subscribe({
         next: (product: Product) => {
           this.loading = false;
-          console.log('✅ Produto criado:', product);
-          console.log('📌 Categoria do produto:', product.category);
-          console.log('👤 Seller ID do produto:', product.seller?.id);
 
           this.alertService.success(
             'Produto criado!',

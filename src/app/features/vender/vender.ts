@@ -203,8 +203,6 @@ export class Vender implements OnInit {
           (productData as any).oldPrice = Number(this.product.oldPrice);
         }
 
-        console.log('📦 Enviando produto simplificado:', JSON.stringify(productData, null, 2));
-
         this.productService.createProduct(productData).subscribe({
           next: (product) => {
             this.loading = false;

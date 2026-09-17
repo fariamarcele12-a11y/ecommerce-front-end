@@ -43,7 +43,6 @@ export class ImageUpload implements OnInit, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['currentImage']) {
       const newValue = changes['currentImage'].currentValue;
-      console.log('🔄 currentImage mudou:', newValue ? 'Sim' : 'Não');
       this.previewUrl = newValue || this.placeholder;
     }
   }
@@ -126,11 +125,7 @@ export class ImageUpload implements OnInit, OnChanges {
     }
   }
 
-  /**
-   * 🔥 Remove a imagem - CORRIGIDO
-   */
   removeImage(event: Event): void {
-    // 🔥 Parar propagação para não abrir o seletor
     event.preventDefault();
     event.stopPropagation();
 
@@ -141,16 +136,12 @@ export class ImageUpload implements OnInit, OnChanges {
       'Cancelar'
     ).then((result) => {
       if (result.isConfirmed) {
-        console.log('🗑️ Removendo imagem do tipo:', this.type);
-        
-        // 🔥 Limpar preview e arquivo
         this.previewUrl = this.placeholder;
         this.selectedFile = null;
         this.errorMessage = '';
-        
-        // 🔥 Emitir evento para o componente pai
+
         this.imageRemoved.emit();
-        
+
         this.alertService.success('Imagem removida', 'A imagem foi removida com sucesso.', 2000);
       }
     });

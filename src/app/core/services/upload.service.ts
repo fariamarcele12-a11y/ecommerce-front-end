@@ -24,16 +24,11 @@ export class UploadService {
   private readonly http = inject(HttpClient);
   private readonly alertService = inject(AlertService);
 
-  // 🔥 Configurações de upload
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   private readonly ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
   private readonly MAX_DIMENSION = 1200; // pixels
 
-  /**
-   * 🔥 Valida o arquivo antes do upload
-   */
   validateFile(file: File, type: 'avatar' | 'logo' | 'banner' = 'avatar'): { valid: boolean; error?: string } {
-    // Validar tipo
     if (!this.ALLOWED_TYPES.includes(file.type)) {
       return {
         valid: false,
@@ -41,7 +36,6 @@ export class UploadService {
       };
     }
 
-    // Validar tamanho
     const maxSize = type === 'banner' ? 10 * 1024 * 1024 : this.MAX_FILE_SIZE; // Banner: 10MB
     if (file.size > maxSize) {
       const maxMB = maxSize / (1024 * 1024);
@@ -54,9 +48,6 @@ export class UploadService {
     return { valid: true };
   }
 
-  /**
-   * 🔥 Converte arquivo para Base64 (para salvar no JSON Server)
-   */
   fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -66,9 +57,6 @@ export class UploadService {
     });
   }
 
-  /**
-   * 🔥 Redimensiona a imagem antes de converter para Base64
-   */
   async resizeAndConvertToBase64(file: File, maxWidth: number = 800, maxHeight: number = 800): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -83,7 +71,6 @@ export class UploadService {
           let width = img.width;
           let height = img.height;
 
-          // Calcular novas dimensões mantendo proporção
           if (width > height) {
             if (width > maxWidth) {
               height = Math.round((height * maxWidth) / width);
@@ -116,9 +103,6 @@ export class UploadService {
     });
   }
 
-  /**
-   * 🔥 Upload de avatar do usuário
-   */
   async uploadUserAvatar(file: File): Promise<string> {
     const validation = this.validateFile(file, 'avatar');
     if (!validation.valid) {
@@ -126,19 +110,14 @@ export class UploadService {
     }
 
     try {
-      // Redimensionar para 400x400
       const base64 = await this.resizeAndConvertToBase64(file, 400, 400);
-      console.log('✅ Avatar convertido para Base64');
       return base64;
     } catch (error) {
       console.error('❌ Erro ao processar avatar:', error);
-      throw new Error('Erro ao processar a imagem. Tente novamente.');
+      throw new Error('Erro ao processar a imagem. Tente novamente.', { cause: error });
     }
   }
 
-  /**
-   * 🔥 Upload de logo da loja
-   */
   async uploadStoreLogo(file: File): Promise<string> {
     const validation = this.validateFile(file, 'logo');
     if (!validation.valid) {
@@ -146,19 +125,14 @@ export class UploadService {
     }
 
     try {
-      // Redimensionar para 400x400
       const base64 = await this.resizeAndConvertToBase64(file, 400, 400);
-      console.log('✅ Logo convertida para Base64');
       return base64;
     } catch (error) {
       console.error('❌ Erro ao processar logo:', error);
-      throw new Error('Erro ao processar a imagem. Tente novamente.');
+      throw new Error('Erro ao processar a imagem. Tente novamente.', { cause: error });
     }
   }
 
-  /**
-   * 🔥 Upload de banner da loja
-   */
   async uploadStoreBanner(file: File): Promise<string> {
     const validation = this.validateFile(file, 'banner');
     if (!validation.valid) {
@@ -166,13 +140,12 @@ export class UploadService {
     }
 
     try {
-      // Redimensionar para 1200x400 (banner)
       const base64 = await this.resizeAndConvertToBase64(file, 1200, 400);
       console.log('✅ Banner convertido para Base64');
       return base64;
     } catch (error) {
       console.error('❌ Erro ao processar banner:', error);
-      throw new Error('Erro ao processar a imagem. Tente novamente.');
+      throw new Error('Erro ao processar a imagem. Tente novamente.', { cause: error });
     }
   }
 
@@ -209,16 +182,10 @@ export class UploadService {
     );
   }
 
-  /**
-   * 🔥 Obtém a extensão do arquivo
-   */
   getFileExtension(filename: string): string {
     return filename.slice(((filename.lastIndexOf('.') - 1) >>> 0) + 2);
   }
 
-  /**
-   * 🔥 Formata o tamanho do arquivo
-   */
   formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -227,9 +194,6 @@ export class UploadService {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  /**
-   * 🔥 Cria preview da imagem
-   */
   createPreview(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -239,9 +203,6 @@ export class UploadService {
     });
   }
 
-  /**
-   * 🔥 Remove a imagem (se for URL externa)
-   */
   deleteImage(url: string): Observable<void> {
     // Se for Base64, não precisa deletar
     if (url.startsWith('data:')) {
@@ -251,7 +212,6 @@ export class UploadService {
       });
     }
 
-    // Se for URL, deletar do servidor
     return this.http.delete<void>(`/api/upload/${url}`).pipe(
       catchError((error) => {
         console.error('❌ Erro ao deletar imagem:', error);

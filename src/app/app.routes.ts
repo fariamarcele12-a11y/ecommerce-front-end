@@ -134,7 +134,6 @@ export const routes: Routes = [
     canActivate: [DebugGuard],
     loadComponent: () =>
       import('./features/store/product-form/product-form').then((m) => {
-        console.log('📦 ProductForm carregado pela rota!');
         return m.ProductForm;
       }),
   },
@@ -143,7 +142,6 @@ export const routes: Routes = [
     canActivate: [DebugGuard],
     loadComponent: () =>
       import('./features/store/product-form/product-form').then((m) => {
-        console.log('📦 ProductForm carregado pela rota (edição)!');
         return m.ProductForm;
       }),
   },

@@ -39,7 +39,6 @@ export class Home implements OnInit {
     limit: 8
   };
 
-  // 🔥 Categorias populares (vindas do banco)
   popularCategories: Category[] = [];
   loadingCategories = true;
 
@@ -49,29 +48,21 @@ export class Home implements OnInit {
     this.loadPopularCategories();
   }
 
-  /**
-   * 🔥 Carrega categorias populares do banco de dados
-   */
   loadPopularCategories(): void {
     this.loadingCategories = true;
     this.categoryService.getPopularCategories(4).subscribe({
       next: (categories) => {
         this.popularCategories = categories;
         this.loadingCategories = false;
-        console.log('📦 Categorias populares carregadas:', this.popularCategories);
       },
       error: (error) => {
         console.error('❌ Erro ao carregar categorias populares:', error);
         this.loadingCategories = false;
-        // 🔥 Fallback: categorias padrão
         this.popularCategories = this.getDefaultCategories();
       }
     });
   }
 
-  /**
-   * 🔥 Categorias padrão para fallback
-   */
   private getDefaultCategories(): Category[] {
     const now = new Date().toISOString();
     return [
@@ -82,25 +73,16 @@ export class Home implements OnInit {
     ];
   }
 
-  /**
-   * 🔥 Obtém a classe de cor para o ícone da categoria
-   */
   getIconColor(index: number): string {
     const colors = ['text-primary', 'text-success', 'text-warning', 'text-danger'];
     return colors[index % colors.length];
   }
 
-  /**
-   * 🔥 Obtém a classe de fundo para o ícone da categoria
-   */
   getIconBgClass(index: number): string {
     const colors = ['bg-primary', 'bg-success', 'bg-warning', 'bg-danger'];
     return colors[index % colors.length];
   }
 
-  /**
-   * 🔥 Formata o número de produtos
-   */
   formatProductCount(count: number | undefined): string {
     if (!count) return '0 produtos';
     if (count > 1000) return (count / 1000).toFixed(1) + 'k produtos';

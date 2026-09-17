@@ -30,7 +30,6 @@ export class Navbar implements OnInit, OnDestroy {
   hasStore = false;
   storeId: string | null = null;
 
-  // 🔥 Notificações
   notifications: Notification[] = [];
   unreadCount = 0;
   showNotifications = false;
@@ -53,17 +52,14 @@ export class Navbar implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Carrinho
     this.cartSubscription = this.cartService.getTotalItems().subscribe((total: number) => {
       this.cartCount = total;
     });
 
-    // Favoritos
     this.favoritesSubscription = this.productService.favorites$.subscribe((favorites: any[]) => {
       this.favoritesCount = favorites.length;
     });
 
-    // 🔥 Notificações
     this.notificationsSubscription = this.notificationService.notifications$.subscribe(
       (notifications) => {
         this.notifications = notifications;
@@ -76,16 +72,10 @@ export class Navbar implements OnInit, OnDestroy {
       }
     );
 
-    // Usuário
     this.userSubscription = this.authService.currentUser$.subscribe((user: User | null) => {
       this.isLoggedIn = !!user;
       this.userName = user?.name || '';
       this.userAvatar = (user as any)?.avatar || '';
-
-      console.log('👤 Usuário logado:', user);
-      console.log('📸 Avatar:', this.userAvatar ? 'Sim' : 'Não');
-      console.log('📦 hasStore no user:', user?.hasStore);
-      console.log('🆔 storeId no user:', user?.storeId);
 
       if (this.isLoggedIn && user?.id) {
         this.checkUserStore(user.id);
@@ -99,7 +89,6 @@ export class Navbar implements OnInit, OnDestroy {
       }
     });
 
-    // 🔥 Fechar notificações ao clicar fora
     if (typeof document !== 'undefined') {
       document.addEventListener('click', this.onDocumentClick.bind(this));
     }
@@ -133,9 +122,6 @@ export class Navbar implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Alterna visibilidade das notificações
-   */
   toggleNotifications(event: Event): void {
     event.stopPropagation();
     this.showNotifications = !this.showNotifications;
@@ -146,18 +132,13 @@ export class Navbar implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Ao clicar em uma notificação
-   */
   onNotificationClick(notification: Notification, event: Event): void {
     event.stopPropagation();
 
-    // 🔥 Marcar como lida
     if (!notification.read) {
       this.notificationService.markAsRead(notification.id).subscribe();
     }
 
-    // 🔥 Fechar dropdown
     this.showNotifications = false;
 
     // 🔥 Navegar para o link
@@ -166,33 +147,21 @@ export class Navbar implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Marca todas como lidas
-   */
   markAllAsRead(event: Event): void {
     event.stopPropagation();
     this.notificationService.markAllAsRead();
   }
 
-  /**
-   * 🔥 Remove uma notificação
-   */
   deleteNotification(notificationId: string, event: Event): void {
     event.stopPropagation();
     this.notificationService.deleteNotification(notificationId).subscribe();
   }
 
-  /**
-   * 🔥 Remove todas as notificações
-   */
   clearAllNotifications(event: Event): void {
     event.stopPropagation();
     this.notificationService.clearAll();
   }
 
-  /**
-   * 🔥 Obtém ícone da notificação
-   */
   getNotificationIcon(type: string): string {
     switch (type) {
       case 'message': return 'bi-chat-dots-fill';
@@ -204,9 +173,6 @@ export class Navbar implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Obtém cor do ícone
-   */
   getNotificationColor(type: string): string {
     switch (type) {
       case 'message': return 'text-primary';
@@ -218,9 +184,6 @@ export class Navbar implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Formata data relativa
-   */
   formatRelativeTime(dateString: string): string {
     const date = new Date(dateString);
     const now = new Date();
@@ -243,26 +206,15 @@ export class Navbar implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Logout (COM LIMPEZA DE NOTIFICAÇÕES)
-   */
   logout(): void {
-    console.log('👋 Fazendo logout...');
-
-    // 🔥 Limpar notificações ANTES do logout
     this.notificationService.clearLocal();
 
-    // 🔥 Fazer logout
     this.authService.logout();
-
-    // 🔥 Limpar estado local do componente
     this.hasStore = false;
     this.storeId = null;
     this.userAvatar = '';
     this.notifications = [];
     this.unreadCount = 0;
-
-    // 🔥 Navegar para home
     this.router.navigate(['/home']);
   }
 

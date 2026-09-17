@@ -118,7 +118,6 @@ export class SearchFilters implements OnInit, OnChanges {
     this.categoryService.getCategories().subscribe({
       next: (categories) => {
         this.categories = categories;
-        console.log('📂 Categorias carregadas:', categories.length);
       },
       error: (error) => {
         console.error('❌ Erro ao carregar categorias:', error);
@@ -142,8 +141,6 @@ export class SearchFilters implements OnInit, OnChanges {
       this.availableCities = [...(this.citiesByState[this.selectedState] || [])];
       this.availableCities.sort((a, b) => a.localeCompare(b));
     }
-
-    console.log('🔧 Filtros inicializados:', this.filters);
   }
 
   syncFilters(): void {
@@ -171,8 +168,6 @@ export class SearchFilters implements OnInit, OnChanges {
    * 🔥 Categoria alterada - emite o SLUG
    */
   onCategoryChange(slug: string): void {
-    console.log('📂 Categoria alterada (slug):', slug);
-
     if (slug) {
       this.filters.category = slug;
     } else {
@@ -184,7 +179,6 @@ export class SearchFilters implements OnInit, OnChanges {
 
   onSortChange(sortBy: string): void {
     this.filters.sortBy = sortBy as ProductFilters['sortBy'];
-    console.log('📊 Ordenação alterada:', sortBy);
     this.filtersChange.emit(this.filters);
   }
 
@@ -194,25 +188,21 @@ export class SearchFilters implements OnInit, OnChanges {
     } else {
       this.filters.condition = condition as 'new' | 'used';
     }
-    console.log('🏷️ Condição alterada para:', this.filters.condition);
     this.filtersChange.emit(this.filters);
   }
 
   onHasDiscountChange(hasDiscount: boolean): void {
     this.filters.hasDiscount = hasDiscount;
-    console.log('🏷️ Promoção alterada:', hasDiscount);
     this.filtersChange.emit(this.filters);
   }
 
   onFreeShippingChange(freeShipping: boolean): void {
     this.filters.freeShipping = freeShipping;
-    console.log('🚚 Frete grátis alterado:', freeShipping);
     this.filtersChange.emit(this.filters);
   }
 
   onInStockChange(inStock: boolean): void {
     this.filters.inStock = inStock;
-    console.log('📦 Estoque alterado:', inStock);
     this.filtersChange.emit(this.filters);
   }
 
@@ -239,11 +229,6 @@ export class SearchFilters implements OnInit, OnChanges {
       state: this.selectedState || undefined,
       city: this.selectedCity || undefined
     };
-
-    console.log('📍 Filtro de localização:', {
-      state: this.selectedState,
-      city: this.selectedCity
-    });
 
     this.filtersChange.emit(this.filters);
   }

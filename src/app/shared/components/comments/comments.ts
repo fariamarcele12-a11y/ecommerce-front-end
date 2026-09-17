@@ -46,12 +46,8 @@ export class Comments implements OnInit {
     this.currentUser = user;
     this.currentUserName = user?.name || 'Usuário';
 
-    // 🔥 Avatar do USUÁRIO (não da loja)
     const realAvatar = (user as any)?.avatar || '';
     this.currentUserAvatar = this.getAvatarUrl(this.currentUserName, realAvatar);
-
-    console.log('👤 Usuário:', this.currentUserName);
-    console.log('📸 Avatar:', this.currentUserAvatar);
 
     this.checkIfVendor();
     this.loadComments();
@@ -75,7 +71,6 @@ export class Comments implements OnInit {
         next: (store) => {
           if (store && String(store.userId) === this.currentUserId) {
             this.isVendor = true;
-            console.log('🏪 Usuário é o vendedor!');
           }
         },
         error: () => {

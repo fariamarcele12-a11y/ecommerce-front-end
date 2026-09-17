@@ -69,15 +69,12 @@ export class ProductService {
 
     // 🔥 Se filtros mudaram, invalidar cache
     if (this.lastFilters !== cacheKey) {
-      console.log('🔄 Filtros mudaram, invalidando cache');
       this.productsCache$ = null;
       this.lastCacheTime = 0;
       this.lastFilters = cacheKey;
     }
 
-    // 🔥 Usar cache APENAS se useCache = true
     if (useCache && this.productsCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
-      console.log('📦 Usando cache para filtros:', filters);
       return this.productsCache$;
     }
 
@@ -86,20 +83,10 @@ export class ProductService {
     const page = filters?.page || 1;
     const limit = filters?.limit || 12;
 
-    // 🔥 Detectar filtros que exigem processamento manual
     const hasCategoryFilter = !!filters?.category;
     const hasLocationFilter = !!(filters?.state || filters?.city);
     const needsManualProcessing = hasCategoryFilter || hasLocationFilter;
 
-    console.log('🔍 Filtros recebidos:', {
-      category: filters?.category,
-      state: filters?.state,
-      city: filters?.city,
-      sortBy: filters?.sortBy,
-      needsManualProcessing,
-    });
-
-    // 🔥 Se NÃO precisa de processamento manual, usar paginação do servidor
     if (!needsManualProcessing) {
       params = params.set('_page', page.toString());
       params = params.set('_limit', limit.toString());
@@ -123,7 +110,6 @@ export class ProductService {
         params = params.set('seller.id', filters.sellerId);
       }
 
-      // Ordenação no servidor (só se não precisar processamento manual)
       if (!needsManualProcessing && filters.sortBy) {
         switch (filters.sortBy) {
           case 'price_asc':
@@ -148,9 +134,6 @@ export class ProductService {
 
     params = params.set('_t', Date.now().toString());
 
-    console.log('🌐 URL da requisição:', `${this.apiUrl}?${params.toString()}`);
-
-    // 🔥 Guardar o slug em variável local
     const categorySlug = filters?.category;
 
     const request = this.http
@@ -168,20 +151,13 @@ export class ProductService {
           let products: Product[] = response.body || [];
           let total = parseInt(response.headers.get('X-Total-Count') || '0', 10) || products.length;
 
-          console.log(`📦 Produtos recebidos do servidor: ${products.length}`);
-
-          // 🔥 Se tem filtro de categoria, converter slug → nome
           if (hasCategoryFilter && categorySlug) {
             return this.categoryService.getCategories().pipe(
               map((categories: any[]) => {
                 const category = categories.find((c: any) => c.slug === categorySlug);
                 const categoryName = category?.name || categorySlug;
 
-                console.log(`🔄 Slug "${categorySlug}" → Nome "${categoryName}"`);
-
                 products = products.filter((p: Product) => p.category === categoryName);
-
-                console.log(`🔍 Filtro categoria "${categoryName}": ${products.length} produtos`);
 
                 return this.applyAllFilters(products, filters, total, page, limit);
               }),
@@ -202,7 +178,6 @@ export class ProductService {
         }),
         tap((response) => {
           this.lastCacheTime = Date.now();
-          console.log(`✅ Resposta final: ${response.products.length} produtos`);
         }),
         catchError(this.handleError),
       );
@@ -215,9 +190,6 @@ export class ProductService {
     return request;
   }
 
-  /**
-   * 🔥 Aplica TODOS os filtros manuais + ordenação + paginação
-   */
   private applyAllFilters(
     products: Product[],
     filters: ProductFilters | undefined,
@@ -235,7 +207,6 @@ export class ProductService {
       };
     }
 
-    // 🔥 1. ESTADO
     if (filters.state) {
       const stateUF = filters.state.toUpperCase().trim();
       products = products.filter((p: Product) => {
@@ -247,44 +218,32 @@ export class ProductService {
           location.endsWith(stateUF)
         );
       });
-      console.log(`🔍 Estado "${filters.state}": ${products.length} produtos`);
     }
 
-    // 🔥 2. CIDADE
     if (filters.city) {
       const city = filters.city.toLowerCase().trim();
       products = products.filter((p: Product) => {
         const location = (p.location || '').toLowerCase().trim();
         return location.includes(city);
       });
-      console.log(`🔍 Cidade "${filters.city}": ${products.length} produtos`);
     }
 
-    // 🔥 3. DESCONTO
     if (filters.hasDiscount) {
       products = products.filter((p: Product) => p.oldPrice && p.oldPrice > p.price);
-      console.log(`🔍 Desconto: ${products.length} produtos`);
     }
 
-    // 🔥 4. FRETE GRÁTIS
     if (filters.freeShipping) {
       products = products.filter((p: Product) => p.freeShipping === true);
-      console.log(`🔍 Frete grátis: ${products.length} produtos`);
     }
 
-    // 🔥 5. ESTOQUE
     if (filters.inStock) {
       products = products.filter((p: Product) => p.stock > 0);
-      console.log(`🔍 Em estoque: ${products.length} produtos`);
     }
 
-    // 🔥 6. CONDIÇÃO
     if (filters.condition) {
       products = products.filter((p: Product) => p.condition === filters.condition);
-      console.log(`🔍 Condição: ${products.length} produtos`);
     }
 
-    // 🔥 7. PREÇO
     if (filters.minPrice !== undefined && filters.minPrice !== null && filters.minPrice > 0) {
       products = products.filter((p: Product) => p.price >= filters.minPrice!);
     }
@@ -292,7 +251,6 @@ export class ProductService {
       products = products.filter((p: Product) => p.price <= filters.maxPrice!);
     }
 
-    // 🔥 8. BUSCA
     if (filters.search) {
       const search = filters.search.toLowerCase().trim();
       products = products.filter((p: Product) => {
@@ -301,31 +259,22 @@ export class ProductService {
           (p.description || '').toLowerCase().includes(search)
         );
       });
-      console.log(`🔍 Busca "${filters.search}": ${products.length} produtos`);
     }
 
-    // 🔥 9. ORDENAÇÃO (SEMPRE aplicar após todos os filtros)
     if (filters.sortBy) {
       products = this.sortProducts(products, filters.sortBy);
-      console.log(`📊 Ordenação "${filters.sortBy}" aplicada`);
     }
 
-    // 🔥 10. Atualizar favoritos
     const favorites = this.favoritesSubject.value;
     products.forEach((product: Product) => {
       product.isFavorite = favorites.includes(String(product.id));
     });
 
-    // 🔥 11. Paginação manual
     total = products.length;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
     const paginatedProducts = products.slice(startIndex, endIndex);
     const totalPages = Math.ceil(total / limit) || 1;
-
-    console.log(
-      `📄 Paginação: página ${page}/${totalPages}, mostrando ${paginatedProducts.length} de ${total}`,
-    );
 
     return {
       products: paginatedProducts,
@@ -336,9 +285,6 @@ export class ProductService {
     };
   }
 
-  /**
-   * 🔥 Ordena produtos
-   */
   private sortProducts(products: Product[], sortBy: string): Product[] {
     const sorted = [...products];
 
@@ -462,7 +408,6 @@ export class ProductService {
         : ['https://via.placeholder.com/300x300/667eea/ffffff?text=Sem+Imagem'];
 
     const productId = this.idGenerator.generateProductId();
-    console.log('🔑 ID único gerado para o produto:', productId);
 
     const newProduct: any = {
       id: productId,
@@ -488,7 +433,6 @@ export class ProductService {
 
     return this.http.post<Product>(this.apiUrl, newProduct).pipe(
       tap((response) => {
-        console.log('✅ Produto criado com ID:', response.id);
         this.invalidateCache();
       }),
       catchError(this.handleError),
@@ -510,11 +454,8 @@ export class ProductService {
   }
 
   deleteProduct(id: string): Observable<void> {
-    console.log(`🗑️ Excluindo produto com ID: ${id}`);
-
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
       tap(() => {
-        console.log(`✅ Produto ${id} excluído com sucesso!`);
         this.invalidateCache();
       }),
       catchError((error: HttpErrorResponse) => {

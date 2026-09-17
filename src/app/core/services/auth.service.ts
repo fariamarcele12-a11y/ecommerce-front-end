@@ -32,8 +32,6 @@ export class AuthService {
    * 🔥 Login
    */
   login(credentials: LoginCredentials): Observable<AuthResponse> {
-    console.log('🔑 Tentando login:', credentials.email);
-
     return this.http.get<User[]>(`${this.apiUrl}?email=${credentials.email}`).pipe(
       map((users) => {
         if (users.length === 0) {
@@ -62,8 +60,6 @@ export class AuthService {
 
         this.currentUserSubject.next(userToStore as User);
 
-        console.log('✅ Login realizado:', user.name);
-
         return {
           success: true,
           message: 'Login realizado com sucesso!',
@@ -84,7 +80,6 @@ export class AuthService {
    */
   register(credentials: RegisterCredentials): Observable<AuthResponse> {
     const userId = this.idGenerator.generateUUID();
-    console.log('📝 Registrando usuário com ID:', userId);
 
     return this.http.get<User[]>(`${this.apiUrl}?email=${credentials.email}`).pipe(
       switchMap((users) => {
@@ -148,8 +143,6 @@ export class AuthService {
 
                 this.currentUserSubject.next(userWithoutPassword as User);
 
-                console.log('✅ Registro realizado:', createdUser.name);
-
                 return {
                   success: true,
                   message: 'Cadastro realizado com sucesso!',
@@ -173,8 +166,6 @@ export class AuthService {
    * 🔥 Logout (COM LIMPEZA DE NOTIFICAÇÕES)
    */
   logout(): void {
-    console.log('👋 Realizando logout...');
-
     if (this.isBrowser) {
       localStorage.removeItem('currentUser');
       localStorage.removeItem('currentStore');
@@ -183,7 +174,6 @@ export class AuthService {
     }
 
     this.currentUserSubject.next(null);
-    console.log('✅ Logout realizado com sucesso!');
   }
 
   isLoggedIn(): boolean {
@@ -208,7 +198,6 @@ export class AuthService {
           if (user.hasStore === undefined) user.hasStore = false;
           if (user.storeId === undefined) user.storeId = null;
 
-          console.log('📦 Usuário carregado do localStorage:', user.name);
           this.currentUserSubject.next(user);
           return;
         }
@@ -219,7 +208,6 @@ export class AuthService {
       if (backupData) {
         const backupUser = JSON.parse(backupData);
         if (backupUser?.id) {
-          console.log('🔄 Restaurando do backup:', backupUser.name);
           localStorage.setItem('currentUser', JSON.stringify(backupUser));
           this.currentUserSubject.next(backupUser);
         }
@@ -237,8 +225,6 @@ export class AuthService {
     if (!currentUser) {
       return of({ success: false, message: 'Usuário não está logado.' });
     }
-
-    console.log('🔄 Atualizando usuário:', userData);
 
     return this.http.patch<User>(`${this.apiUrl}/${currentUser.id}`, {
       ...userData,
@@ -333,8 +319,6 @@ export class AuthService {
         ? (user.storeId ? String(user.storeId) : null)
         : (currentUser?.storeId || null),
     } as User;
-
-    console.log('🔄 Forçando atualização mesclada:', mergedUser.name);
 
     if (this.isBrowser) {
       localStorage.setItem('currentUser', JSON.stringify(mergedUser));

@@ -32,7 +32,6 @@ export class Pagination {
   }
 
   onPageChange(page: number): void {
-    console.log('🔄 Pagination - emitindo página:', page);
     if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
       this.pageChange.emit(page);
       window.scrollTo({ top: 0, behavior: 'smooth' });

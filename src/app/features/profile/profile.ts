@@ -117,7 +117,6 @@ export class Profile implements OnInit {
       this.storeService.getStoreById(user.storeId).subscribe({
         next: (store) => {
           this.store = store;
-          console.log('🏪 Loja carregada:', store);
         },
         error: (error) => {
           console.error('❌ Erro ao carregar loja:', error);
@@ -131,34 +130,19 @@ export class Profile implements OnInit {
     }
 
     this.loading = false;
-    console.log('👤 Dados do usuário carregados:', this.profileData);
   }
 
-  /**
-   * 🔥 Quando o avatar é atualizado
-   */
   onAvatarUploaded(base64: string): void {
-    console.log('✅ Avatar atualizado');
     this.profileData.avatar = base64;
 
-    // 🔥 Salvar automaticamente o avatar
     this.saveAvatar(base64);
   }
 
-  /**
-   * 🔥 Quando o avatar é removido
-   */
   onAvatarRemoved(): void {
-    console.log('🗑️ Avatar removido');
     this.profileData.avatar = '';
-
-    // 🔥 Remover avatar do servidor
     this.saveAvatar('');
   }
 
-  /**
-   * 🔥 Salva o avatar no servidor
-   */
   private saveAvatar(avatar: string): void {
     if (!this.user) return;
 
@@ -169,8 +153,6 @@ export class Profile implements OnInit {
     this.authService.updateUser(updateData).subscribe({
       next: (response) => {
         if (response.success) {
-          console.log('✅ Avatar salvo no servidor');
-          // Atualizar o usuário local
           this.user = this.authService.getCurrentUser();
         }
       },
@@ -181,9 +163,6 @@ export class Profile implements OnInit {
     });
   }
 
-  /**
-   * 🔥 Busca endereço pelo CEP
-   */
   onCepBlur(): void {
     const cep = this.profileData.address.cep.replace(/\D/g, '');
     if (cep.length === 8) {
@@ -212,16 +191,10 @@ export class Profile implements OnInit {
     });
   }
 
-  /**
-   * 🔥 Formata CEP
-   */
   formatCep(value: string): string {
     return this.cepService.formatarCep(value);
   }
 
-  /**
-   * 🔥 Salva as alterações do perfil
-   */
   saveProfile(): void {
     if (!this.validateForm()) {
       return;
@@ -270,9 +243,6 @@ export class Profile implements OnInit {
     });
   }
 
-  /**
-   * 🔥 Valida o formulário
-   */
   validateForm(): boolean {
     if (!this.profileData.name || this.profileData.name.trim().length < 3) {
       this.alertService.warning('Nome inválido', 'Digite seu nome completo (mínimo 3 caracteres).');
@@ -298,9 +268,6 @@ export class Profile implements OnInit {
     return true;
   }
 
-  /**
-   * 🔥 Formata documento
-   */
   formatDocument(value: string): string {
     const numbers = value.replace(/\D/g, '');
     if (this.profileData.documentType === 'pf') {
@@ -318,9 +285,6 @@ export class Profile implements OnInit {
     }
   }
 
-  /**
-   * 🔥 Formata telefone
-   */
   formatPhone(value: string): string {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 2) return numbers;
@@ -329,9 +293,6 @@ export class Profile implements OnInit {
     return numbers.replace(/(\d{2})(\d{5})(\d{1,4})/, '($1) $2-$3');
   }
 
-  /**
-   * 🔥 Obtém a inicial do nome
-   */
   getInitials(name: string): string {
     if (!name) return '?';
     const words = name.trim().split(' ');
@@ -341,9 +302,6 @@ export class Profile implements OnInit {
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
-  /**
-   * 🔥 Formata data para exibição
-   */
   formatDate(date: string | Date): string {
     if (!date) return 'Data não disponível';
     const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -354,23 +312,14 @@ export class Profile implements OnInit {
     }).format(dateObj);
   }
 
-  /**
-   * 🔥 Obtém o tipo de usuário
-   */
   getUserTypeLabel(): string {
     return this.profileData.documentType === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica';
   }
 
-  /**
-   * 🔥 Obtém o ID da loja como string
-   */
   getStoreId(): string {
     return this.store?.id ? String(this.store.id) : '';
   }
 
-  /**
-   * 🔥 Obtém o nome da loja
-   */
   getStoreName(): string {
     return this.store?.storeName || 'Minha Loja';
   }

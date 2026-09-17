@@ -18,13 +18,8 @@ export class PasswordResetService {
 
   constructor(private http: HttpClient) {}
 
-  /**
-   * 🔥 Solicita reset de senha
-   */
   requestReset(email: string): Observable<PasswordResetResponse> {
-    console.log(`📧 Solicitando reset de senha para: ${email}`);
 
-    // 🔥 Verificar se o usuário existe
     return this.http.get<any[]>(`${this.apiUrl}/users?email=${email}`).pipe(
       switchMap((users) => {
         if (users.length === 0) {
@@ -37,7 +32,6 @@ export class PasswordResetService {
 
         const user = users[0];
 
-        // 🔥 Criar token de reset
         const tokenData = {
           userId: user.id,
           token: this.generateToken(),
@@ -46,13 +40,8 @@ export class PasswordResetService {
           createdAt: new Date().toISOString()
         };
 
-        // 🔥 Salvar token no servidor (JSON Server)
         return this.http.post(this.resetTokensUrl, tokenData).pipe(
           map(() => {
-            // 🔥 Simular envio de email
-            console.log(`📧 Token de reset gerado para ${user.email}: ${tokenData.token}`);
-            console.log(`🔗 Link de reset: http://localhost:4200/redefinir-senha?token=${tokenData.token}`);
-
             return {
               success: true,
               message: 'Se o email estiver cadastrado, você receberá as instruções para redefinir sua senha.'
@@ -74,8 +63,6 @@ export class PasswordResetService {
    * 🔥 Valida token de reset
    */
   validateToken(token: string): Observable<{ valid: boolean; message: string; userId?: string | number }> {
-    console.log(`🔍 Validando token: ${token}`);
-
     return this.http.get<PasswordResetToken[]>(`${this.resetTokensUrl}?token=${token}`).pipe(
       map((tokens) => {
         if (tokens.length === 0) {
@@ -108,13 +95,8 @@ export class PasswordResetService {
     );
   }
 
-  /**
-   * 🔥 Confirma reset de senha
-   */
   confirmReset(data: PasswordResetConfirm): Observable<PasswordResetResponse> {
-    console.log(`🔐 Confirmando reset de senha com token: ${data.token}`);
 
-    // 🔥 Buscar o token
     return this.http.get<PasswordResetToken[]>(`${this.resetTokensUrl}?token=${data.token}`).pipe(
       switchMap((tokens) => {
         if (tokens.length === 0) {
@@ -126,7 +108,6 @@ export class PasswordResetService {
 
         const tokenData = tokens[0];
 
-        // 🔥 Verificar se o token é válido
         if (tokenData.used) {
           return of({
             success: false,
@@ -142,7 +123,6 @@ export class PasswordResetService {
           } as PasswordResetResponse);
         }
 
-        // 🔥 Atualizar a senha do usuário
         return this.http.patch(`${this.apiUrl}/users/${tokenData.userId}`, {
           password: data.newPassword,
           updatedAt: new Date().toISOString()
@@ -153,7 +133,6 @@ export class PasswordResetService {
               used: true
             }).pipe(
               map(() => {
-                console.log('✅ Senha atualizada com sucesso!');
                 return {
                   success: true,
                   message: 'Senha redefinida com sucesso! Você já pode fazer login com sua nova senha.'

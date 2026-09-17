@@ -178,12 +178,6 @@ export class OrderService {
   private dispatchOrderNotifications(order: Order): void {
     const items: any[] = order.items || [];
 
-    console.log('═══════════════════════════════════════');
-    console.log('🔔 [NOTIF] Iniciando notificações');
-    console.log('🔔 [NOTIF] Pedido:', order.id);
-    console.log('🔔 [NOTIF] Items:', items);
-    console.log('═══════════════════════════════════════');
-
     if (items.length === 0) {
       console.warn('⚠️ Pedido sem itens — notificações não disparadas');
       return;
@@ -192,19 +186,13 @@ export class OrderService {
     const buyerId = String(order.userId || '1');
     const buyerName = (order as any).buyerName || 'Cliente';
 
-    console.log(`🔔 [NOTIF] Comprador: id=${buyerId} | nome=${buyerName}`);
-
-    // Agrupa itens por vendedor
     const bySeller = new Map<string, any[]>();
     items.forEach((item) => {
       const sellerId = String(item.sellerId || item.storeId || item.ownerId || '1');
-      console.log(`🔔 [NOTIF] Item "${item.productName || item.name}" → sellerId=${sellerId}`);
 
       if (!bySeller.has(sellerId)) bySeller.set(sellerId, []);
       bySeller.get(sellerId)!.push(item);
     });
-
-    console.log(`🔔 [NOTIF] Vendedores identificados:`, [...bySeller.keys()]);
 
     bySeller.forEach((sellerItems, sellerId) => {
       const firstItem = sellerItems[0];
@@ -218,8 +206,6 @@ export class OrderService {
         0
       );
 
-      // 🔔 Notifica COMPRADOR
-      console.log(`🔔 [NOTIF] → Notificando COMPRADOR ${buyerId}`);
       this.notificationService.notifyOrderConfirmed(
         buyerId,
         productName,
@@ -228,7 +214,6 @@ export class OrderService {
       );
 
       // 🔔 Notifica VENDEDOR
-      console.log(`🔔 [NOTIF] → Notificando VENDEDOR ${sellerId}`);
       this.notificationService.notifyNewSale(
         sellerId,
         buyerName,
@@ -237,13 +222,8 @@ export class OrderService {
         sellerTotal
       );
     });
-
-    console.log('═══════════════════════════════════════');
   }
 
-  /**
-   * 🔥 Atualiza status E notifica as partes envolvidas
-   */
   updateOrderStatus(orderId: string, status: Order['status']): Observable<Order> {
     const updates = {
       status,
@@ -262,16 +242,12 @@ export class OrderService {
           }
         }
 
-        // 🔔 Dispara notificações de status (comprador + vendedor)
         this.dispatchStatusNotifications(updatedOrder, status);
       }),
       catchError(this.handleError),
     );
   }
 
-  /**
-   * 🔔 Notifica comprador/vendedor sobre mudança de status
-   */
   private dispatchStatusNotifications(order: Order, status: Order['status']): void {
     if (!['shipped', 'delivered', 'cancelled', 'processing'].includes(status)) {
       return;

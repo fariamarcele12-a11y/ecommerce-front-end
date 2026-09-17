@@ -48,12 +48,8 @@ export class StoreService {
     }
   }
 
-  /**
-   * 🔥 Verifica se o usuário já tem uma loja
-   */
   hasStore(userId: number | string): Observable<boolean> {
     const id = String(userId);
-    console.log(`🔍 Verificando se usuário ${id} tem loja...`);
 
     if (this.isBrowser) {
       try {
@@ -61,7 +57,6 @@ export class StoreService {
         if (storedUser) {
           const userData = JSON.parse(storedUser);
           if (userData.hasStore === true && userData.storeId) {
-            console.log('📦 Loja encontrada no localStorage:', userData.storeId);
             return of(true);
           }
         }
@@ -72,7 +67,6 @@ export class StoreService {
 
     return this.http.get<Store[]>(`${this.apiUrl}?userId=${id}`).pipe(
       map((stores) => {
-        console.log(`📦 Encontradas ${stores.length} lojas para o usuário`);
         return stores.length > 0;
       }),
       catchError((error) => {
@@ -87,19 +81,14 @@ export class StoreService {
    */
   getStoreByUser(userId: number | string): Observable<Store | null> {
     const id = String(userId);
-    console.log(`🔍 Buscando loja para userId: ${id}`);
     return this.http.get<Store[]>(`${this.apiUrl}?userId=${id}`).pipe(
       map((stores) => {
-        console.log(`📦 Encontradas ${stores.length} lojas`);
         return stores.length > 0 ? stores[0] : null;
       }),
       tap((store) => {
         if (store && this.isBrowser) {
           localStorage.setItem('currentStore', JSON.stringify(store));
           this.currentStoreSubject.next(store);
-          console.log('🏪 Loja salva no localStorage:', store.storeName);
-          console.log('📸 Logo:', store.logo ? 'Sim' : 'Não');
-          console.log('🖼️ Banner:', store.banner ? 'Sim' : 'Não');
 
           const userData = localStorage.getItem('currentUser');
           if (userData) {
@@ -131,7 +120,6 @@ export class StoreService {
    */
   getStoreById(id: string | number): Observable<Store | null> {
     const storeId = String(id);
-    console.log(`🔍 Buscando loja por ID: ${storeId}`);
     return this.http.get<Store>(`${this.apiUrl}/${storeId}`).pipe(
       tap((store) => {
         console.log('🏪 Loja encontrada:', store?.storeName);

@@ -89,10 +89,8 @@ export class CategoryService {
    * Busca categoria por slug
    */
   getCategoryBySlug(slug: string): Observable<Category | null> {
-    console.log(`🔍 Buscando categoria por slug: ${slug}`);
     return this.http.get<Category[]>(`${this.apiUrl}?slug=${slug}`).pipe(
       map((categories) => {
-        console.log(`📦 Encontradas ${categories.length} categorias com slug "${slug}"`);
         return categories.length ? categories[0] : null;
       }),
       catchError((error) => {
@@ -161,7 +159,6 @@ export class CategoryService {
    * Atualiza uma categoria
    */
   updateCategory(id: string | number, category: Partial<Category>): Observable<Category> {
-    console.log(`📝 Atualizando categoria ID: ${id}`, category);
     return this.http
       .patch<Category>(`${this.apiUrl}/${id}`, {
         ...category,
@@ -169,7 +166,6 @@ export class CategoryService {
       })
       .pipe(
         tap((updated) => {
-          console.log(`✅ Categoria atualizada:`, updated);
           this.invalidateCache();
         }),
         catchError((error) => {

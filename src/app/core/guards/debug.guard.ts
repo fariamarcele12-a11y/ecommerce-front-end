@@ -10,8 +10,6 @@ export class DebugGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): boolean {
-    console.log('🔍 DebugGuard - Rota:', state.url);
-    console.log('🔍 DebugGuard - Parâmetros:', route.params);
     return true;
   }
 }

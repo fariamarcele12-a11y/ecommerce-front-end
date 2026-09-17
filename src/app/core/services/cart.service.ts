@@ -159,14 +159,6 @@ export class CartService {
 
     this.updateCart(currentItems);
     this.saveToStorageAndServer(currentItems);
-
-    // 🔥 LOG de debug
-    console.log('🛒 Produto adicionado:', {
-      id: product.id,
-      name: product.name,
-      seller: product.seller,
-      sellerIdExtraido: this.getSellerIdFromProduct(product),
-    });
   }
 
   removeFromCart(productId: string): void {
@@ -195,8 +187,6 @@ export class CartService {
   }
 
   clearCart(): void {
-    console.log('🗑️ Limpando APENAS o carrinho...');
-
     this.updateCart([]);
     this.discount.next(0);
     this.couponCode.next('');
@@ -484,8 +474,6 @@ export class CartService {
 
           if (items.length > 0) {
             this.updateCart(items);
-            console.log('🛒 Carrinho restaurado:', items.length, 'itens');
-            console.log('🛒 Sellers:', items.map((i) => this.getSellerIdFromItem(i)));
           }
         }
       }
@@ -511,10 +499,8 @@ export class CartService {
       .pipe(
         switchMap((carts) => {
           if (carts && carts.length > 0) {
-            console.log('📦 Carrinho existente encontrado:', carts[0]);
             return of(carts[0]);
           }
-          console.log('📦 Criando novo carrinho...');
           return this.http.post<ServerCart>(this.apiUrl, {
             id: 1,
             items: [],
@@ -527,7 +513,7 @@ export class CartService {
         }),
       )
       .subscribe((serverCart) => {
-        this.isSyncing = false;
+
         if (serverCart) {
           console.log('📦 Carrinho carregado:', serverCart);
         }
@@ -547,14 +533,12 @@ export class CartService {
         if (!carts || carts.length <= 1) {
           return of(void 0);
         }
-        console.log(`🗑️ Removendo ${carts.length - 1} carrinhos duplicados...`);
         const deleteCarts = carts.slice(1);
         const deleteRequests = deleteCarts.map((cart) =>
           this.http.delete(`${this.apiUrl}/${cart.id}`),
         );
         return forkJoin(deleteRequests).pipe(
           map(() => {
-            console.log('✅ Carrinhos duplicados removidos!');
             return void 0;
           }),
         );
@@ -564,20 +548,5 @@ export class CartService {
         return of(void 0);
       }),
     );
-  }
-
-  debugCart(): void {
-    console.log('🛒 Estado atual do carrinho:');
-    console.log('  - Itens:', this.cartItems.value);
-    console.log('  - Total de itens:', this.totalItems.value);
-    console.log('  - Preço total:', this.totalPrice.value);
-    console.log('  - Desconto:', this.discount.value);
-    console.log('  - Frete:', this.shipping.value);
-    console.log('  - Cupom:', this.couponCode.value);
-    console.log('  - Sellers:', this.cartItems.value.map((i) => ({
-      produto: i.product.name,
-      sellerId: this.getSellerIdFromItem(i),
-      sellerName: this.getSellerNameFromItem(i),
-    })));
   }
 }

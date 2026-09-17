@@ -41,7 +41,6 @@ export class Favorites implements OnInit, OnDestroy {
         next: (products) => {
           this.products = products;
           this.loading = false;
-          console.log(`❤️ ${products.length} produtos favoritos carregados`);
         },
         error: (error) => {
           console.error('❌ Erro ao carregar favoritos:', error);
