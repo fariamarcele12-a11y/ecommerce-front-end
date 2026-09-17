@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { CartItem, CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
 import { AlertService } from '../../core/services/alert.service';
@@ -12,6 +12,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
 import { DocumentValidator } from '../../core/utils/validators';
 import { User, UserAddress } from '../../core/models/user.model';
+import { Order, OrderItem, PaymentMethod } from '../../core/models/checkout.model';
 
 @Component({
   selector: 'app-checkout',
@@ -27,12 +28,11 @@ export class Checkout implements OnInit, OnDestroy {
   shipping = 0;
   total = 0;
 
-  paymentMethods: any[] = [];
+  paymentMethods: PaymentMethod[] = [];
   selectedPaymentMethod: string = 'credit';
   installments: number = 1;
   maxInstallments: number = 12;
 
-  // 🔥 Dados do usuário
   currentUser: User | null = null;
   userAddresses: UserAddress[] = [];
   selectedAddressId: string | null = null;
@@ -90,17 +90,11 @@ export class Checkout implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
-  /**
-   * 🔥 Getter para o endereço selecionado (SEMPRE busca da lista)
-   */
   get selectedAddress(): UserAddress | null {
     if (!this.selectedAddressId) return null;
     return this.userAddresses.find((a) => a.id === this.selectedAddressId) || null;
   }
 
-  /**
-   * 🔥 Verifica se o documento é válido
-   */
   isDocumentValid(): boolean {
     if (!this.form.cpfCnpj) return false;
     const numbers = this.form.cpfCnpj.replace(/\D/g, '');
@@ -113,9 +107,6 @@ export class Checkout implements OnInit, OnDestroy {
     return false;
   }
 
-  /**
-   * 🔥 Carrega dados do usuário (endereço + CPF/CNPJ)
-   */
   loadUserData(): void {
     const user = this.authService.getCurrentUser();
     if (!user) {
@@ -125,29 +116,22 @@ export class Checkout implements OnInit, OnDestroy {
     }
 
     this.currentUser = user;
-    console.log('👤 Usuário carregado:', user.name);
+    console.log('👤 Usuário carregado:', user.name, '| id:', user.id);
 
-    // 🔥 Preencher CPF/CNPJ automaticamente
     if (user.document) {
       this.form.cpfCnpj = this.formatCpfCnpj(user.document);
-      console.log('📄 CPF/CNPJ preenchido:', this.form.cpfCnpj);
     }
 
     this.loadUserAddresses(user);
   }
 
-  /**
-   * 🔥 Carrega endereços do usuário
-   */
   loadUserAddresses(user: User): void {
     if (user.addresses && user.addresses.length > 0) {
-      // 🔥 Garantir que todos os endereços tenham id
       this.userAddresses = user.addresses.map((addr) => ({
         ...addr,
         id: addr.id || this.generateAddressId(),
       }));
 
-      // Selecionar endereço principal ou o primeiro
       const mainAddress = this.userAddresses.find((a) => a.isDefault) || this.userAddresses[0];
       if (mainAddress && mainAddress.id) {
         this.selectedAddressId = mainAddress.id;
@@ -155,7 +139,6 @@ export class Checkout implements OnInit, OnDestroy {
       }
       console.log('✅ Endereços carregados:', this.userAddresses.length);
     } else if (user.address) {
-      // 🔥 Migrar endereço antigo para o novo formato
       const newId = this.generateAddressId();
       const migratedAddress: UserAddress = {
         id: newId,
@@ -178,14 +161,12 @@ export class Checkout implements OnInit, OnDestroy {
 
       console.log('✅ Endereço migrado:', migratedAddress);
     } else {
-      // 🔥 Tentar carregar do localStorage (fallback)
       const savedAddress = localStorage.getItem('savedAddress');
       if (savedAddress) {
         try {
           const address = JSON.parse(savedAddress);
           this.form.address = { ...this.form.address, ...address };
           this.form.saveAddress = true;
-          console.log('✅ Endereço do localStorage:', address);
         } catch (error) {
           console.error('Erro ao carregar endereço salvo:', error);
         }
@@ -193,28 +174,18 @@ export class Checkout implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * 🔥 Gera ID único para endereço
-   */
   private generateAddressId(): string {
     return 'ADDR-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 8);
   }
 
-  /**
-   * 🔥 Seleciona um endereço para entrega
-   */
   selectAddress(addressId: string): void {
     const address = this.userAddresses.find((a) => a.id === addressId);
     if (address) {
       this.selectedAddressId = addressId;
       this.form.address = { ...address };
-      console.log('📍 Endereço selecionado:', address);
     }
   }
 
-  /**
-   * 🔥 Abre o modal de novo endereço
-   */
   openNewAddressModal(): void {
     this.editingAddress = null;
     this.form.address = {
@@ -233,9 +204,6 @@ export class Checkout implements OnInit, OnDestroy {
     this.showAddressModal = true;
   }
 
-  /**
-   * 🔥 Abre o modal para editar endereço existente
-   */
   editAddress(address: UserAddress, event: Event): void {
     event.stopPropagation();
     this.editingAddress = { ...address };
@@ -243,17 +211,11 @@ export class Checkout implements OnInit, OnDestroy {
     this.showAddressModal = true;
   }
 
-  /**
-   * 🔥 Fecha o modal de endereço
-   */
   closeAddressModal(): void {
     this.showAddressModal = false;
     this.editingAddress = null;
   }
 
-  /**
-   * 🔥 Salva o endereço (novo ou editado)
-   */
   saveAddress(): void {
     const address = this.form.address;
 
@@ -295,9 +257,6 @@ export class Checkout implements OnInit, OnDestroy {
     this.alertService.success('Endereço salvo!', 'O endereço foi salvo com sucesso.');
   }
 
-  /**
-   * 🔥 Remove um endereço
-   */
   removeAddress(addressId: string, event: Event): void {
     event.stopPropagation();
 
@@ -331,18 +290,11 @@ export class Checkout implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * 🔥 Salva endereços no usuário (API + localStorage)
-   */
-  /**
-   * 🔥 Salva endereços no usuário (PRESERVANDO todos os dados)
-   */
   private saveAddressesToUser(): void {
     if (!this.currentUser) return;
 
     const mainAddress = this.userAddresses.find((a) => a.isDefault) || this.userAddresses[0];
 
-    // 🔥 Enviar APENAS os campos que mudaram
     const updateData = {
       addresses: this.userAddresses,
       address: mainAddress,
@@ -354,11 +306,9 @@ export class Checkout implements OnInit, OnDestroy {
       next: (updatedUser) => {
         console.log('✅ Endereços salvos na API');
 
-        // 🔥 MESCLAR com o currentUser (NÃO SUBSTITUIR!)
         this.currentUser = {
           ...this.currentUser,
           ...updatedUser,
-          // 🔥 Garantir que dados críticos não sejam perdidos
           id: this.currentUser?.id || updatedUser.id,
           name: this.currentUser?.name || updatedUser.name,
           email: this.currentUser?.email || updatedUser.email,
@@ -370,13 +320,11 @@ export class Checkout implements OnInit, OnDestroy {
           storeId: this.currentUser?.storeId ?? updatedUser.storeId,
         } as User;
 
-        // 🔥 Atualizar no AuthService (que já faz mesclagem segura)
         this.authService.forceUpdateUser(this.currentUser);
       },
       error: (error) => {
         console.error('❌ Erro ao salvar endereços:', error);
 
-        // 🔥 Fallback: salvar localmente
         if (this.currentUser) {
           const updatedUser = {
             ...this.currentUser,
@@ -390,9 +338,6 @@ export class Checkout implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * 🔥 Atualiza endereço principal
-   */
   setAsMainAddress(addressId: string, event: Event): void {
     event.stopPropagation();
 
@@ -417,6 +362,16 @@ export class Checkout implements OnInit, OnDestroy {
         if (items.length === 0) {
           this.alertService.warning('Carrinho vazio', 'Adicione itens ao carrinho.');
           this.router.navigate(['/carrinho']);
+        } else {
+          // 🔥 LOG: verifica se os sellers estão certos
+          console.log('🛒 Itens do carrinho:');
+          items.forEach((item) => {
+            console.log({
+              produto: item.product.name,
+              sellerId: item.product.seller?.id,
+              sellerName: item.product.seller?.name,
+            });
+          });
         }
       }),
     );
@@ -591,7 +546,6 @@ export class Checkout implements OnInit, OnDestroy {
       return false;
     }
 
-    // 🔥 Validação do documento
     if (!this.isDocumentValid()) {
       this.alertService.error('CPF/CNPJ inválido', 'O documento cadastrado não é válido.');
       return false;
@@ -604,8 +558,15 @@ export class Checkout implements OnInit, OnDestroy {
     return true;
   }
 
-  onSubmit(): void {
+  /**
+   * 🔥 SUBMIT REAL: cria pedido, processa pagamento e notifica comprador + vendedor
+   */
+  async onSubmit(): Promise<void> {
     if (!this.validateForm()) {
+      return;
+    }
+    if (!this.currentUser) {
+      this.alertService.error('Erro', 'Usuário não autenticado.');
       return;
     }
 
@@ -616,24 +577,98 @@ export class Checkout implements OnInit, OnDestroy {
       'Aguarde enquanto processamos sua compra.',
     );
 
-    if (this.form.updateAsMainAddress && this.selectedAddressId) {
-      this.userAddresses.forEach((a) => (a.isDefault = a.id === this.selectedAddressId));
-      this.saveAddressesToUser();
-    }
+    try {
+      // 🔥 Atualiza endereço principal se solicitado
+      if (this.form.updateAsMainAddress && this.selectedAddressId) {
+        this.userAddresses.forEach((a) => (a.isDefault = a.id === this.selectedAddressId));
+        this.saveAddressesToUser();
+      }
 
-    setTimeout(() => {
+      const selectedAddress = this.selectedAddress;
+      if (!selectedAddress) throw new Error('Endereço não selecionado');
+
+      // 🔥 USA O HELPER DO CARTSERVICE — já vem com sellerId correto!
+      const checkoutItems = this.cartService.getCheckoutItems();
+
+      console.log('🛒 Itens prontos para o pedido:', checkoutItems);
+
+      // Converte para OrderItem
+      const mappedItems: OrderItem[] = checkoutItems.map((item) => ({
+        productId: Number(item.productId) || 0,
+        productName: item.productName,
+        quantity: item.quantity,
+        price: item.price,
+        subtotal: item.subtotal,
+        image: item.image,
+        sellerId: item.sellerId,
+        sellerName: item.sellerName,
+      }));
+
+      console.log('📦 OrderItems mapeados:', mappedItems);
+
+      // 🔥 Monta o pedido
+      const orderData: Partial<Order> = {
+        userId: String(this.currentUser.id),
+        buyerName: this.currentUser.name,
+        items: mappedItems,
+        address: {
+          cep: selectedAddress.cep,
+          street: selectedAddress.street,
+          number: selectedAddress.number,
+          complement: selectedAddress.complement,
+          neighborhood: selectedAddress.neighborhood,
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          country: selectedAddress.country || 'Brasil',
+        },
+        paymentMethod: {
+          id: this.form.paymentMethod,
+          name:
+            this.paymentMethods.find((m) => m.id === this.form.paymentMethod)?.name ||
+            'Pagamento',
+          icon: '',
+          type: (this.paymentMethods.find((m) => m.id === this.form.paymentMethod)?.type ||
+            'pix') as any,
+        },
+        subtotal: this.subtotal,
+        discount: this.discount,
+        shipping: this.shipping,
+        total: this.total,
+        status: 'pending',
+        createdAt: new Date(),
+      };
+
+      // 🔥 1) Cria o pedido (OrderService dispara as notificações de compra/venda)
+      const createdOrder = await firstValueFrom(
+        this.orderService.createOrder(orderData)
+      );
+
+      console.log('✅ Pedido criado:', createdOrder.id);
+
+      // 🔥 2) Processa pagamento (simulado) — o status vai para 'processing'
+      await firstValueFrom(this.orderService.processPayment(createdOrder));
+
+      // ✅ Sucesso
       this.alertService.close();
       this.isProcessing = false;
       this.orderConfirmed = true;
-      this.orderId = 'ORD-' + Date.now();
+      this.orderId = createdOrder.id;
       this.cartService.clearCart();
 
       this.alertService.success(
         '🎉 Pedido confirmado!',
-        `Seu pedido ${this.orderId} foi realizado com sucesso.`,
+        `Seu pedido ${createdOrder.id} foi realizado. Você e o vendedor foram notificados.`,
         5000,
       );
-    }, 2000);
+
+      console.log('✅ Checkout finalizado com notificações enviadas');
+    } catch (error: any) {
+      console.error('❌ Erro no checkout:', error);
+      this.alertService.close();
+      this.isProcessing = false;
+      this.paymentError = error?.message || 'Erro ao processar pedido.';
+      this.alertService.error('Falha no pagamento', this.paymentError);
+    }
   }
 
   continueShopping(): void {

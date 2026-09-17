@@ -4,6 +4,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError, catchError, tap, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Order, OrderFilter, PaymentMethod, CardData } from '../models/checkout.model';
+import { NotificationService } from './notification.service';
 
 @Injectable({
   providedIn: 'root',
@@ -18,6 +19,7 @@ export class OrderService {
   private currentOrder = new BehaviorSubject<Order | null>(null);
   private readonly isBrowser: boolean;
   private readonly http = inject(HttpClient);
+  private readonly notificationService = inject(NotificationService); // 🔥
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -90,16 +92,31 @@ export class OrderService {
   }
 
   /**
+   * 🔥 Busca pedidos onde o usuário é VENDEDOR (para tela "Minhas Vendas")
+   */
+  getSellerOrders(sellerId: string): Observable<Order[]> {
+    // JSON Server não faz query aninhada em arrays, então filtramos no cliente
+    return this.http.get<Order[]>(`${this.apiUrl}?_sort=createdAt&_order=desc`).pipe(
+      map((orders) =>
+        orders.filter((order: any) =>
+          (order.items || []).some(
+            (item: any) => String(item.sellerId || item.storeId) === String(sellerId)
+          )
+        )
+      ),
+      catchError(this.handleError),
+    );
+  }
+
+  /**
    * Busca pedido por ID
    */
   getOrderById(orderId: string): Observable<Order | undefined> {
-    // Primeiro tenta do cache local
     const cachedOrder = this.orders.value.find((o) => o.id === orderId);
     if (cachedOrder) {
       return of(cachedOrder);
     }
 
-    // Se não encontrar, busca da API
     return this.http.get<Order>(`${this.apiUrl}/${orderId}`).pipe(
       tap((order) => {
         const currentOrders = this.orders.value;
@@ -119,7 +136,7 @@ export class OrderService {
   }
 
   /**
-   * Cria um novo pedido
+   * 🔥 Cria um novo pedido E dispara notificações para comprador e vendedor
    */
   createOrder(orderData: Partial<Order>): Observable<Order> {
     const newOrder: Order = {
@@ -134,6 +151,7 @@ export class OrderService {
       status: 'pending',
       createdAt: new Date(),
       userId: orderData.userId || '1',
+      buyerName: orderData.buyerName,
       ...orderData,
     };
 
@@ -146,13 +164,85 @@ export class OrderService {
         if (this.isBrowser) {
           this.saveOrdersToStorage([createdOrder, ...currentOrders]);
         }
+
+        // 🔥 DISPARA NOTIFICAÇÕES PARA COMPRADOR E VENDEDOR
+        this.dispatchOrderNotifications(createdOrder);
       }),
       catchError(this.handleError),
     );
   }
 
   /**
-   * Atualiza o status de um pedido
+   * 🔔 Dispara notificações de compra/venda usando o NotificationService
+   */
+  private dispatchOrderNotifications(order: Order): void {
+    const items: any[] = order.items || [];
+
+    console.log('═══════════════════════════════════════');
+    console.log('🔔 [NOTIF] Iniciando notificações');
+    console.log('🔔 [NOTIF] Pedido:', order.id);
+    console.log('🔔 [NOTIF] Items:', items);
+    console.log('═══════════════════════════════════════');
+
+    if (items.length === 0) {
+      console.warn('⚠️ Pedido sem itens — notificações não disparadas');
+      return;
+    }
+
+    const buyerId = String(order.userId || '1');
+    const buyerName = (order as any).buyerName || 'Cliente';
+
+    console.log(`🔔 [NOTIF] Comprador: id=${buyerId} | nome=${buyerName}`);
+
+    // Agrupa itens por vendedor
+    const bySeller = new Map<string, any[]>();
+    items.forEach((item) => {
+      const sellerId = String(item.sellerId || item.storeId || item.ownerId || '1');
+      console.log(`🔔 [NOTIF] Item "${item.productName || item.name}" → sellerId=${sellerId}`);
+
+      if (!bySeller.has(sellerId)) bySeller.set(sellerId, []);
+      bySeller.get(sellerId)!.push(item);
+    });
+
+    console.log(`🔔 [NOTIF] Vendedores identificados:`, [...bySeller.keys()]);
+
+    bySeller.forEach((sellerItems, sellerId) => {
+      const firstItem = sellerItems[0];
+      const productName =
+        sellerItems.length > 1
+          ? `${firstItem.productName || firstItem.name} (+${sellerItems.length - 1})`
+          : firstItem.productName || firstItem.name;
+
+      const sellerTotal = sellerItems.reduce(
+        (sum, it) => sum + (it.subtotal || it.price * it.quantity || 0),
+        0
+      );
+
+      // 🔔 Notifica COMPRADOR
+      console.log(`🔔 [NOTIF] → Notificando COMPRADOR ${buyerId}`);
+      this.notificationService.notifyOrderConfirmed(
+        buyerId,
+        productName,
+        order.id,
+        sellerTotal
+      );
+
+      // 🔔 Notifica VENDEDOR
+      console.log(`🔔 [NOTIF] → Notificando VENDEDOR ${sellerId}`);
+      this.notificationService.notifyNewSale(
+        sellerId,
+        buyerName,
+        productName,
+        order.id,
+        sellerTotal
+      );
+    });
+
+    console.log('═══════════════════════════════════════');
+  }
+
+  /**
+   * 🔥 Atualiza status E notifica as partes envolvidas
    */
   updateOrderStatus(orderId: string, status: Order['status']): Observable<Order> {
     const updates = {
@@ -171,9 +261,87 @@ export class OrderService {
             this.saveOrdersToStorage(currentOrders);
           }
         }
+
+        // 🔔 Dispara notificações de status (comprador + vendedor)
+        this.dispatchStatusNotifications(updatedOrder, status);
       }),
       catchError(this.handleError),
     );
+  }
+
+  /**
+   * 🔔 Notifica comprador/vendedor sobre mudança de status
+   */
+  private dispatchStatusNotifications(order: Order, status: Order['status']): void {
+    if (!['shipped', 'delivered', 'cancelled', 'processing'].includes(status)) {
+      return;
+    }
+
+    const items: any[] = order.items || [];
+    if (items.length === 0) return;
+
+    const firstItem = items[0];
+    const buyerId = String(order.userId || '1');
+    const buyerName = (order as any).buyerName || 'Cliente';
+    const sellerId = String(firstItem.sellerId || firstItem.storeId || '1');
+    const sellerName = firstItem.sellerName || firstItem.storeName || 'Vendedor';
+    const productName = firstItem.productName || firstItem.name || 'Produto';
+
+    const statusMessages: Record<
+      string,
+      { buyerTitle: string; buyer: string; sellerTitle: string; seller: string }
+    > = {
+      shipped: {
+        buyerTitle: '📦 Pedido enviado',
+        buyer: `Seu pedido "${productName}" foi enviado e está a caminho!`,
+        sellerTitle: '📦 Pedido enviado',
+        seller: `Você enviou "${productName}" para ${buyerName}.`,
+      },
+      delivered: {
+        buyerTitle: '🎉 Pedido entregue',
+        buyer: `Seu pedido "${productName}" foi entregue com sucesso!`,
+        sellerTitle: '✅ Entrega confirmada',
+        seller: `"${productName}" foi entregue para ${buyerName}.`,
+      },
+      cancelled: {
+        buyerTitle: '❌ Pedido cancelado',
+        buyer: `Seu pedido "${productName}" foi cancelado.`,
+        sellerTitle: '❌ Venda cancelada',
+        seller: `A venda de "${productName}" para ${buyerName} foi cancelada.`,
+      },
+      processing: {
+        buyerTitle: '⏳ Pagamento aprovado',
+        buyer: `Seu pedido "${productName}" está sendo processado.`,
+        sellerTitle: '⏳ Pedido em processamento',
+        seller: `O pedido de "${productName}" para ${buyerName} está em processamento.`,
+      },
+    };
+
+    const msgs = statusMessages[status];
+
+    // 🔔 Comprador
+    this.notificationService
+      .createNotification(
+        buyerId,
+        'order',
+        msgs.buyerTitle,
+        msgs.buyer,
+        `/pedidos/${order.id}`,
+        { orderId: order.id, status, role: 'buyer' }
+      )
+      .subscribe();
+
+    // 🔔 Vendedor
+    this.notificationService
+      .createNotification(
+        sellerId,
+        status === 'cancelled' ? 'order' : 'sale',
+        msgs.sellerTitle,
+        msgs.seller,
+        `/pedidos/${order.id}`,
+        { orderId: order.id, status, role: 'seller', buyerName, sellerName }
+      )
+      .subscribe();
   }
 
   /**
@@ -274,7 +442,7 @@ export class OrderService {
             transactionId: `TXN-${Date.now()}`,
           });
 
-          // Atualizar status do pedido
+          // Atualizar status do pedido (isso já dispara notificações)
           this.updateOrderStatus(order.id, 'processing').subscribe();
         } else {
           observer.next({
@@ -294,7 +462,6 @@ export class OrderService {
     order: Order,
     cardData: CardData,
   ): Observable<{ success: boolean; message: string; transactionId?: string }> {
-    // Validação simples
     if (!cardData.cardNumber || cardData.cardNumber.length < 16) {
       return of({
         success: false,
@@ -333,7 +500,6 @@ export class OrderService {
       transactionId: `PIX-${Date.now()}`,
     };
 
-    // Atualizar status do pedido
     this.updateOrderStatus(order.id, 'processing').subscribe();
 
     return of(result);
@@ -352,7 +518,6 @@ export class OrderService {
       transactionId: `BOL-${Date.now()}`,
     };
 
-    // Atualizar status do pedido
     this.updateOrderStatus(order.id, 'processing').subscribe();
 
     return of(result);

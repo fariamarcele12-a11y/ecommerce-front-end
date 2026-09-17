@@ -1,3 +1,5 @@
+// src/app/core/models/checkout.model.ts
+
 export interface Address {
   id?: number;
   cep: string;
@@ -27,9 +29,22 @@ export interface PaymentMethod {
   installments?: number;
 }
 
+export interface OrderItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  price: number;
+  subtotal: number;
+  image: string;
+  // 🔥 NOVOS CAMPOS (opcionais, para notificações)
+  sellerId?: string;
+  sellerName?: string;
+}
+
 export interface Order {
   id: string;
   userId?: string;
+  buyerName?: string; // 🔥 usado nas notificações
   items: OrderItem[];
   address: Address;
   paymentMethod: PaymentMethod;
@@ -41,15 +56,6 @@ export interface Order {
   createdAt: Date;
   updatedAt?: Date;
   trackingCode?: string;
-}
-
-export interface OrderItem {
-  productId: number;
-  productName: string;
-  quantity: number;
-  price: number;
-  subtotal: number;
-  image: string;
 }
 
 export interface CheckoutForm {

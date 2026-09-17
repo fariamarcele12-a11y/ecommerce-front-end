@@ -10,11 +10,11 @@ export interface Product {
   category: string;
   condition: 'new' | 'used';
   seller: {
-    id: string; // 🔥 Mudado para string (ID único do usuário)
+    id: string;
     name: string;
     rating: number;
     sales: number;
-    memberSince?: string; // 🔥 NOVO: Data de cadastro do vendedor
+    memberSince?: string;
   };
   storeId?: string;
   location: string;

@@ -33,9 +33,23 @@ export interface CartSummary {
 export interface ServerCart {
   id: number;
   items: {
-    productId: string; // 🔥 string
+    productId: string;
     quantity: number;
   }[];
+}
+
+/**
+ * 🔥 Estrutura pronta para o checkout (com sellerId)
+ */
+export interface CheckoutItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  subtotal: number;
+  image: string;
+  sellerId: string;
+  sellerName: string;
 }
 
 type Coupon = Record<string, number>;
@@ -92,6 +106,28 @@ export class CartService {
     return this.couponCode.asObservable();
   }
 
+  /**
+   * 🔥 Retorna os itens formatados para o checkout (com sellerId)
+   */
+  getCheckoutItems(): CheckoutItem[] {
+    return this.cartItems.value.map((item) => {
+      const product = item.product;
+      const price = product.price || 0;
+      const quantity = item.quantity || 1;
+
+      return {
+        productId: String(product.id),
+        productName: product.name,
+        quantity,
+        price,
+        subtotal: price * quantity,
+        image: product.images?.[0] || '',
+        sellerId: this.getSellerIdFromItem(item),
+        sellerName: this.getSellerNameFromItem(item),
+      };
+    });
+  }
+
   addToCart(product: Product, quantity = 1): void {
     const currentItems = this.cartItems.value;
     const existingItem = currentItems.find((item) => item.product.id === product.id);
@@ -123,16 +159,22 @@ export class CartService {
 
     this.updateCart(currentItems);
     this.saveToStorageAndServer(currentItems);
+
+    // 🔥 LOG de debug
+    console.log('🛒 Produto adicionado:', {
+      id: product.id,
+      name: product.name,
+      seller: product.seller,
+      sellerIdExtraido: this.getSellerIdFromProduct(product),
+    });
   }
 
-  // 🔥 CORRIGIDO: productId como string
   removeFromCart(productId: string): void {
     const currentItems = this.cartItems.value.filter((item) => item.product.id !== productId);
     this.updateCart(currentItems);
     this.saveToStorageAndServer(currentItems);
   }
 
-  // 🔥 CORRIGIDO: productId como string
   updateQuantity(productId: string, quantity: number): void {
     const currentItems = this.cartItems.value;
     const item = currentItems.find((item) => item.product.id === productId);
@@ -294,16 +336,65 @@ export class CartService {
     return this.cartItems.value.length;
   }
 
-  // 🔥 CORRIGIDO: productId como string
   isProductInCart(productId: string): boolean {
     return this.cartItems.value.some((item) => item.product.id === productId);
   }
 
-  // 🔥 CORRIGIDO: productId como string
   getProductQuantity(productId: string): number {
     const item = this.cartItems.value.find((item) => item.product.id === productId);
     return item ? item.quantity : 0;
   }
+
+  // ============================================
+  // 🔥 HELPERS PARA O CHECKOUT (sellerId)
+  // ============================================
+
+  /**
+   * 🔥 Extrai o sellerId do PRODUTO (lida com seller.id aninhado)
+   */
+  private getSellerIdFromProduct(product: Product): string {
+    const p: any = product || {};
+    return String(
+      p.seller?.id ||       // 🔥 SEU CASO: seller.id
+      p.sellerId ||         // fallback 1
+      p.storeId ||          // fallback 2
+      p.ownerId ||          // fallback 3
+      p.userId ||           // fallback 4
+      '1'                   // último recurso
+    );
+  }
+
+  /**
+   * 🔥 Extrai o sellerName do PRODUTO (lida com seller.name aninhado)
+   */
+  private getSellerNameFromProduct(product: Product): string {
+    const p: any = product || {};
+    return (
+      p.seller?.name ||     // 🔥 SEU CASO: seller.name
+      p.sellerName ||       // fallback 1
+      p.storeName ||        // fallback 2
+      p.ownerName ||        // fallback 3
+      'Vendedor'            // último recurso
+    );
+  }
+
+  /**
+   * 🔥 Extrai o sellerId de um ITEM do carrinho
+   */
+  private getSellerIdFromItem(item: CartItem): string {
+    return this.getSellerIdFromProduct(item.product);
+  }
+
+  /**
+   * 🔥 Extrai o sellerName de um ITEM do carrinho
+   */
+  private getSellerNameFromItem(item: CartItem): string {
+    return this.getSellerNameFromProduct(item.product);
+  }
+
+  // ============================================
+  // MÉTODOS PRIVADOS
+  // ============================================
 
   private updateCart(items: CartItem[]): void {
     items.forEach((item) => {
@@ -330,8 +421,9 @@ export class CartService {
 
   private saveCartToStorage(items: CartItem[]): void {
     try {
+      // 🔥 Salva o produto COMPLETO (inclui seller aninhado) + quantity
       const cartData = items.map((item) => ({
-        productId: item.product.id,
+        product: item.product,
         quantity: item.quantity,
       }));
       localStorage.setItem('cart', JSON.stringify(cartData));
@@ -381,7 +473,20 @@ export class CartService {
       if (cartData) {
         const parsedData = JSON.parse(cartData);
         if (parsedData && parsedData.length > 0) {
-          this.loadProductsForCart(parsedData);
+          // 🔥 Reconstrói os itens com o produto completo (preserva seller)
+          const items: CartItem[] = parsedData
+            .filter((d: any) => d.product)
+            .map((d: any) => ({
+              product: d.product,
+              quantity: d.quantity,
+              subtotal: d.product.price * d.quantity,
+            }));
+
+          if (items.length > 0) {
+            this.updateCart(items);
+            console.log('🛒 Carrinho restaurado:', items.length, 'itens');
+            console.log('🛒 Sellers:', items.map((i) => this.getSellerIdFromItem(i)));
+          }
         }
       }
 
@@ -394,11 +499,6 @@ export class CartService {
     } catch (error) {
       console.error('Erro ao carregar carrinho do localStorage:', error);
     }
-  }
-
-  private loadProductsForCart(cartData: { productId: string; quantity: number }[]): void {
-    const productIds = cartData.map((item) => item.productId);
-    console.log('🛒 Carrinho carregado do localStorage:', { productIds });
   }
 
   private syncCartWithServer(): void {
@@ -474,5 +574,10 @@ export class CartService {
     console.log('  - Desconto:', this.discount.value);
     console.log('  - Frete:', this.shipping.value);
     console.log('  - Cupom:', this.couponCode.value);
+    console.log('  - Sellers:', this.cartItems.value.map((i) => ({
+      produto: i.product.name,
+      sellerId: this.getSellerIdFromItem(i),
+      sellerName: this.getSellerNameFromItem(i),
+    })));
   }
 }

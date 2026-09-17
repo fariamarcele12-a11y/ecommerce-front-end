@@ -1,15 +1,17 @@
 // src/app/shared/components/navbar/navbar.ts
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ProductService } from '../../../core/services/product.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { StoreService } from '../../../core/services/store.service';
+import { CartService } from '../../../core/services/cart.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { SearchBar } from '../search-bar/search-bar';
 import { Subscription } from 'rxjs';
 import { Store } from '../../../core/models/store.model';
-import { CartService } from '../../../core/services/cart.service';
 import { User } from '../../../core/models/user.model';
+import { Notification } from '../../../core/models/notification.model';
 
 @Component({
   selector: 'app-navbar',
@@ -24,14 +26,23 @@ export class Navbar implements OnInit, OnDestroy {
   isLoggedIn = false;
   isScrolled = false;
   userName = '';
-  userAvatar = ''; // 🔥 NOVO: Avatar do usuário
+  userAvatar = '';
   hasStore = false;
   storeId: string | null = null;
+
+  // 🔥 Notificações
+  notifications: Notification[] = [];
+  unreadCount = 0;
+  showNotifications = false;
 
   private cartSubscription: Subscription = new Subscription();
   private favoritesSubscription: Subscription = new Subscription();
   private userSubscription: Subscription = new Subscription();
   private storeSubscription: Subscription = new Subscription();
+  private notificationsSubscription: Subscription = new Subscription();
+  private unreadCountSubscription: Subscription = new Subscription();
+
+  private readonly notificationService = inject(NotificationService);
 
   constructor(
     private cartService: CartService,
@@ -52,11 +63,24 @@ export class Navbar implements OnInit, OnDestroy {
       this.favoritesCount = favorites.length;
     });
 
+    // 🔥 Notificações
+    this.notificationsSubscription = this.notificationService.notifications$.subscribe(
+      (notifications) => {
+        this.notifications = notifications;
+      }
+    );
+
+    this.unreadCountSubscription = this.notificationService.unreadCount$.subscribe(
+      (count) => {
+        this.unreadCount = count;
+      }
+    );
+
     // Usuário
     this.userSubscription = this.authService.currentUser$.subscribe((user: User | null) => {
       this.isLoggedIn = !!user;
       this.userName = user?.name || '';
-      this.userAvatar = (user as any)?.avatar || ''; // 🔥 Carregar avatar
+      this.userAvatar = (user as any)?.avatar || '';
 
       console.log('👤 Usuário logado:', user);
       console.log('📸 Avatar:', this.userAvatar ? 'Sim' : 'Não');
@@ -65,26 +89,32 @@ export class Navbar implements OnInit, OnDestroy {
 
       if (this.isLoggedIn && user?.id) {
         this.checkUserStore(user.id);
+        this.notificationService.loadNotifications(true);
       } else {
         this.hasStore = false;
         this.storeId = null;
         this.userAvatar = '';
+        this.notifications = [];
+        this.unreadCount = 0;
       }
     });
+
+    // 🔥 Fechar notificações ao clicar fora
+    if (typeof document !== 'undefined') {
+      document.addEventListener('click', this.onDocumentClick.bind(this));
+    }
   }
 
   ngOnDestroy(): void {
-    if (this.cartSubscription) {
-      this.cartSubscription.unsubscribe();
-    }
-    if (this.favoritesSubscription) {
-      this.favoritesSubscription.unsubscribe();
-    }
-    if (this.userSubscription) {
-      this.userSubscription.unsubscribe();
-    }
-    if (this.storeSubscription) {
-      this.storeSubscription.unsubscribe();
+    this.cartSubscription?.unsubscribe();
+    this.favoritesSubscription?.unsubscribe();
+    this.userSubscription?.unsubscribe();
+    this.storeSubscription?.unsubscribe();
+    this.notificationsSubscription?.unsubscribe();
+    this.unreadCountSubscription?.unsubscribe();
+
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('click', this.onDocumentClick.bind(this));
     }
   }
 
@@ -93,69 +123,177 @@ export class Navbar implements OnInit, OnDestroy {
     this.isScrolled = window.scrollY > 50;
   }
 
-  onSearch(searchTerm: string): void {
-    if (searchTerm.trim()) {
-      this.router.navigate(['/busca'], {
-        queryParams: { q: searchTerm }
-      });
+  /**
+   * 🔥 Fecha notificações ao clicar fora
+   */
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.notifications-dropdown')) {
+      this.showNotifications = false;
     }
   }
 
+  /**
+   * 🔥 Alterna visibilidade das notificações
+   */
+  toggleNotifications(event: Event): void {
+    event.stopPropagation();
+    this.showNotifications = !this.showNotifications;
+
+    // 🔥 Recarregar ao abrir (força atualização)
+    if (this.showNotifications) {
+      this.notificationService.loadNotifications(true);
+    }
+  }
+
+  /**
+   * 🔥 Ao clicar em uma notificação
+   */
+  onNotificationClick(notification: Notification, event: Event): void {
+    event.stopPropagation();
+
+    // 🔥 Marcar como lida
+    if (!notification.read) {
+      this.notificationService.markAsRead(notification.id).subscribe();
+    }
+
+    // 🔥 Fechar dropdown
+    this.showNotifications = false;
+
+    // 🔥 Navegar para o link
+    if (notification.link) {
+      this.router.navigateByUrl(notification.link);
+    }
+  }
+
+  /**
+   * 🔥 Marca todas como lidas
+   */
+  markAllAsRead(event: Event): void {
+    event.stopPropagation();
+    this.notificationService.markAllAsRead();
+  }
+
+  /**
+   * 🔥 Remove uma notificação
+   */
+  deleteNotification(notificationId: string, event: Event): void {
+    event.stopPropagation();
+    this.notificationService.deleteNotification(notificationId).subscribe();
+  }
+
+  /**
+   * 🔥 Remove todas as notificações
+   */
+  clearAllNotifications(event: Event): void {
+    event.stopPropagation();
+    this.notificationService.clearAll();
+  }
+
+  /**
+   * 🔥 Obtém ícone da notificação
+   */
+  getNotificationIcon(type: string): string {
+    switch (type) {
+      case 'message': return 'bi-chat-dots-fill';
+      case 'order': return 'bi-box-seam-fill';
+      case 'sale': return 'bi-cash-coin';
+      case 'review': return 'bi-star-fill';
+      case 'system': return 'bi-info-circle-fill';
+      default: return 'bi-bell-fill';
+    }
+  }
+
+  /**
+   * 🔥 Obtém cor do ícone
+   */
+  getNotificationColor(type: string): string {
+    switch (type) {
+      case 'message': return 'text-primary';
+      case 'order': return 'text-info';
+      case 'sale': return 'text-success';
+      case 'review': return 'text-warning';
+      case 'system': return 'text-secondary';
+      default: return 'text-primary';
+    }
+  }
+
+  /**
+   * 🔥 Formata data relativa
+   */
+  formatRelativeTime(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHour = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+
+    if (diffMin < 1) return 'Agora';
+    if (diffMin < 60) return `${diffMin}min`;
+    if (diffHour < 24) return `${diffHour}h`;
+    if (diffDay < 7) return `${diffDay}d`;
+
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  }
+
+  onSearch(searchTerm: string): void {
+    if (searchTerm.trim()) {
+      this.router.navigate(['/busca'], { queryParams: { q: searchTerm } });
+    }
+  }
+
+  /**
+   * 🔥 Logout (COM LIMPEZA DE NOTIFICAÇÕES)
+   */
   logout(): void {
+    console.log('👋 Fazendo logout...');
+
+    // 🔥 Limpar notificações ANTES do logout
+    this.notificationService.clearLocal();
+
+    // 🔥 Fazer logout
     this.authService.logout();
+
+    // 🔥 Limpar estado local do componente
     this.hasStore = false;
     this.storeId = null;
     this.userAvatar = '';
+    this.notifications = [];
+    this.unreadCount = 0;
+
+    // 🔥 Navegar para home
     this.router.navigate(['/home']);
   }
 
-  /**
-   * 🔥 Obtém as iniciais do nome para o avatar
-   */
   getInitials(name: string): string {
     if (!name) return '?';
     const words = name.trim().split(' ');
-    if (words.length === 1) {
-      return words[0].charAt(0).toUpperCase();
-    }
+    if (words.length === 1) return words[0].charAt(0).toUpperCase();
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
-  /**
-   * 🔥 Remove o avatar em caso de erro
-   */
   onAvatarError(): void {
     console.warn('⚠️ Erro ao carregar avatar, removendo...');
     this.userAvatar = '';
   }
 
-  /**
-   * Verifica se o usuário possui uma loja
-   */
   private checkUserStore(userId: number | string): void {
     if (this.storeSubscription) {
       this.storeSubscription.unsubscribe();
     }
 
-    console.log('🔍 Verificando loja para userId:', userId);
-
     this.storeSubscription = this.storeService.getStoreByUser(userId).subscribe({
       next: (store: Store | null) => {
-        console.log('📦 Resposta da loja:', store);
-
         if (store) {
           this.hasStore = true;
           this.storeId = String(store.id);
-          console.log('🏪 Loja encontrada:', store.storeName);
-          console.log('🆔 storeId (string):', this.storeId);
         } else {
           this.hasStore = false;
           this.storeId = null;
-          console.log('ℹ️ Usuário não possui loja');
         }
       },
-      error: (error: any) => {
-        console.error('❌ Erro ao verificar loja do usuário:', error);
+      error: () => {
         this.hasStore = false;
         this.storeId = null;
       }

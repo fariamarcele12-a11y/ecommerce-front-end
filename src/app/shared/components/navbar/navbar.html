@@ -65,6 +65,133 @@
           </span>
         </a>
 
+        <!-- 🔥 NOTIFICAÇÕES (aparece apenas para usuários logados) -->
+        <div class="dropdown notifications-dropdown" *ngIf="isLoggedIn">
+          <button
+            class="nav-link position-relative btn btn-link text-dark text-decoration-none p-2"
+            type="button"
+            (click)="toggleNotifications($event)"
+            [attr.aria-expanded]="showNotifications"
+            title="Notificações"
+          >
+            <i class="bi bi-bell fs-5"></i>
+            <span
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+              *ngIf="unreadCount > 0"
+            >
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+              <span class="visually-hidden">não lidas</span>
+            </span>
+          </button>
+
+          <!-- Dropdown de Notificações -->
+          <div
+            class="notifications-menu shadow-lg"
+            *ngIf="showNotifications"
+            (click)="$event.stopPropagation()"
+          >
+            <!-- Header -->
+            <div class="notifications-header">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0">
+                  <i class="bi bi-bell-fill me-2 text-primary"></i>
+                  Notificações
+                  <span class="badge bg-danger ms-2" *ngIf="unreadCount > 0">
+                    {{ unreadCount }}
+                  </span>
+                </h6>
+                <div class="d-flex gap-2">
+                  <button
+                    *ngIf="unreadCount > 0"
+                    class="btn btn-sm btn-link text-primary text-decoration-none p-0"
+                    (click)="markAllAsRead($event)"
+                    title="Marcar todas como lidas"
+                  >
+                    <i class="bi bi-check-all fs-5"></i>
+                  </button>
+                  <button
+                    *ngIf="notifications.length > 0"
+                    class="btn btn-sm btn-link text-danger text-decoration-none p-0"
+                    (click)="clearAllNotifications($event)"
+                    title="Limpar todas"
+                  >
+                    <i class="bi bi-trash fs-5"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lista de Notificações -->
+            <div class="notifications-body">
+              <!-- Sem notificações -->
+              <div *ngIf="notifications.length === 0" class="text-center py-5">
+                <i class="bi bi-bell-slash display-4 text-muted"></i>
+                <p class="text-muted mt-2 mb-0">Nenhuma notificação</p>
+                <small class="text-muted">Você está em dia! 🎉</small>
+              </div>
+
+              <!-- Com notificações -->
+              <div
+                *ngFor="let notification of notifications"
+                class="notification-item"
+                [class.unread]="!notification.read"
+                (click)="onNotificationClick(notification, $event)"
+              >
+                <div class="d-flex gap-3 align-items-start">
+                  <!-- Ícone -->
+                  <div
+                    class="notification-icon-wrapper"
+                    [class.icon-message]="notification.type === 'message'"
+                    [class.icon-order]="notification.type === 'order'"
+                    [class.icon-sale]="notification.type === 'sale'"
+                    [class.icon-review]="notification.type === 'review'"
+                    [class.icon-system]="notification.type === 'system'"
+                  >
+                    <i
+                      class="bi"
+                      [class]="getNotificationIcon(notification.type)"
+                    ></i>
+                  </div>
+
+                  <!-- Conteúdo -->
+                  <div class="flex-grow-1 min-width-0">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <strong class="notification-title">{{ notification.title }}</strong>
+                      <button
+                        class="btn btn-sm btn-link text-muted p-0 notification-delete"
+                        (click)="deleteNotification(notification.id, $event)"
+                        title="Remover"
+                      >
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
+                    <p class="notification-message mb-1">{{ notification.message }}</p>
+                    <small class="text-muted d-flex align-items-center gap-1">
+                      <i class="bi bi-clock"></i>
+                      {{ formatRelativeTime(notification.createdAt) }}
+                    </small>
+                  </div>
+
+                  <!-- Indicador de não lida -->
+                  <div *ngIf="!notification.read" class="notification-dot"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="notifications-footer" *ngIf="notifications.length > 0">
+              <a
+                routerLink="/notificacoes"
+                class="btn btn-sm btn-link w-100 text-decoration-none fw-bold"
+                (click)="showNotifications = false"
+              >
+                Ver todas as notificações
+                <i class="bi bi-arrow-right ms-1"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+
         <!-- 🔥 Avatar/Usuário com suporte a imagem -->
         <div class="dropdown">
           <button

@@ -28,15 +28,22 @@ export class AuthService {
     }
   }
 
+  /**
+   * 🔥 Login
+   */
   login(credentials: LoginCredentials): Observable<AuthResponse> {
+    console.log('🔑 Tentando login:', credentials.email);
+
     return this.http.get<User[]>(`${this.apiUrl}?email=${credentials.email}`).pipe(
       map((users) => {
         if (users.length === 0) {
+          console.warn('⚠️ Usuário não encontrado');
           return { success: false, message: 'Usuário não encontrado.' };
         }
 
         const user = users[0];
         if (user.password !== credentials.password) {
+          console.warn('⚠️ Senha incorreta');
           return { success: false, message: 'Senha incorreta.' };
         }
 
@@ -55,6 +62,8 @@ export class AuthService {
 
         this.currentUserSubject.next(userToStore as User);
 
+        console.log('✅ Login realizado:', user.name);
+
         return {
           success: true,
           message: 'Login realizado com sucesso!',
@@ -70,8 +79,12 @@ export class AuthService {
     );
   }
 
+  /**
+   * 🔥 Registro
+   */
   register(credentials: RegisterCredentials): Observable<AuthResponse> {
     const userId = this.idGenerator.generateUUID();
+    console.log('📝 Registrando usuário com ID:', userId);
 
     return this.http.get<User[]>(`${this.apiUrl}?email=${credentials.email}`).pipe(
       switchMap((users) => {
@@ -135,6 +148,8 @@ export class AuthService {
 
                 this.currentUserSubject.next(userWithoutPassword as User);
 
+                console.log('✅ Registro realizado:', createdUser.name);
+
                 return {
                   success: true,
                   message: 'Cadastro realizado com sucesso!',
@@ -154,14 +169,21 @@ export class AuthService {
     );
   }
 
+  /**
+   * 🔥 Logout (COM LIMPEZA DE NOTIFICAÇÕES)
+   */
   logout(): void {
+    console.log('👋 Realizando logout...');
+
     if (this.isBrowser) {
       localStorage.removeItem('currentUser');
       localStorage.removeItem('currentStore');
       localStorage.removeItem('rememberMe');
       // 🔥 NÃO remover userBackup (preserva para próxima sessão)
     }
+
     this.currentUserSubject.next(null);
+    console.log('✅ Logout realizado com sucesso!');
   }
 
   isLoggedIn(): boolean {
@@ -225,9 +247,8 @@ export class AuthService {
       map((updatedUser) => {
         // 🔥 MESCLAR: preservar TODOS os campos
         const mergedUser: User = {
-          ...currentUser,   // 🔥 começa com dados atuais
-          ...updatedUser,   // sobrescreve com o que voltou da API
-          // 🔥 GARANTIR campos críticos
+          ...currentUser,
+          ...updatedUser,
           id: updatedUser.id || currentUser.id,
           name: updatedUser.name || currentUser.name,
           email: updatedUser.email || currentUser.email,
@@ -298,7 +319,6 @@ export class AuthService {
     const mergedUser: User = {
       ...(currentUser || {}),
       ...user,
-      // 🔥 GARANTIR campos críticos
       id: user.id || currentUser?.id || '',
       name: user.name || currentUser?.name || '',
       email: user.email || currentUser?.email || '',
