@@ -171,6 +171,9 @@ export class AuthService {
     return this.currentUserSubject.value !== null;
   }
 
+  /**
+   * 🔥 Retorna o usuário atual de forma síncrona
+   */
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
   }

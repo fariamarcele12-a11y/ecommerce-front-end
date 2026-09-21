@@ -16,6 +16,7 @@ import { Product } from '../models/ProductModel/product.model';
 import { ProductFilters } from '../models/ProductModel/product-filters.model';
 import { IdGeneratorService } from './id-generator.service';
 import { CategoryService } from './category.service';
+import { AuthService } from './auth.service';
 
 export interface ProductResponse {
   products: Product[];
@@ -39,24 +40,74 @@ export class ProductService {
   private favoritesSubject = new BehaviorSubject<string[]>([]);
   public favorites$ = this.favoritesSubject.asObservable();
 
+  // 🔥 Chave do localStorage por usuário
+  private readonly FAVORITES_KEY_PREFIX = 'favorites_';
+  private readonly GUEST_FAVORITES_KEY = 'favorites_guest';
+
   private isBrowser: boolean;
+  private currentUserId: string | null = null;
+
   private readonly http: HttpClient;
   private readonly idGenerator: IdGeneratorService;
   private readonly categoryService: CategoryService;
+  private readonly authService: AuthService;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     http: HttpClient,
     idGenerator: IdGeneratorService,
     categoryService: CategoryService,
+    authService: AuthService,
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
     this.http = http;
     this.idGenerator = idGenerator;
     this.categoryService = categoryService;
+    this.authService = authService;
+
+    // 🔥 Escutar mudanças de usuário
+    this.authService.currentUser$.subscribe((user) => {
+      const newUserId = user?.id ? String(user.id) : null;
+
+      if (this.currentUserId !== newUserId) {
+        console.log('❤️ ProductService: usuário mudou', this.currentUserId, '->', newUserId);
+        this.currentUserId = newUserId;
+        this.loadFavoritesForCurrentUser();
+      }
+    });
 
     if (this.isBrowser) {
-      this.loadFavoritesFromStorage();
+      this.loadFavoritesForCurrentUser();
+    }
+  }
+
+  /**
+   * 🔥 Gera a chave de favoritos baseada no usuário
+   */
+  private getFavoritesKey(): string {
+    return this.currentUserId
+      ? `${this.FAVORITES_KEY_PREFIX}${this.currentUserId}`
+      : this.GUEST_FAVORITES_KEY;
+  }
+
+  /**
+   * 🔥 Carrega os favoritos do usuário atual
+   */
+  private loadFavoritesForCurrentUser(): void {
+    if (!this.isBrowser) return;
+
+    try {
+      const favoritesData = localStorage.getItem(this.getFavoritesKey());
+      if (favoritesData) {
+        const favorites = JSON.parse(favoritesData);
+        this.favoritesSubject.next(favorites || []);
+        console.log(`❤️ Favoritos carregados para usuário ${this.currentUserId || 'guest'}:`, favorites?.length || 0);
+      } else {
+        this.favoritesSubject.next([]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar favoritos:', error);
+      this.favoritesSubject.next([]);
     }
   }
 
@@ -89,7 +140,6 @@ export class ProductService {
     }
 
     if (filters) {
-      // Filtros que funcionam no servidor
       if (filters.minPrice !== undefined && filters.minPrice !== null && filters.minPrice > 0) {
         params = params.set('price_gte', filters.minPrice.toString());
       }
@@ -158,7 +208,6 @@ export class ProductService {
                 return this.applyAllFilters(products, filters, total, page, limit);
               }),
               catchError(() => {
-                // Fallback: filtrar pelo slug também
                 const slug = categorySlug;
                 products = products.filter(
                   (p: Product) =>
@@ -178,7 +227,6 @@ export class ProductService {
         catchError(this.handleError),
       );
 
-    // 🔥 Salvar no cache apenas se useCache = true
     if (useCache) {
       this.productsCache$ = request;
     }
@@ -541,25 +589,32 @@ export class ProductService {
 
     if (this.isBrowser) {
       try {
-        localStorage.setItem('favorites', JSON.stringify(newFavorites));
+        // 🔥 Salva na chave do usuário atual
+        localStorage.setItem(this.getFavoritesKey(), JSON.stringify(newFavorites));
       } catch (error) {
         console.error('Erro ao salvar favoritos:', error);
       }
     }
   }
 
-  private loadFavoritesFromStorage(): void {
+  /**
+   * 🔥 Limpa os favoritos do usuário atual
+   */
+  clearFavorites(): void {
     if (!this.isBrowser) return;
+    localStorage.removeItem(this.getFavoritesKey());
+    this.favoritesSubject.next([]);
+  }
 
-    try {
-      const favoritesData = localStorage.getItem('favorites');
-      if (favoritesData) {
-        const favorites = JSON.parse(favoritesData);
-        this.favoritesSubject.next(favorites);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar favoritos:', error);
-    }
+  /**
+   * 🔥 Remove TODOS os favoritos salvos (útil para debug)
+   */
+  clearAllFavorites(): void {
+    if (!this.isBrowser) return;
+    Object.keys(localStorage)
+      .filter(key => key.startsWith(this.FAVORITES_KEY_PREFIX))
+      .forEach(key => localStorage.removeItem(key));
+    this.favoritesSubject.next([]);
   }
 
   invalidateCache(): void {

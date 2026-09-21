@@ -42,6 +42,7 @@ export class Navbar implements OnInit, OnDestroy {
   private unreadCountSubscription: Subscription = new Subscription();
 
   private readonly notificationService = inject(NotificationService);
+  private currentUserId: string | null = null;
 
   constructor(
     private cartService: CartService,
@@ -52,14 +53,23 @@ export class Navbar implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // ==========================================
+    // 🔥 CARRINHO - Sempre escuta o serviço
+    // ==========================================
     this.cartSubscription = this.cartService.getTotalItems().subscribe((total: number) => {
-      this.cartCount = total;
+      this.cartCount = total || 0;
     });
 
+    // ==========================================
+    // 🔥 FAVORITOS - Sempre escuta o serviço
+    // ==========================================
     this.favoritesSubscription = this.productService.favorites$.subscribe((favorites: any[]) => {
-      this.favoritesCount = favorites.length;
+      this.favoritesCount = favorites?.length || 0;
     });
 
+    // ==========================================
+    // NOTIFICAÇÕES
+    // ==========================================
     this.notificationsSubscription = this.notificationService.notifications$.subscribe(
       (notifications) => {
         this.notifications = notifications;
@@ -72,11 +82,38 @@ export class Navbar implements OnInit, OnDestroy {
       }
     );
 
+    // ==========================================
+    // 🔥 AUTENTICAÇÃO - Detecta login/logout/troca de usuário
+    // ==========================================
     this.userSubscription = this.authService.currentUser$.subscribe((user: User | null) => {
+      const previousUserId = this.currentUserId;
+      this.currentUserId = user?.id ? String(user.id) : null;
+
+      const wasLoggedIn = this.isLoggedIn;
       this.isLoggedIn = !!user;
       this.userName = user?.name || '';
       this.userAvatar = (user as any)?.avatar || '';
 
+      // 🔥 LOGOUT: quando o usuário era logado e agora é null
+      if (wasLoggedIn && !this.isLoggedIn) {
+        console.log('🚪 Logout detectado - limpando estado local do navbar');
+        this.hasStore = false;
+        this.storeId = null;
+        this.userAvatar = '';
+        this.notifications = [];
+        this.unreadCount = 0;
+        // Os serviços CartService e ProductService já reagem ao currentUser$ = null
+        // e limpam os contadores automaticamente
+      }
+
+      // 🔥 TROCA DE USUÁRIO: logado com um usuário e agora logado com outro
+      if (previousUserId && this.currentUserId && previousUserId !== this.currentUserId) {
+        console.log('🔄 Troca de usuário detectada:', previousUserId, '->', this.currentUserId);
+        // Os serviços CartService e ProductService recarregam automaticamente
+        // os dados do novo usuário
+      }
+
+      // 🔥 USUÁRIO LOGADO: carregar dados da loja e notificações
       if (this.isLoggedIn && user?.id) {
         this.checkUserStore(user.id);
         this.notificationService.loadNotifications(true);
@@ -201,15 +238,34 @@ export class Navbar implements OnInit, OnDestroy {
     }
   }
 
+  // ==========================================
+  // 🔥 LOGOUT - Limpa TODOS os dados do usuário
+  // ==========================================
   logout(): void {
+    console.log('🚪 Iniciando logout...');
+
+    // 1. Limpar notificações
     this.notificationService.clearLocal();
 
-    this.authService.logout();
+    // 2. 🔥 Limpar carrinho e favoritos ANTES de deslogar
+    //    para garantir que não vazem para o próximo usuário
+    this.cartService.clearCart();
+    this.productService.clearFavorites();
+
+    // 3. Resetar estado local
     this.hasStore = false;
     this.storeId = null;
     this.userAvatar = '';
     this.notifications = [];
     this.unreadCount = 0;
+    this.cartCount = 0;
+    this.favoritesCount = 0;
+
+    // 4. Deslogar (isso vai disparar currentUser$ = null)
+    //    Os serviços vão reagir e carregar os dados de "guest"
+    this.authService.logout();
+
+    // 5. Navegar para home
     this.router.navigate(['/home']);
   }
 

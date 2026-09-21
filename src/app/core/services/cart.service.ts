@@ -14,6 +14,7 @@ import {
 } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
+import { AuthService } from './auth.service';
 
 export interface CartItem {
   product: Product;
@@ -67,15 +68,99 @@ export class CartService {
   private isBrowser: boolean;
   private isSyncing = false;
 
+  // 🔥 Chave do localStorage por usuário
+  private readonly CART_KEY_PREFIX = 'cart_';
+  private readonly COUPON_KEY_PREFIX = 'appliedCoupon_';
+  private readonly GUEST_CART_KEY = 'cart_guest';
+  private readonly GUEST_COUPON_KEY = 'appliedCoupon_guest';
+
+  private currentUserId: string | null = null;
+
   private readonly platformId = inject(PLATFORM_ID);
   private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
 
   constructor() {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
+    // 🔥 Escutar mudanças de usuário
+    this.authService.currentUser$.subscribe((user) => {
+      const newUserId = user?.id ? String(user.id) : null;
+
+      if (this.currentUserId !== newUserId) {
+        console.log('🛒 CartService: usuário mudou', this.currentUserId, '->', newUserId);
+        this.currentUserId = newUserId;
+        this.loadCartForCurrentUser();
+      }
+    });
+
     if (this.isBrowser) {
-      this.loadCartFromStorage();
+      this.loadCartForCurrentUser();
       this.syncCartWithServer();
+    }
+  }
+
+  /**
+   * 🔥 Gera a chave do carrinho baseada no usuário
+   */
+  private getCartKey(): string {
+    return this.currentUserId
+      ? `${this.CART_KEY_PREFIX}${this.currentUserId}`
+      : this.GUEST_CART_KEY;
+  }
+
+  /**
+   * 🔥 Gera a chave do cupom baseada no usuário
+   */
+  private getCouponKey(): string {
+    return this.currentUserId
+      ? `${this.COUPON_KEY_PREFIX}${this.currentUserId}`
+      : this.GUEST_COUPON_KEY;
+  }
+
+  /**
+   * 🔥 Carrega o carrinho do usuário atual
+   */
+  private loadCartForCurrentUser(): void {
+    if (!this.isBrowser) return;
+
+    try {
+      const cartData = localStorage.getItem(this.getCartKey());
+
+      if (cartData) {
+        const parsedData = JSON.parse(cartData);
+        if (parsedData && parsedData.length > 0) {
+          const items: CartItem[] = parsedData
+            .filter((d: any) => d.product)
+            .map((d: any) => ({
+              product: d.product,
+              quantity: d.quantity,
+              subtotal: d.product.price * d.quantity,
+            }));
+
+          if (items.length > 0) {
+            this.updateCart(items);
+            console.log(`🛒 Carrinho carregado para usuário ${this.currentUserId || 'guest'}:`, items.length);
+            return;
+          }
+        }
+      }
+
+      // Nenhum carrinho salvo - limpar estado
+      this.updateCart([]);
+      this.discount.next(0);
+      this.couponCode.next('');
+
+      // Carregar cupom do usuário
+      const couponData = localStorage.getItem(this.getCouponKey());
+      if (couponData) {
+        const coupon = JSON.parse(couponData);
+        this.discount.next(coupon.discount);
+        this.couponCode.next(coupon.code);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar carrinho do localStorage:', error);
+      this.updateCart([]);
     }
   }
 
@@ -189,11 +274,25 @@ export class CartService {
     this.totalPrice.next(0);
 
     if (this.isBrowser) {
-      localStorage.removeItem('cart');
-      localStorage.removeItem('appliedCoupon');
+      // 🔥 Remove APENAS o carrinho do usuário atual
+      localStorage.removeItem(this.getCartKey());
+      localStorage.removeItem(this.getCouponKey());
     }
 
     this.saveCartToServer([]);
+  }
+
+  /**
+   * 🔥 Remove TODOS os carrinhos salvos (útil para debug)
+   */
+  clearAllCarts(): void {
+    if (!this.isBrowser) return;
+    Object.keys(localStorage)
+      .filter(key => key.startsWith(this.CART_KEY_PREFIX) || key.startsWith(this.COUPON_KEY_PREFIX))
+      .forEach(key => localStorage.removeItem(key));
+    this.updateCart([]);
+    this.discount.next(0);
+    this.couponCode.next('');
   }
 
   applyCoupon(
@@ -229,7 +328,7 @@ export class CartService {
 
       if (this.isBrowser) {
         localStorage.setItem(
-          'appliedCoupon',
+          this.getCouponKey(),
           JSON.stringify({
             code: upperCode,
             discount: discountAmount,
@@ -254,7 +353,7 @@ export class CartService {
     this.discount.next(0);
     this.couponCode.next('');
     if (this.isBrowser) {
-      localStorage.removeItem('appliedCoupon');
+      localStorage.removeItem(this.getCouponKey());
     }
   }
 
@@ -332,12 +431,12 @@ export class CartService {
   private getSellerIdFromProduct(product: Product): string {
     const p: any = product || {};
     return String(
-      p.seller?.id ||       // 🔥 SEU CASO: seller.id
-      p.sellerId ||         // fallback 1
-      p.storeId ||          // fallback 2
-      p.ownerId ||          // fallback 3
-      p.userId ||           // fallback 4
-      '1'                   // último recurso
+      p.seller?.id ||
+      p.sellerId ||
+      p.storeId ||
+      p.ownerId ||
+      p.userId ||
+      '1'
     );
   }
 
@@ -384,12 +483,14 @@ export class CartService {
   }
 
   private saveCartToStorage(items: CartItem[]): void {
+    if (!this.isBrowser) return;
     try {
       const cartData = items.map((item) => ({
         product: item.product,
         quantity: item.quantity,
       }));
-      localStorage.setItem('cart', JSON.stringify(cartData));
+      // 🔥 Salva na chave do usuário atual
+      localStorage.setItem(this.getCartKey(), JSON.stringify(cartData));
     } catch (error) {
       console.error('Erro ao salvar carrinho:', error);
     }
@@ -428,40 +529,6 @@ export class CartService {
       .subscribe();
   }
 
-  private loadCartFromStorage(): void {
-    if (!this.isBrowser) return;
-
-    try {
-      const cartData = localStorage.getItem('cart');
-      if (cartData) {
-        const parsedData = JSON.parse(cartData);
-        if (parsedData && parsedData.length > 0) {
-          // 🔥 Reconstrói os itens com o produto completo (preserva seller)
-          const items: CartItem[] = parsedData
-            .filter((d: any) => d.product)
-            .map((d: any) => ({
-              product: d.product,
-              quantity: d.quantity,
-              subtotal: d.product.price * d.quantity,
-            }));
-
-          if (items.length > 0) {
-            this.updateCart(items);
-          }
-        }
-      }
-
-      const couponData = localStorage.getItem('appliedCoupon');
-      if (couponData) {
-        const coupon = JSON.parse(couponData);
-        this.discount.next(coupon.discount);
-        this.couponCode.next(coupon.code);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar carrinho do localStorage:', error);
-    }
-  }
-
   private syncCartWithServer(): void {
     if (!this.isBrowser) return;
 
@@ -486,7 +553,6 @@ export class CartService {
         }),
       )
       .subscribe((serverCart) => {
-
         if (serverCart) {
           console.log('📦 Carrinho carregado:', serverCart);
         }
