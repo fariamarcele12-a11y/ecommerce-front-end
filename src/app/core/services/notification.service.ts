@@ -44,6 +44,16 @@ export class NotificationService implements OnDestroy {
     this.stopPolling();
   }
 
+  /**
+   * 🔥 Valida se um ID é utilizável (não é null, undefined, '', 'null', 'undefined', 'NaN')
+   */
+  private isValidId(id: any): boolean {
+    if (id === null || id === undefined) return false;
+    const str = String(id).trim();
+    if (str === '' || str === 'null' || str === 'undefined' || str === 'NaN') return false;
+    return true;
+  }
+
   loadNotifications(force: boolean = false): void {
     const user = this.authService.getCurrentUser();
 
@@ -96,8 +106,9 @@ export class NotificationService implements OnDestroy {
     link?: string,
     data?: any
   ): Observable<Notification | null> {
-    if (!userId) {
-      console.warn('⚠️ createNotification: userId inválido');
+    // 🔥 VALIDAÇÃO: não cria notificação se userId for inválido
+    if (!this.isValidId(userId)) {
+      console.warn('⚠️ createNotification: userId inválido, notificação NÃO criada:', userId);
       return of(null);
     }
 
@@ -114,9 +125,15 @@ export class NotificationService implements OnDestroy {
       data: data || undefined,
     };
 
+    console.log('🔔 Criando notificação:', {
+      to: userId,
+      type,
+      title,
+      link,
+    });
+
     return this.http.post<Notification>(this.apiUrl, notification).pipe(
       tap(() => {
-
         const currentUser = this.authService.getCurrentUser();
         if (currentUser && String(currentUser.id) === String(userId)) {
           this.loadNotifications(true);
@@ -223,13 +240,86 @@ export class NotificationService implements OnDestroy {
   }
 
   /**
-   * Cria notificação de NOVA MENSAGEM
-   * @param sellerId - quem VAI RECEBER (dono do produto)
-   * @param buyerId - quem ENVIOU
-   * @param buyerName - nome de quem enviou
-   * @param productName - nome do produto
-   * @param messagePreview - prévia da mensagem
+   * 🔥 NOTIFICAR VENDEDOR (cliente enviou mensagem)
    */
+  notifyNewMessageToSeller(
+    sellerId: string,
+    buyerId: string,
+    buyerName: string,
+    productName: string,
+    messagePreview: string,
+    productId?: string
+  ): void {
+    if (!this.isValidId(sellerId)) {
+      console.warn('⚠️ notifyNewMessageToSeller: sellerId inválido:', sellerId);
+      return;
+    }
+
+    // 🔥 Monta o link apenas com parâmetros válidos
+    const linkParams: string[] = [];
+    if (this.isValidId(productId)) linkParams.push(`productId=${productId}`);
+    if (this.isValidId(buyerId)) linkParams.push(`userId=${buyerId}`);
+
+    const link = linkParams.length > 0
+      ? `/chat?${linkParams.join('&')}`
+      : '/chat';
+
+    this.createNotification(
+      String(sellerId),
+      'message',
+      `💬 Nova mensagem de ${buyerName}`,
+      `"${messagePreview}" - ${productName}`,
+      link,
+      {
+        buyerId: this.isValidId(buyerId) ? String(buyerId) : null,
+        buyerName,
+        productName,
+        productId,
+        senderType: 'buyer',
+      }
+    ).subscribe();
+  }
+
+  /**
+   * 🔥 NOTIFICAR CLIENTE (vendedor respondeu)
+   */
+  notifyNewMessageToBuyer(
+    buyerId: string,
+    sellerId: string,
+    sellerName: string,
+    productName: string,
+    messagePreview: string,
+    productId?: string
+  ): void {
+    if (!this.isValidId(buyerId)) {
+      console.warn('⚠️ notifyNewMessageToBuyer: buyerId inválido:', buyerId);
+      return;
+    }
+
+    const linkParams: string[] = [];
+    if (this.isValidId(productId)) linkParams.push(`productId=${productId}`);
+    if (this.isValidId(sellerId)) linkParams.push(`sellerId=${sellerId}`);
+
+    const link = linkParams.length > 0
+      ? `/chat?${linkParams.join('&')}`
+      : '/chat';
+
+    this.createNotification(
+      String(buyerId),
+      'message',
+      `💬 Nova resposta de ${sellerName}`,
+      `"${messagePreview}" - ${productName}`,
+      link,
+      {
+        sellerId: this.isValidId(sellerId) ? String(sellerId) : null,
+        sellerName,
+        productName,
+        productId,
+        senderType: 'seller',
+      }
+    ).subscribe();
+  }
+
   notifyNewMessage(
     sellerId: string,
     buyerId: string,
@@ -237,19 +327,7 @@ export class NotificationService implements OnDestroy {
     productName: string,
     messagePreview: string
   ): void {
-    if (!sellerId) {
-      console.warn('⚠️ notifyNewMessage: sellerId inválido');
-      return;
-    }
-
-    this.createNotification(
-      String(sellerId),
-      'message',
-      `💬 Nova mensagem de ${buyerName}`,
-      `"${messagePreview}" - ${productName}`,
-      '/chat',
-      { buyerId, productName }
-    ).subscribe();
+    this.notifyNewMessageToSeller(sellerId, buyerId, buyerName, productName, messagePreview);
   }
 
   notifyNewSale(
@@ -259,7 +337,7 @@ export class NotificationService implements OnDestroy {
     orderId: string,
     total: number
   ): void {
-    if (!sellerId) {
+    if (!this.isValidId(sellerId)) {
       console.warn('⚠️ notifyNewSale: sellerId inválido');
       return;
     }
@@ -280,7 +358,7 @@ export class NotificationService implements OnDestroy {
     orderId: string,
     total: number
   ): void {
-    if (!buyerId) {
+    if (!this.isValidId(buyerId)) {
       console.warn('⚠️ notifyOrderConfirmed: buyerId inválido');
       return;
     }
@@ -301,7 +379,7 @@ export class NotificationService implements OnDestroy {
     productName: string,
     rating: number
   ): void {
-    if (!sellerId) {
+    if (!this.isValidId(sellerId)) {
       console.warn('⚠️ notifyNewReview: sellerId inválido');
       return;
     }
@@ -322,6 +400,10 @@ export class NotificationService implements OnDestroy {
     message: string,
     link?: string
   ): void {
+    if (!this.isValidId(userId)) {
+      console.warn('⚠️ notifySystem: userId inválido');
+      return;
+    }
     this.createNotification(String(userId), 'system', title, message, link).subscribe();
   }
 

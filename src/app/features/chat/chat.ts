@@ -25,11 +25,12 @@ export class Chat implements OnInit, OnDestroy {
   selectedConversation: ChatConversation | null = null;
   newMessage = '';
   loading = true;
-  userId: number = 0;
+
+  // 🔥 userId é STRING (UUID)
+  userId: string = '';
   userName: string = '';
   isSeller = false;
 
-  // 🔥 CORRIGIDO: Parâmetros como string
   private productIdParam: string | null = null;
   private sellerIdParam: string | null = null;
   private productNameParam: string | null = null;
@@ -56,8 +57,16 @@ export class Chat implements OnInit, OnDestroy {
       return;
     }
 
-    this.userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+    // 🔥 userId como STRING (UUID)
+    this.userId = String(user.id || '');
     this.userName = user.name || 'Usuário';
+    this.isSeller = user.hasStore === true;
+
+    console.log('👤 Chat iniciado:', {
+      userId: this.userId,
+      userName: this.userName,
+      isSeller: this.isSeller,
+    });
 
     this.routeSub = this.route.queryParams.subscribe(params => {
       this.productIdParam = params['productId'] || null;
@@ -194,18 +203,133 @@ export class Chat implements OnInit, OnDestroy {
     this.scrollToBottom();
   }
 
+  /**
+   * 🔥 ENVIA MENSAGEM COM LÓGICA CORRETA DE DESTINATÁRIOS
+   *
+   * REGRA IMPORTANTE:
+   * - O campo `userId` da mensagem SEMPRE representa o CLIENTE (comprador)
+   * - O campo `sellerId` da mensagem SEMPRE representa o VENDEDOR
+   *
+   * Quando o VENDEDOR responde:
+   *   - `userId` = ID do CLIENTE da conversa (não o ID do vendedor logado)
+   *   - `sellerId` = ID do VENDEDOR logado
+   *   - `isFromSeller` = true
+   *
+   * Quando o CLIENTE envia:
+   *   - `userId` = ID do CLIENTE logado
+   *   - `sellerId` = ID do VENDEDOR da conversa
+   *   - `isFromSeller` = false
+   */
   sendMessage(): void {
     if (!this.newMessage.trim() || !this.selectedConversation) return;
+
+    if (!this.userId) {
+      console.error('❌ userId está vazio, não é possível enviar a mensagem');
+      this.alertService.error('Erro', 'Você precisa estar logado para enviar mensagens.');
+      return;
+    }
+
+    const currentUserIdStr = String(this.userId);
+    const conversationSellerIdStr = String(this.selectedConversation.sellerId || '');
+
+    // 🔥 O usuário logado é o VENDEDOR desta conversa?
+    //    Isso é verdade quando o ID do usuário logado é igual ao sellerId da conversa
+    const loggedUserIsSeller = (currentUserIdStr === conversationSellerIdStr) || this.isSeller;
+
+    // 🔥 Determinar os IDs corretos para a mensagem
+    let messageUserId: string;
+    let messageUserName: string;
+    let messageSellerId: string;
+    let messageSellerName: string;
+    let messageIsFromSeller: boolean;
+
+    if (loggedUserIsSeller) {
+      // ============================================
+      // VENDEDOR enviando mensagem
+      // ============================================
+      // userId = ID do CLIENTE da conversa (precisamos descobrir)
+      // sellerId = ID do vendedor logado
+
+      // Tentar descobrir o ID do cliente:
+      // 1. Se a conversa veio da lista de conversas, tem nos messages
+      // 2. Senão, precisamos buscar a partir das mensagens existentes
+      let clientIdFromConversation = '';
+
+      // Verificar se já temos o cliente nas mensagens anteriores
+      if (this.messages.length > 0) {
+        // Buscar a primeira mensagem do cliente (isFromSeller = false)
+        const clientMessage = this.messages.find(m => m.isFromSeller === false);
+        if (clientMessage?.userId) {
+          clientIdFromConversation = String(clientMessage.userId);
+        }
+      }
+
+      // Se a conversa foi carregada pela lista, pode ter o userId do cliente
+      if (!clientIdFromConversation && this.selectedConversation.messages?.length) {
+        const clientMessage = this.selectedConversation.messages.find(m => m.isFromSeller === false);
+        if (clientMessage?.userId) {
+          clientIdFromConversation = String(clientMessage.userId);
+        }
+      }
+
+      // Se ainda não encontrou, usar o userIdParam da URL (se existir)
+      if (!clientIdFromConversation) {
+        const userIdParam = this.route.snapshot.queryParams['userId'];
+        if (userIdParam && userIdParam !== 'NaN' && userIdParam !== 'null') {
+          clientIdFromConversation = String(userIdParam);
+        }
+      }
+
+      if (!clientIdFromConversation) {
+        console.error('❌ Não foi possível identificar o cliente desta conversa');
+        this.alertService.error(
+          'Erro',
+          'Não foi possível identificar o cliente desta conversa. Recarregue a página.'
+        );
+        return;
+      }
+
+      messageUserId = clientIdFromConversation;
+      // Tentar pegar o nome do cliente da conversa
+      const clientMessage = this.messages.find(m => m.isFromSeller === false);
+      messageUserName = clientMessage?.userName || 'Cliente';
+
+      messageSellerId = conversationSellerIdStr;
+      messageSellerName = this.selectedConversation.sellerName || this.userName;
+      messageIsFromSeller = true;
+
+      console.log('📤 [VENDEDOR] Enviando mensagem:', {
+        toClientId: messageUserId,
+        fromSellerId: messageSellerId,
+        isFromSeller: messageIsFromSeller,
+      });
+
+    } else {
+      // ============================================
+      // CLIENTE enviando mensagem
+      // ============================================
+      messageUserId = currentUserIdStr;
+      messageUserName = this.userName;
+      messageSellerId = conversationSellerIdStr;
+      messageSellerName = this.selectedConversation.sellerName || '';
+      messageIsFromSeller = false;
+
+      console.log('📤 [CLIENTE] Enviando mensagem:', {
+        fromClientId: messageUserId,
+        toSellerId: messageSellerId,
+        isFromSeller: messageIsFromSeller,
+      });
+    }
 
     const message: Partial<Message> = {
       productId: String(this.selectedConversation.productId || ''),
       productName: this.selectedConversation.productName || 'Conversa com a Loja',
-      sellerId: String(this.selectedConversation.sellerId || ''),
-      sellerName: this.selectedConversation.sellerName || '',
-      userId: this.userId,
-      userName: this.userName,
+      sellerId: messageSellerId,
+      sellerName: messageSellerName,
+      userId: messageUserId,
+      userName: messageUserName,
       content: this.newMessage.trim(),
-      isFromSeller: this.isSeller
+      isFromSeller: messageIsFromSeller,
     };
 
     const tempMessage: Message = {
@@ -219,7 +343,7 @@ export class Chat implements OnInit, OnDestroy {
       content: message.content!,
       createdAt: new Date(),
       read: false,
-      isFromSeller: message.isFromSeller || false
+      isFromSeller: message.isFromSeller || false,
     };
 
     this.messages.push(tempMessage);

@@ -5,6 +5,7 @@ import { BehaviorSubject, Observable, of, throwError, catchError, tap, map } fro
 import { isPlatformBrowser } from '@angular/common';
 import { Message, ChatConversation } from '../models/message.model';
 import { IdGeneratorService } from './id-generator.service';
+import { NotificationService } from './notification.service';
 
 @Injectable({
   providedIn: 'root',
@@ -16,6 +17,7 @@ export class ChatService {
   private isBrowser: boolean;
   private readonly http = inject(HttpClient);
   private readonly idGenerator = inject(IdGeneratorService);
+  private readonly notificationService = inject(NotificationService);
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -104,25 +106,45 @@ export class ChatService {
       );
   }
 
+  /**
+   * 🔥 ENVIA MENSAGEM E NOTIFICA O DESTINATÁRIO
+   *
+   * CORREÇÃO: O spread `...message` agora vem ANTES dos valores validados,
+   * garantindo que `userId` e `sellerId` nunca fiquem null.
+   */
   sendMessage(message: Partial<Message>): Observable<Message> {
+    // 🔥 VALIDAÇÃO: garantir que userId e sellerId nunca sejam null/undefined
+    const safeUserId = message.userId != null ? String(message.userId) : '';
+    const safeSellerId = message.sellerId != null ? String(message.sellerId) : '';
+
+    // ⚠️ IMPORTANTE: spread PRIMEIRO, depois os valores validados sobrescrevem
     const newMessage: Message = {
-      id: this.idGenerator.generateMessageId(), // 🔥 ID único
+      ...message,
+
+      id: this.idGenerator.generateMessageId(),
       productId: String(message.productId || ''),
       productName: message.productName || '',
-      sellerId: message.sellerId || '',
+      sellerId: safeSellerId,
       sellerName: message.sellerName || '',
-      userId: message.userId || '',
+      userId: safeUserId,
       userName: message.userName || '',
       content: message.content || '',
       createdAt: new Date(),
       read: false,
       isFromSeller: message.isFromSeller || false,
-      ...message,
     };
+
+    console.log('📤 Enviando mensagem:', {
+      userId: newMessage.userId,
+      sellerId: newMessage.sellerId,
+      isFromSeller: newMessage.isFromSeller,
+      content: newMessage.content?.substring(0, 50),
+    });
 
     return this.http.post<Message>(this.apiUrl, newMessage).pipe(
       tap(() => {
-        if (newMessage.userId) {
+        // 🔥 Atualizar lista de conversas do cliente
+        if (newMessage.userId && newMessage.userId !== '') {
           const userId =
             typeof newMessage.userId === 'string'
               ? parseInt(String(newMessage.userId), 10)
@@ -131,6 +153,9 @@ export class ChatService {
             this.refreshConversations(userId);
           }
         }
+
+        // 🔥 NOTIFICAR O DESTINATÁRIO
+        this.sendNotificationForMessage(newMessage);
       }),
       catchError((error) => {
         console.error('❌ Erro ao enviar mensagem:', error);
@@ -139,9 +164,70 @@ export class ChatService {
     );
   }
 
+  /**
+   * 🔥 Envia a notificação correta baseada em quem enviou
+   */
+  private sendNotificationForMessage(message: Message): void {
+    const preview = message.content.length > 60
+      ? message.content.substring(0, 60) + '...'
+      : message.content;
+
+    console.log('🔔 sendNotificationForMessage:', {
+      isFromSeller: message.isFromSeller,
+      userId: message.userId,
+      sellerId: message.sellerId,
+    });
+
+    if (message.isFromSeller) {
+      // ============================================
+      // VENDEDOR enviou → NOTIFICAR o CLIENTE
+      // ============================================
+      if (!message.userId || message.userId === '' || message.userId === 'null') {
+        console.warn('⚠️ Não é possível notificar cliente: userId ausente ou inválido');
+        return;
+      }
+
+      this.notificationService
+        .notifyNewMessageToBuyer(
+          String(message.userId),
+          String(message.sellerId),
+          message.sellerName || 'Vendedor',
+          message.productName,
+          preview,
+          String(message.productId)
+        );
+
+      console.log('✅ Cliente notificado sobre resposta do vendedor:', message.userId);
+
+    } else {
+      // ============================================
+      // CLIENTE enviou → NOTIFICAR o VENDEDOR
+      // ============================================
+      if (!message.sellerId || message.sellerId === '' || message.sellerId === 'null') {
+        console.warn('⚠️ Não é possível notificar vendedor: sellerId ausente ou inválido');
+        return;
+      }
+
+      this.notificationService
+        .notifyNewMessageToSeller(
+          String(message.sellerId),
+          String(message.userId),
+          message.userName || 'Cliente',
+          message.productName,
+          preview,
+          String(message.productId)
+        );
+
+      console.log('✅ Vendedor notificado sobre nova mensagem do cliente:', message.sellerId);
+    }
+  }
+
   markAsRead(messageId: number | string): Observable<Message> {
     const id = String(messageId);
-    return this.http.patch<Message>(`${this.apiUrl}/${id}`, { read: true }).pipe(
+    return this.http.patch<Message>(`${this.apiUrl}/${id}`, {
+      read: true,
+      readAt: new Date().toISOString(),
+    }).pipe(
       catchError((error) => {
         console.warn('⚠️ Erro ao marcar mensagem como lida:', error);
         return of({} as Message);
@@ -210,11 +296,12 @@ export class ChatService {
       const lastMessage = messages[messages.length - 1];
       const firstMessage = messages[0];
 
-      // 🔥 CORRIGIDO: productId como string
       conversations.push({
-        productId: productId, // 🔥 Manter como string
+        productId: productId,
         productName: firstMessage.productName || 'Produto',
-        productImage: 'https://picsum.photos/seed/' + productId + '/100/100',
+        productImage:
+          firstMessage.productImage ||
+          'https://picsum.photos/seed/' + productId + '/100/100',
         sellerId: String(firstMessage.sellerId || ''),
         sellerName: firstMessage.sellerName || 'Vendedor',
         lastMessage: lastMessage.content,
