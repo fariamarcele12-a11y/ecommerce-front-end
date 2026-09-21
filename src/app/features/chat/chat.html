@@ -38,11 +38,12 @@
                [class.active]="selectedConversation?.productId === conv.productId && selectedConversation?.sellerId === conv.sellerId"
                (click)="selectConversation(conv)">
             <div class="d-flex align-items-center gap-3">
-              <img [src]="conv.productImage"
+              <!-- 🔥 Imagem real do produto com fallback tratado -->
+              <img [src]="conv.productImage || 'https://via.placeholder.com/50x50/667eea/ffffff?text=Produto'"
                    [alt]="conv.productName"
                    class="rounded-circle"
                    style="width: 50px; height: 50px; object-fit: cover;"
-                   (error)="conv.productImage = 'https://via.placeholder.com/50x50/667eea/ffffff?text=Produto'">
+                   (error)="onImageError($event, '50x50')">
               <div class="flex-grow-1 overflow-hidden">
                 <div class="d-flex justify-content-between align-items-center">
                   <h6 class="fw-bold mb-0 text-truncate">{{ conv.productName }}</h6>
@@ -70,11 +71,12 @@
         <!-- Cabeçalho do Chat -->
         <div class="card-header bg-white p-3 border-bottom" *ngIf="selectedConversation">
           <div class="d-flex align-items-center gap-3">
-            <img [src]="selectedConversation.productImage"
+            <!-- 🔥 Imagem real do produto com fallback -->
+            <img [src]="selectedConversation.productImage || 'https://via.placeholder.com/40x40/667eea/ffffff?text=Produto'"
                  [alt]="selectedConversation.productName"
                  class="rounded-circle"
                  style="width: 40px; height: 40px; object-fit: cover;"
-                 (error)="selectedConversation.productImage = 'https://via.placeholder.com/40x40/667eea/ffffff?text=Produto'">
+                 (error)="onImageError($event, '40x40')">
             <div>
               <h6 class="fw-bold mb-0">{{ selectedConversation.productName }}</h6>
               <small class="text-muted">com {{ selectedConversation.sellerName }}</small>

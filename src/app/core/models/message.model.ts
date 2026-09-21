@@ -35,6 +35,7 @@ export interface ChatConversation {
 export interface SendMessageRequest {
   productId: string;
   productName: string;
+  productImage?: string;
   sellerId: string | number;
   sellerName: string;
   userId: string | number;
@@ -56,6 +57,7 @@ export function createEmptyMessage(): Message {
     id: '',
     productId: '',
     productName: '',
+    productImage: '',
     sellerId: '',
     sellerName: '',
     userId: '',

@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { ChatService } from '../../core/services/chat.service';
 import { AlertService } from '../../core/services/alert.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ProductService } from '../../core/services/product.service';
 import { ChatConversation, Message } from '../../core/models/message.model';
 import { IdGeneratorService } from '../../core/services/id-generator.service';
 
@@ -35,7 +36,11 @@ export class Chat implements OnInit, OnDestroy {
   private sellerIdParam: string | null = null;
   private productNameParam: string | null = null;
   private sellerNameParam: string | null = null;
+  private productImageParam: string | null = null;   // 🔥 NOVO
   private isStoreChat: boolean = false;
+
+  // 🔥 Cache de imagens dos produtos (evita buscar toda hora)
+  private productImageCache = new Map<string, string>();
 
   private routeSub: Subscription = new Subscription();
   private chatSub: Subscription = new Subscription();
@@ -46,6 +51,7 @@ export class Chat implements OnInit, OnDestroy {
     private chatService: ChatService,
     private alertService: AlertService,
     private authService: AuthService,
+    private productService: ProductService,   // 🔥 ADICIONAR
     private idGenerator: IdGeneratorService
   ) {}
 
@@ -73,6 +79,7 @@ export class Chat implements OnInit, OnDestroy {
       this.sellerIdParam = params['sellerId'] || null;
       this.productNameParam = params['productName'] || null;
       this.sellerNameParam = params['sellerName'] || null;
+      this.productImageParam = params['productImage'] || null;   // 🔥 NOVO
       this.isStoreChat = params['store'] === 'true';
 
       if (this.productIdParam && this.sellerIdParam) {
@@ -100,12 +107,47 @@ export class Chat implements OnInit, OnDestroy {
       next: (conversations: ChatConversation[]) => {
         this.conversations = conversations;
         this.loading = false;
+
+        // 🔥 Para cada conversa sem imagem válida, buscar a imagem real do produto
+        this.conversations.forEach(conv => {
+          if (!conv.productImage || conv.productImage.includes('placeholder')) {
+            this.enrichConversationWithProductImage(conv);
+          }
+        });
       },
       error: (error: Error) => {
         console.error('❌ Erro ao carregar conversas:', error);
         this.loading = false;
         this.conversations = [];
         this.alertService.error('Erro', 'Não foi possível carregar as conversas.');
+      }
+    });
+  }
+
+  /**
+   * 🔥 Busca a imagem real do produto e atualiza a conversa
+   */
+  private enrichConversationWithProductImage(conversation: ChatConversation): void {
+    const productId = conversation.productId;
+    if (!productId) return;
+
+    // Verificar cache primeiro
+    if (this.productImageCache.has(productId)) {
+      conversation.productImage = this.productImageCache.get(productId)!;
+      return;
+    }
+
+    // Buscar do backend
+    this.productService.getProductById(productId).subscribe({
+      next: (product) => {
+        if (product?.images && product.images.length > 0) {
+          const image = product.images[0];
+          this.productImageCache.set(productId, image);
+          conversation.productImage = image;
+        }
+      },
+      error: (err) => {
+        console.warn('⚠️ Não foi possível buscar imagem do produto', productId, err);
       }
     });
   }
@@ -117,13 +159,21 @@ export class Chat implements OnInit, OnDestroy {
         this.messages = messages;
         this.loading = false;
 
-        const productName = this.productNameParam || (messages.length > 0 ? messages[0].productName : 'Produto');
-        const sellerName = this.sellerNameParam || (messages.length > 0 ? messages[0].sellerName : 'Vendedor');
+        const productName = this.productNameParam
+          || (messages.length > 0 ? messages[0].productName : 'Produto');
+        const sellerName = this.sellerNameParam
+          || (messages.length > 0 ? messages[0].sellerName : 'Vendedor');
+
+        // 🔥 Determinar a imagem do produto (prioridade: URL > mensagem > backend)
+        const imageFromMessages = messages.find(m => m.productImage)?.productImage;
+        const productImage = this.productImageParam
+          || imageFromMessages
+          || 'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto';
 
         this.selectedConversation = {
           productId: productId,
           productName: productName,
-          productImage: 'https://picsum.photos/seed/' + productId + '/100/100',
+          productImage: productImage,
           sellerId: sellerId,
           sellerName: sellerName,
           lastMessage: messages.length > 0 ? messages[messages.length - 1]?.content || '' : '',
@@ -132,6 +182,11 @@ export class Chat implements OnInit, OnDestroy {
           messages: messages || [],
           isStoreChat: false
         };
+
+        // 🔥 Se não temos imagem (nem da URL nem das mensagens), buscar do backend
+        if (!this.productImageParam && !imageFromMessages) {
+          this.enrichConversationWithProductImage(this.selectedConversation);
+        }
 
         this.scrollToBottom();
       },
@@ -142,11 +197,13 @@ export class Chat implements OnInit, OnDestroy {
 
         const productName = this.productNameParam || 'Produto';
         const sellerName = this.sellerNameParam || 'Vendedor';
+        const productImage = this.productImageParam
+          || 'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto';
 
         this.selectedConversation = {
           productId: productId,
           productName: productName,
-          productImage: 'https://picsum.photos/seed/' + productId + '/100/100',
+          productImage: productImage,
           sellerId: sellerId,
           sellerName: sellerName,
           lastMessage: '',
@@ -155,6 +212,11 @@ export class Chat implements OnInit, OnDestroy {
           messages: [],
           isStoreChat: false
         };
+
+        // Tentar buscar imagem do backend como fallback
+        if (!this.productImageParam) {
+          this.enrichConversationWithProductImage(this.selectedConversation);
+        }
       }
     });
   }
@@ -233,7 +295,6 @@ export class Chat implements OnInit, OnDestroy {
     const conversationSellerIdStr = String(this.selectedConversation.sellerId || '');
 
     // 🔥 O usuário logado é o VENDEDOR desta conversa?
-    //    Isso é verdade quando o ID do usuário logado é igual ao sellerId da conversa
     const loggedUserIsSeller = (currentUserIdStr === conversationSellerIdStr) || this.isSeller;
 
     // 🔥 Determinar os IDs corretos para a mensagem
@@ -247,24 +308,17 @@ export class Chat implements OnInit, OnDestroy {
       // ============================================
       // VENDEDOR enviando mensagem
       // ============================================
-      // userId = ID do CLIENTE da conversa (precisamos descobrir)
-      // sellerId = ID do vendedor logado
-
-      // Tentar descobrir o ID do cliente:
-      // 1. Se a conversa veio da lista de conversas, tem nos messages
-      // 2. Senão, precisamos buscar a partir das mensagens existentes
       let clientIdFromConversation = '';
 
-      // Verificar se já temos o cliente nas mensagens anteriores
+      // 1. Buscar nas mensagens carregadas
       if (this.messages.length > 0) {
-        // Buscar a primeira mensagem do cliente (isFromSeller = false)
         const clientMessage = this.messages.find(m => m.isFromSeller === false);
         if (clientMessage?.userId) {
           clientIdFromConversation = String(clientMessage.userId);
         }
       }
 
-      // Se a conversa foi carregada pela lista, pode ter o userId do cliente
+      // 2. Buscar nas mensagens da conversa selecionada
       if (!clientIdFromConversation && this.selectedConversation.messages?.length) {
         const clientMessage = this.selectedConversation.messages.find(m => m.isFromSeller === false);
         if (clientMessage?.userId) {
@@ -272,7 +326,7 @@ export class Chat implements OnInit, OnDestroy {
         }
       }
 
-      // Se ainda não encontrou, usar o userIdParam da URL (se existir)
+      // 3. Buscar no parâmetro da URL
       if (!clientIdFromConversation) {
         const userIdParam = this.route.snapshot.queryParams['userId'];
         if (userIdParam && userIdParam !== 'NaN' && userIdParam !== 'null') {
@@ -290,7 +344,6 @@ export class Chat implements OnInit, OnDestroy {
       }
 
       messageUserId = clientIdFromConversation;
-      // Tentar pegar o nome do cliente da conversa
       const clientMessage = this.messages.find(m => m.isFromSeller === false);
       messageUserName = clientMessage?.userName || 'Cliente';
 
@@ -321,9 +374,16 @@ export class Chat implements OnInit, OnDestroy {
       });
     }
 
+    // 🔥 Determinar a imagem do produto para salvar junto
+    const productImage = this.selectedConversation.productImage
+      || this.productImageParam
+      || this.messages.find(m => m.productImage)?.productImage
+      || '';
+
     const message: Partial<Message> = {
       productId: String(this.selectedConversation.productId || ''),
       productName: this.selectedConversation.productName || 'Conversa com a Loja',
+      productImage: productImage,   // 🔥 SALVAR imagem na mensagem
       sellerId: messageSellerId,
       sellerName: messageSellerName,
       userId: messageUserId,
@@ -336,6 +396,7 @@ export class Chat implements OnInit, OnDestroy {
       id: 'temp-' + Date.now(),
       productId: message.productId!,
       productName: message.productName || '',
+      productImage: message.productImage || '',   // 🔥 PRESERVAR na temp
       sellerId: message.sellerId!,
       sellerName: message.sellerName || '',
       userId: message.userId!,
@@ -416,5 +477,20 @@ export class Chat implements OnInit, OnDestroy {
 
   getSellerId(): string {
     return String(this.selectedConversation?.sellerId || '');
+  }
+
+  /**
+   * 🔥 Trata erro de carregamento de imagem
+   * Evita que o `(error)` muta o objeto direto e dispare loop infinito
+   */
+  onImageError(event: Event, size: string): void {
+    const img = event.target as HTMLImageElement;
+    if (!img) return;
+
+    // 🔥 Evitar loop infinito se a imagem de fallback também falhar
+    if (img.src.includes('placeholder.com')) return;
+
+    // Trocar para imagem de placeholder
+    img.src = `https://via.placeholder.com/${size}/667eea/ffffff?text=Produto`;
   }
 }
