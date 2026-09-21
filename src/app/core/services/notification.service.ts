@@ -320,6 +320,87 @@ export class NotificationService implements OnDestroy {
     ).subscribe();
   }
 
+  /**
+   * 🔥 NOTIFICAR VENDEDOR sobre um NOVO COMENTÁRIO no produto dele
+   */
+  notifyNewComment(
+    sellerId: string,
+    commenterId: string,
+    commenterName: string,
+    productId: string,
+    productName: string,
+    commentPreview: string
+  ): void {
+    if (!this.isValidId(sellerId)) {
+      console.warn('⚠️ notifyNewComment: sellerId inválido:', sellerId);
+      return;
+    }
+
+    const preview = commentPreview.length > 60
+      ? commentPreview.substring(0, 60) + '...'
+      : commentPreview;
+
+    const link = this.isValidId(productId)
+      ? `/produto/${productId}#comments`
+      : '/home';
+
+    this.createNotification(
+      String(sellerId),
+      'review',
+      `💬 Novo comentário de ${commenterName}`,
+      `"${preview}" - ${productName}`,
+      link,
+      {
+        commenterId: this.isValidId(commenterId) ? String(commenterId) : null,
+        commenterName,
+        productId,
+        productName,
+        type: 'comment',
+      }
+    ).subscribe();
+  }
+
+  /**
+   * 🔥 NOTIFICAR CLIENTE sobre uma RESPOSTA do vendedor em um comentário
+   */
+  notifyCommentReply(
+    commenterId: string,
+    sellerId: string,
+    sellerName: string,
+    productId: string,
+    productName: string,
+    replyPreview: string
+  ): void {
+    if (!this.isValidId(commenterId)) {
+      console.warn('⚠️ notifyCommentReply: commenterId inválido:', commenterId);
+      return;
+    }
+
+    const preview = replyPreview.length > 60
+      ? replyPreview.substring(0, 60) + '...'
+      : replyPreview;
+
+    const link = this.isValidId(productId)
+      ? `/produto/${productId}#comments`
+      : '/home';
+
+    this.createNotification(
+      String(commenterId),
+      'message',
+      `💬 ${sellerName} respondeu seu comentário`,
+      `"${preview}" - ${productName}`,
+      link,
+      {
+        sellerId: this.isValidId(sellerId) ? String(sellerId) : null,
+        sellerName,
+        productId,
+        productName,
+        type: 'comment-reply',
+        isFromSeller: true,
+      }
+    ).subscribe();
+  }
+
   notifyNewMessage(
     sellerId: string,
     buyerId: string,
