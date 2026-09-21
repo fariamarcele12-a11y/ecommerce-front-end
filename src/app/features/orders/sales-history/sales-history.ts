@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
 import { Order } from '../../../core/models/checkout.model';
 import { AlertService } from '../../../core/services/alert.service';
+import { AuthService } from '../../../core/services/auth.service';   // 🔥 ADICIONAR
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -40,7 +41,8 @@ export class SalesHistory implements OnInit, OnDestroy {
 
   constructor(
     private orderService: OrderService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private authService: AuthService   // 🔥 ADICIONAR
   ) {}
 
   ngOnInit(): void {
@@ -53,8 +55,32 @@ export class SalesHistory implements OnInit, OnDestroy {
 
   loadSales(): void {
     this.loading = true;
+
+    // 🔥 CORREÇÃO: pegar o ID do usuário LOGADO
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser?.id) {
+      this.loading = false;
+      this.orders = [];
+      this.alertService.warning('Login necessário', 'Faça login para ver suas vendas.');
+      return;
+    }
+
+    // 🔥 CORREÇÃO: verificar se o usuário é vendedor
+    if (!currentUser.hasStore) {
+      this.loading = false;
+      this.orders = [];
+      this.alertService.info(
+        'Você ainda não é vendedor',
+        'Crie uma loja para começar a vender.'
+      );
+      return;
+    }
+
+    const sellerId = String(currentUser.id);
+
+    // 🔥 CORREÇÃO: usar getSellerOrders em vez de getOrders
     this.subscriptions.add(
-      this.orderService.getOrders().subscribe({
+      this.orderService.getSellerOrders(sellerId).subscribe({
         next: (orders) => {
           this.orders = orders;
           this.calculateStats();

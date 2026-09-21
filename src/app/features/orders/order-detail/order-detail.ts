@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
 import { Order } from '../../../core/models/checkout.model';
 import { AlertService } from '../../../core/services/alert.service';
+import { AuthService } from '../../../core/services/auth.service';   // 🔥 ADICIONAR
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -11,7 +12,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './order-detail.html',
-  styleUrls: ['./order-detail.scss']
+  styleUrls: ['./order-detail.scss'],
 })
 export class OrderDetail implements OnInit, OnDestroy {
   order: Order | null = null;
@@ -23,7 +24,7 @@ export class OrderDetail implements OnInit, OnDestroy {
     processing: 'info',
     shipped: 'primary',
     delivered: 'success',
-    cancelled: 'danger'
+    cancelled: 'danger',
   };
 
   statusIcons: { [key: string]: string } = {
@@ -31,7 +32,7 @@ export class OrderDetail implements OnInit, OnDestroy {
     processing: 'bi-arrow-repeat',
     shipped: 'bi-truck',
     delivered: 'bi-check-circle',
-    cancelled: 'bi-x-circle'
+    cancelled: 'bi-x-circle',
   };
 
   statusLabels: { [key: string]: string } = {
@@ -39,25 +40,26 @@ export class OrderDetail implements OnInit, OnDestroy {
     processing: 'Processando',
     shipped: 'Enviado',
     delivered: 'Entregue',
-    cancelled: 'Cancelado'
+    cancelled: 'Cancelado',
   };
 
   statusSteps = [
     { key: 'pending', label: 'Pedido Confirmado' },
     { key: 'processing', label: 'Em Processamento' },
     { key: 'shipped', label: 'Enviado' },
-    { key: 'delivered', label: 'Entregue' }
+    { key: 'delivered', label: 'Entregue' },
   ];
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private orderService: OrderService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private authService: AuthService,   // 🔥 ADICIONAR
   ) {}
 
   ngOnInit(): void {
-    this.routeSub = this.route.params.subscribe(params => {
+    this.routeSub = this.route.params.subscribe((params) => {
       const id = params['id'];
       if (id) {
         this.loadOrder(id);
@@ -76,10 +78,31 @@ export class OrderDetail implements OnInit, OnDestroy {
     this.orderService.getOrderById(orderId).subscribe({
       next: (order) => {
         if (order) {
+          // 🔥 VALIDAÇÃO: garantir que o usuário tem permissão
+          const currentUser = this.authService.getCurrentUser();
+          const userId = String(currentUser?.id);
+
+          const isBuyer = String(order.userId) === userId;
+          const isSeller = (order.items || []).some(
+            (item: any) => String(item.sellerId) === userId,
+          );
+
+          if (!isBuyer && !isSeller) {
+            this.alertService.error(
+              'Acesso negado',
+              'Você não tem permissão para ver este pedido.',
+            );
+            this.router.navigate(['/pedidos']);
+            return;
+          }
+
           this.order = order;
           this.loading = false;
         } else {
-          this.alertService.error('Pedido não encontrado', 'O pedido solicitado não foi encontrado.');
+          this.alertService.error(
+            'Pedido não encontrado',
+            'O pedido solicitado não foi encontrado.',
+          );
           this.router.navigate(['/pedidos']);
         }
       },
@@ -88,7 +111,7 @@ export class OrderDetail implements OnInit, OnDestroy {
         this.loading = false;
         this.alertService.error('Erro', 'Não foi possível carregar os detalhes do pedido.');
         this.router.navigate(['/pedidos']);
-      }
+      },
     });
   }
 
@@ -106,14 +129,14 @@ export class OrderDetail implements OnInit, OnDestroy {
 
   getCurrentStepIndex(): number {
     if (!this.order) return 0;
-    const index = this.statusSteps.findIndex(s => s.key === this.order?.status);
+    const index = this.statusSteps.findIndex((s) => s.key === this.order?.status);
     return index !== -1 ? index : 0;
   }
 
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(price);
   }
 
@@ -123,31 +146,33 @@ export class OrderDetail implements OnInit, OnDestroy {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 
   cancelOrder(): void {
     if (!this.order) return;
 
-    this.alertService.confirm(
-      'Cancelar pedido?',
-      'Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.',
-      'Sim, cancelar',
-      'Não'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        this.orderService.cancelOrder(this.order!.id).subscribe({
-          next: () => {
-            this.alertService.success('Pedido cancelado!', 'O pedido foi cancelado com sucesso.');
-            this.loadOrder(this.order!.id);
-          },
-          error: () => {
-            this.alertService.error('Erro', 'Não foi possível cancelar o pedido.');
-          }
-        });
-      }
-    });
+    this.alertService
+      .confirm(
+        'Cancelar pedido?',
+        'Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.',
+        'Sim, cancelar',
+        'Não',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.orderService.cancelOrder(this.order!.id).subscribe({
+            next: () => {
+              this.alertService.success('Pedido cancelado!', 'O pedido foi cancelado com sucesso.');
+              this.loadOrder(this.order!.id);
+            },
+            error: () => {
+              this.alertService.error('Erro', 'Não foi possível cancelar o pedido.');
+            },
+          });
+        }
+      });
   }
 
   canCancel(): boolean {

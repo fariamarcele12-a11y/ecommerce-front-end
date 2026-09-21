@@ -3,7 +3,7 @@ import { Injectable, inject, PLATFORM_ID, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, catchError, map, tap, forkJoin } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
-import { Notification } from '../models/notification.model';
+import { Notification, ShippingAddress, OrderItemSummary } from '../models/notification.model';
 import { IdGeneratorService } from './id-generator.service';
 import { AuthService } from './auth.service';
 
@@ -411,25 +411,63 @@ export class NotificationService implements OnDestroy {
     this.notifyNewMessageToSeller(sellerId, buyerId, buyerName, productName, messagePreview);
   }
 
+  /**
+   * 🔥 NOTIFICA O VENDEDOR sobre uma VENDA
+   * Inclui endereço de entrega, contato do comprador e itens do pedido
+   */
   notifyNewSale(
     sellerId: string,
     buyerName: string,
     productName: string,
     orderId: string,
-    total: number
+    total: number,
+    shippingAddress?: ShippingAddress,
+    buyerContact?: { email?: string; phone?: string },
+    items?: OrderItemSummary[],
+    paymentMethod?: { id: string; name: string; type: string }
   ): void {
     if (!this.isValidId(sellerId)) {
       console.warn('⚠️ notifyNewSale: sellerId inválido');
       return;
     }
 
+    // 🔥 Monta mensagem enriquecida com endereço
+    let message = `${buyerName} comprou "${productName}" por ${this.formatPrice(total)}`;
+
+    // 🔥 Adiciona resumo do endereço na mensagem
+    if (shippingAddress && shippingAddress.city && shippingAddress.state) {
+      message += `\n📍 Enviar para: ${shippingAddress.city} - ${shippingAddress.state}`;
+    }
+
+    if (items && items.length > 1) {
+      message += `\n📦 ${items.length} itens no pedido`;
+    }
+
     this.createNotification(
       String(sellerId),
       'sale',
       '🎉 Você fez uma venda!',
-      `${buyerName} comprou "${productName}" por ${this.formatPrice(total)}`,
+      message,
       `/pedidos/${orderId}`,
-      { orderId, buyerName, productName, total }
+      {
+        orderId,
+        buyerName,
+        productName,
+        total,
+        status: 'processing',
+        role: 'seller',
+
+        // 🔥 Dados de envio
+        shippingAddress: shippingAddress || undefined,
+        items: items || undefined,
+        paymentMethod: paymentMethod || undefined,
+
+        // 🔥 Contato do comprador
+        buyerEmail: buyerContact?.email,
+        buyerPhone: buyerContact?.phone,
+
+        type: 'sale',
+      }
     ).subscribe();
   }
 

@@ -5,21 +5,19 @@ import { BehaviorSubject, Observable, of, throwError, catchError, tap, map } fro
 import { isPlatformBrowser } from '@angular/common';
 import { Order, OrderFilter, PaymentMethod, CardData } from '../models/checkout.model';
 import { NotificationService } from './notification.service';
+import { ShippingAddress, OrderItemSummary } from '../models/notification.model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class OrderService {
-  // 🔥 URL da API local apenas
   private apiUrl = 'http://localhost:3000/orders';
-  //private apiUrl = 'https://ecommerce-api-mf.vercel.app/orders';
 
-  // Estado local
   private orders = new BehaviorSubject<Order[]>([]);
   private currentOrder = new BehaviorSubject<Order | null>(null);
   private readonly isBrowser: boolean;
   private readonly http = inject(HttpClient);
-  private readonly notificationService = inject(NotificationService); // 🔥
+  private readonly notificationService = inject(NotificationService);
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -70,10 +68,30 @@ export class OrderService {
     );
   }
 
+  /**
+   * 🔥 Retorna apenas os pedidos em que o usuário é o COMPRADOR
+   * (usado na página "Meus Pedidos")
+   */
   getMyOrders(userId: string): Observable<Order[]> {
+    const idStr = String(userId);
+
     return this.http
-      .get<Order[]>(`${this.apiUrl}?userId=${userId}&_sort=createdAt&_order=desc`)
+      .get<Order[]>(`${this.apiUrl}?_sort=createdAt&_order=desc`)
       .pipe(
+        map((orders) => {
+          // 🔥 Filtro EXPLÍCITO — só pedidos em que o usuário é o COMPRADOR
+          const myOrders = orders.filter(
+            (order: any) => String(order.userId) === idStr
+          );
+
+          console.log(`📦 getMyOrders(${idStr}):`, {
+            total: orders.length,
+            meus: myOrders.length,
+            ids: myOrders.map(o => o.id),
+          });
+
+          return myOrders;
+        }),
         tap((orders) => {
           this.orders.next(orders);
           if (this.isBrowser) {
@@ -84,16 +102,30 @@ export class OrderService {
       );
   }
 
+  /**
+   * 🔥 Retorna apenas os pedidos em que o usuário é o VENDEDOR de algum item
+   * (usado na página "Minhas Vendas")
+   */
   getSellerOrders(sellerId: string): Observable<Order[]> {
-    // JSON Server não faz query aninhada em arrays, então filtramos no cliente
+    const idStr = String(sellerId);
+
     return this.http.get<Order[]>(`${this.apiUrl}?_sort=createdAt&_order=desc`).pipe(
-      map((orders) =>
-        orders.filter((order: any) =>
+      map((orders) => {
+        // 🔥 Filtro EXPLÍCITO — só pedidos em que algum item pertence ao vendedor
+        const sellerOrders = orders.filter((order: any) =>
           (order.items || []).some(
-            (item: any) => String(item.sellerId || item.storeId) === String(sellerId)
+            (item: any) => String(item.sellerId || item.storeId) === idStr
           )
-        )
-      ),
+        );
+
+        console.log(`💰 getSellerOrders(${idStr}):`, {
+          total: orders.length,
+          minhasVendas: sellerOrders.length,
+          ids: sellerOrders.map(o => o.id),
+        });
+
+        return sellerOrders;
+      }),
       catchError(this.handleError),
     );
   }
@@ -165,6 +197,10 @@ export class OrderService {
 
     const buyerId = String(order.userId || '1');
     const buyerName = (order as any).buyerName || 'Cliente';
+    const buyerContact = {
+      email: (order as any).buyerEmail,
+      phone: (order as any).buyerPhone,
+    };
 
     const bySeller = new Map<string, any[]>();
     items.forEach((item) => {
@@ -186,6 +222,28 @@ export class OrderService {
         0
       );
 
+      const itemsSummary: OrderItemSummary[] = sellerItems.map((it) => ({
+        productId: String(it.productId || it.id || ''),
+        productName: it.productName || it.name || 'Produto',
+        quantity: it.quantity || 1,
+        price: it.price || 0,
+        subtotal: it.subtotal || (it.price || 0) * (it.quantity || 1),
+        image: it.image || '',
+      }));
+
+      const shippingAddress: ShippingAddress | undefined = order.address
+        ? {
+            cep: order.address.cep || '',
+            street: order.address.street || '',
+            number: order.address.number || '',
+            complement: order.address.complement || '',
+            neighborhood: order.address.neighborhood || '',
+            city: order.address.city || '',
+            state: order.address.state || '',
+            country: order.address.country || 'Brasil',
+          }
+        : undefined;
+
       this.notificationService.notifyOrderConfirmed(
         buyerId,
         productName,
@@ -198,7 +256,11 @@ export class OrderService {
         buyerName,
         productName,
         order.id,
-        sellerTotal
+        sellerTotal,
+        shippingAddress,
+        buyerContact,
+        itemsSummary,
+        order.paymentMethod as any
       );
     });
   }
@@ -366,7 +428,7 @@ export class OrderService {
   ): Observable<{ success: boolean; message: string; transactionId?: string }> {
     return new Observable((observer) => {
       setTimeout(() => {
-        const success = Math.random() > 0.1; // 90% de chance de sucesso
+        const success = Math.random() > 0.1;
         if (success) {
           observer.next({
             success: true,

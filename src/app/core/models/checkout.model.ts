@@ -36,7 +36,7 @@ export interface OrderItem {
   price: number;
   subtotal: number;
   image: string;
-  // 🔥 NOVOS CAMPOS (opcionais, para notificações)
+  // 🔥 Campos usados nas notificações
   sellerId?: string;
   sellerName?: string;
 }
@@ -44,7 +44,12 @@ export interface OrderItem {
 export interface Order {
   id: string;
   userId?: string;
-  buyerName?: string; // 🔥 usado nas notificações
+  buyerName?: string;
+
+  // 🔥 Campos usados para notificação de venda
+  buyerEmail?: string;
+  buyerPhone?: string;
+
   items: OrderItem[];
   address: Address;
   paymentMethod: PaymentMethod;

@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
 import { Order } from '../../../core/models/checkout.model';
 import { AlertService } from '../../../core/services/alert.service';
+import { AuthService } from '../../../core/services/auth.service';   // 🔥 ADICIONAR
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -38,7 +39,8 @@ export class MyOrders implements OnInit, OnDestroy {
 
   constructor(
     private orderService: OrderService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private authService: AuthService   // 🔥 ADICIONAR
   ) {}
 
   ngOnInit(): void {
@@ -51,8 +53,20 @@ export class MyOrders implements OnInit, OnDestroy {
 
   loadOrders(): void {
     this.loading = true;
+
+    // 🔥 CORREÇÃO: pegar o ID do usuário LOGADO em vez de '1' hardcoded
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser?.id) {
+      this.loading = false;
+      this.orders = [];
+      this.alertService.warning('Login necessário', 'Faça login para ver seus pedidos.');
+      return;
+    }
+
+    const userId = String(currentUser.id);
+
     this.subscriptions.add(
-      this.orderService.getMyOrders('1').subscribe({
+      this.orderService.getMyOrders(userId).subscribe({   // 🔥 USA O ID CORRETO
         next: (orders) => {
           this.orders = orders;
           this.loading = false;

@@ -588,6 +588,11 @@ export class Checkout implements OnInit, OnDestroy {
       const orderData: Partial<Order> = {
         userId: String(this.currentUser.id),
         buyerName: this.currentUser.name,
+
+        // 🔥 NOVOS CAMPOS — contato do comprador para envio
+        buyerEmail: this.currentUser.email,
+        buyerPhone: this.currentUser.phone,
+
         items: mappedItems,
         address: {
           cep: selectedAddress.cep,
