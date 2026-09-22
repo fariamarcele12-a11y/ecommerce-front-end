@@ -113,25 +113,18 @@
                     <div>
                       <span class="text-muted small">📊 Preview do preço:</span>
                       <div class="d-flex align-items-center gap-3 mt-1">
-                        <!-- Preço com desconto -->
                         <span class="h4 fw-bold text-success mb-0">
                           {{ formatPrice(product.price) }}
                         </span>
-
-                        <!-- Preço antigo riscado (se houver oferta) -->
                         <span *ngIf="isOnSale()" class="text-muted text-decoration-line-through">
                           {{ formatPrice(product.oldPrice) }}
                         </span>
-
-                        <!-- Badge de desconto -->
                         <span *ngIf="isOnSale()" class="badge bg-danger rounded-pill fs-6 px-3 py-2">
                           <i class="bi bi-tag-fill me-1"></i>
                           -{{ getDiscountPercentage() }}%
                         </span>
                       </div>
                     </div>
-
-                    <!-- Economia -->
                     <div *ngIf="isOnSale()" class="text-end">
                       <span class="text-success fw-bold">
                         <i class="bi bi-wallet2 me-1"></i>
@@ -156,7 +149,6 @@
                 >
                   <option value="">Selecione uma categoria</option>
                   <option *ngFor="let cat of categories" [value]="cat.slug">
-                    <i *ngIf="cat.icon" [class]="'bi ' + cat.icon"></i>
                     {{ cat.name }}
                     <span *ngIf="cat.productCount !== undefined" class="text-muted small">
                       ({{ cat.productCount }})
@@ -203,18 +195,42 @@
               </div>
             </div>
 
-            <!-- Localização -->
+            <!-- 🔥 Localização com SelectBox para Estado e Cidade -->
             <div class="row g-3 mt-2">
               <div class="col-md-6">
-                <label class="form-label fw-bold small">Localização <span class="text-danger">*</span></label>
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Cidade - Estado"
-                  [(ngModel)]="product.location"
-                  name="location"
+                <label class="form-label fw-bold small">Estado <span class="text-danger">*</span></label>
+                <select                  class="form-select"
+                  [(ngModel)]="selectedState"
+                  (change)="onStateChange($event)"
+                  name="state"
                   required
-                />
+                >
+                  <option value="">Selecione o estado</option>
+                  <option *ngFor="let state of brazilianStates" [value]="state.uf">
+                    {{ state.uf }} - {{ state.name }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-bold small">Cidade <span class="text-danger">*</span></label>
+                <select
+                  class="form-select"
+                  [(ngModel)]="selectedCity"
+                  (change)="onCityChange($event)"
+                  name="city"
+                  required
+                  [disabled]="!selectedState"
+                >
+                  <option value="">Selecione a cidade</option>
+                  <option *ngFor="let city of availableCities" [value]="city">
+                    {{ city }}
+                  </option>
+                </select>
+                <small class="text-muted" *ngIf="!selectedState">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Selecione primeiro o estado
+                </small>
               </div>
 
               <div class="col-md-6">
@@ -234,42 +250,80 @@
                   </label>
                 </div>
               </div>
+
+              <!-- Preview da localização -->
+              <div class="col-md-6" *ngIf="product.location">
+                <label class="form-label fw-bold small">Localização</label>
+                <div class="alert alert-light py-2 mb-0">
+                  <i class="bi bi-geo-alt-fill text-danger me-2"></i>
+                  {{ product.location }}
+                </div>
+              </div>
             </div>
 
-            <!-- Imagens -->
-            <div class="mb-3 mt-3">
+            <!-- 🔥 Imagens com Upload de Arquivo -->
+            <div class="mb-3 mt-4">
               <label class="form-label fw-bold small">Imagens <span class="text-danger">*</span></label>
-              <p class="text-muted small">Adicione URLs das imagens do produto (máx 5)</p>
+              <p class="text-muted small">
+                <i class="bi bi-info-circle me-1"></i>
+                Adicione imagens do seu dispositivo (máx 5 imagens, 5MB cada)
+              </p>
 
-              <div *ngFor="let image of imageUrls; let i = index" class="input-group mb-2">
-                <span class="input-group-text"><i class="bi bi-image"></i></span>
-                <input
-                  type="url"
-                  class="form-control"
-                  [(ngModel)]="imageUrls[i]"
-                  [name]="'image' + i"
-                  placeholder="https://exemplo.com/imagem.jpg"
-                />
-                <button
-                  type="button"
-                  class="btn btn-outline-danger"
-                  (click)="removeImageField(i)"
-                  *ngIf="imageUrls.length > 1"
-                >
-                  <i class="bi bi-trash"></i>
-                </button>
+              <div class="row g-3">
+                <div *ngFor="let image of imageUrls; let i = index" class="col-md-6 col-lg-4">
+                  <div class="image-upload-card">
+                    <!-- Preview da imagem -->
+                    <div *ngIf="hasImagePreview(i)" class="image-preview-container">
+                      <img [src]="imageUrls[i]" alt="Preview" class="image-preview" />
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle"
+                        (click)="removeImageField(i)"
+                        title="Remover imagem"
+                      >
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
+
+                    <!-- Área de upload -->
+                    <div
+                      *ngIf="!hasImagePreview(i)"
+                      class="upload-placeholder"
+                      (click)="triggerFileInput(i)"
+                    >
+                      <i class="bi bi-cloud-arrow-up fs-1 text-primary"></i>
+                      <p class="mb-1 fw-bold">Clique para enviar</p>
+                      <small class="text-muted">PNG, JPG até 5MB</small>
+                    </div>
+
+                    <!-- Input de arquivo oculto -->
+                    <input
+                      type="file"
+                      [id]="'fileInput' + i"
+                      class="d-none"
+                      accept="image/*"
+                      (change)="onFileSelected($event, i)"
+                    />
+                  </div>
+                </div>
+
+                <!-- Botão adicionar mais imagens -->
+                <div class="col-md-6 col-lg-4" *ngIf="imageUrls.length < 5">
+                  <div class="upload-placeholder add-more" (click)="addImageField()">
+                    <i class="bi bi-plus-circle fs-1 text-success"></i>
+                    <p class="mb-0 fw-bold">Adicionar mais</p>
+                    <small class="text-muted">{{ imageUrls.length }}/5</small>
+                  </div>
+                </div>
               </div>
 
-              <button
-                type="button"
-                class="btn btn-outline-primary btn-sm"
-                (click)="addImageField()"
-                [disabled]="imageUrls.length >= 5"
-              >
-                <i class="bi bi-plus-circle me-1"></i>
-                Adicionar imagem
-              </button>
-              <span class="text-muted ms-2 small">{{ imageUrls.length }}/5</span>
+              <!-- Contador -->
+              <div class="mt-2">
+                <span class="badge bg-secondary">
+                  <i class="bi bi-images me-1"></i>
+                  {{ imageUrls.length }}/5 imagens
+                </span>
+              </div>
             </div>
 
             <!-- Botões -->
