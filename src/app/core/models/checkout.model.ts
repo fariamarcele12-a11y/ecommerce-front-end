@@ -30,13 +30,13 @@ export interface PaymentMethod {
 }
 
 export interface OrderItem {
-  productId: number;
+  // 🔥 CORREÇÃO: aceitar string OU number
+  productId: string | number;
   productName: string;
   quantity: number;
   price: number;
   subtotal: number;
   image: string;
-  // 🔥 Campos usados nas notificações
   sellerId?: string;
   sellerName?: string;
 }

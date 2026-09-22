@@ -14,6 +14,8 @@ import { StoreService } from '../../../core/services/store.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { CategoryService } from '../../../core/services/category.service';
+import { ReviewService } from '../../../core/services/review.service';
+import { Review, ReviewSummary } from '../../../core/models/review.model';
 import { Store as StoreModel } from '../../../core/models/store.model';
 
 @Component({
@@ -44,6 +46,16 @@ export class ProductDetail implements OnInit, OnDestroy {
   storeLogo: string = '';
   storeBanner: string = '';
 
+  // 🔥 AVALIAÇÕES
+  reviews: Review[] = [];
+  reviewSummary: ReviewSummary = {
+    total: 0,
+    average: 0,
+    distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  };
+  showAllReviews = false;
+  readonly MAX_VISIBLE_REVIEWS = 3;
+
   private routeSub: Subscription = new Subscription();
 
   constructor(
@@ -56,6 +68,7 @@ export class ProductDetail implements OnInit, OnDestroy {
     private authService: AuthService,
     private userService: UserService,
     private categoryService: CategoryService,
+    private reviewService: ReviewService,
   ) {}
 
   ngOnInit(): void {
@@ -95,6 +108,7 @@ export class ProductDetail implements OnInit, OnDestroy {
           this.loadSellerInfo(product);
           this.loadRelatedProducts(product.category, String(product.id));
           this.checkOwnership(product);
+          this.loadReviews(String(product.id));
         } else {
           this.router.navigate(['/home']);
         }
@@ -107,6 +121,111 @@ export class ProductDetail implements OnInit, OnDestroy {
       },
     });
   }
+
+  // ============================================
+  // 🔥 MÉTODOS DE AVALIAÇÃO
+  // ============================================
+
+  loadReviews(productId: string): void {
+    this.reviewService.getReviewsByProduct(productId).subscribe({
+      next: (reviews) => {
+        this.reviews = reviews || [];
+        this.reviewSummary = this.calculateReviewSummary(this.reviews);
+      },
+      error: (error) => {
+        console.warn('⚠️ Erro ao carregar avaliações:', error);
+        this.reviews = [];
+        this.reviewSummary = {
+          total: 0,
+          average: 0,
+          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+        };
+      },
+    });
+  }
+
+  private calculateReviewSummary(reviews: Review[]): ReviewSummary {
+    const summary: ReviewSummary = {
+      total: reviews.length,
+      average: 0,
+      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    };
+
+    if (reviews.length === 0) return summary;
+
+    let sum = 0;
+    reviews.forEach((r) => {
+      const rating = Math.round(r.rating);
+      sum += r.rating;
+      if (rating >= 1 && rating <= 5) {
+        summary.distribution[rating as 1 | 2 | 3 | 4 | 5] += 1;
+      }
+    });
+
+    summary.average = Math.round((sum / reviews.length) * 10) / 10;
+    return summary;
+  }
+
+  getVisibleReviews(): Review[] {
+    return this.showAllReviews
+      ? this.reviews
+      : this.reviews.slice(0, this.MAX_VISIBLE_REVIEWS);
+  }
+
+  hasMoreReviews(): boolean {
+    return this.reviews.length > this.MAX_VISIBLE_REVIEWS;
+  }
+
+  toggleShowAllReviews(): void {
+    this.showAllReviews = !this.showAllReviews;
+  }
+
+  formatReviewDate(date: string): string {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+
+  getReviewStars(): number[] {
+    return [1, 2, 3, 4, 5];
+  }
+
+  getPercentForRating(rating: number): number {
+    if (this.reviewSummary.total === 0) return 0;
+    const count = this.reviewSummary.distribution[rating as 1 | 2 | 3 | 4 | 5] || 0;
+    return Math.round((count / this.reviewSummary.total) * 100);
+  }
+
+  getReviewerInitials(name: string): string {
+    if (!name) return '?';
+    const words = name.trim().split(' ');
+    if (words.length === 1) return words[0].charAt(0).toUpperCase();
+    return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  }
+
+  /**
+   * 🔥 Fallback quando o avatar do avaliador falha ao carregar
+   * Gera um avatar com as iniciais do usuário via ui-avatars.com
+   */
+  onReviewerAvatarError(event: Event, userName: string): void {
+    const img = event.target as HTMLImageElement;
+    if (!img) return;
+
+    const safeName = encodeURIComponent(userName || 'Usuário');
+    const fallback = `https://ui-avatars.com/api/?name=${safeName}&background=667eea&color=fff&size=80&bold=true`;
+
+    // Evitar loop infinito se a própria imagem de fallback também falhar
+    if (img.src === fallback) return;
+
+    img.src = fallback;
+  }
+
+  // ============================================
+  // FIM DOS MÉTODOS DE AVALIAÇÃO
+  // ============================================
 
   loadCategorySlug(categoryName: string): void {
     this.categoryService.getCategories().subscribe({

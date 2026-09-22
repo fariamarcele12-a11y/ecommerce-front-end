@@ -1,0 +1,137 @@
+<!-- src/app/shared/components/review-modal/review-modal.html -->
+<div class="review-modal-backdrop" (click)="onBackdropClick($event)">
+  <div class="review-modal-container">
+
+    <!-- Header -->
+    <div class="review-modal-header">
+      <div class="d-flex align-items-center gap-3">
+        <div class="product-thumb">
+          <img
+            [src]="item.image || 'https://via.placeholder.com/60x60/667eea/ffffff?text=Produto'"
+            [alt]="item.productName"
+            (error)="$event.target.src = 'https://via.placeholder.com/60x60/667eea/ffffff?text=Produto'"
+          />
+        </div>
+        <div class="flex-grow-1 min-width-0">
+          <h6 class="fw-bold mb-1 text-truncate">{{ item.productName }}</h6>
+          <small class="text-muted">
+            Vendido por {{ sellerName || item.sellerName || 'Vendedor' }}
+          </small>
+        </div>
+      </div>
+      <button
+        class="btn-close-modal"
+        (click)="onClose()"
+        [disabled]="isSubmitting"
+        title="Fechar"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="review-modal-body">
+
+      <!-- Pergunta -->
+      <div class="text-center mb-4">
+        <h5 class="fw-bold mb-2">Como foi sua experiência?</h5>
+        <p class="text-muted small mb-0">
+          Sua opinião ajuda outros compradores e o vendedor a melhorar.
+        </p>
+      </div>
+
+      <!-- Estrelas -->
+      <div class="stars-container">
+        <div class="stars-wrapper">
+          <button
+            *ngFor="let star of stars"
+            type="button"
+            class="star-btn"
+            [class.active]="star <= getDisplayRating()"
+            [class.selected]="star <= rating"
+            (click)="setRating(star)"
+            (mouseenter)="setHoverRating(star)"
+            (mouseleave)="clearHoverRating()"
+            [disabled]="isSubmitting"
+            [attr.aria-label]="star + ' estrelas'"
+          >
+            <i
+              class="bi"
+              [class.bi-star-fill]="star <= getDisplayRating()"
+              [class.bi-star]="star > getDisplayRating()"
+            ></i>
+          </button>
+        </div>
+
+        <p
+          class="rating-label mt-2 mb-0"
+          [ngClass]="getRatingColor(getDisplayRating())"
+        >
+          {{ getRatingLabel(getDisplayRating()) }}
+        </p>
+      </div>
+
+      <!-- Comentário -->
+      <div class="comment-section mt-4">
+        <label for="reviewComment" class="form-label fw-bold">
+          Conte mais sobre sua experiência
+          <span class="text-muted fw-normal">(opcional)</span>
+        </label>
+
+        <textarea
+          id="reviewComment"
+          class="form-control review-textarea"
+          rows="4"
+          placeholder="O que você achou do produto? Ele atendeu suas expectativas? Como foi a entrega?"
+          [(ngModel)]="comment"
+          (ngModelChange)="onCommentChange()"
+          [disabled]="isSubmitting"
+          [maxlength]="maxCommentLength"
+        ></textarea>
+
+        <div class="d-flex justify-content-between mt-1">
+          <small class="text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            Seja honesto e respeitoso
+          </small>
+          <small
+            class="text-muted"
+            [class.text-danger]="getRemainingChars() < 50"
+          >
+            {{ getRemainingChars() }} caracteres restantes
+          </small>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="review-modal-footer">
+      <button
+        type="button"
+        class="btn btn-outline-secondary rounded-pill px-4"
+        (click)="onClose()"
+        [disabled]="isSubmitting"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-primary rounded-pill px-4"
+        (click)="onSubmit()"
+        [disabled]="rating === 0 || isSubmitting"
+      >
+        <span *ngIf="!isSubmitting">
+          <i class="bi bi-send me-2"></i>
+          Enviar avaliação
+        </span>
+        <span *ngIf="isSubmitting">
+          <span class="spinner-border spinner-border-sm me-2"></span>
+          Enviando...
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

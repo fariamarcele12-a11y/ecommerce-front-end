@@ -574,8 +574,9 @@ export class Checkout implements OnInit, OnDestroy {
 
       const checkoutItems = this.cartService.getCheckoutItems();
 
+      // 🔥 CORREÇÃO: manter productId como STRING
       const mappedItems: OrderItem[] = checkoutItems.map((item) => ({
-        productId: Number(item.productId) || 0,
+        productId: String(item.productId),
         productName: item.productName,
         quantity: item.quantity,
         price: item.price,

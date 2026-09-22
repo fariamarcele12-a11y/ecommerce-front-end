@@ -1,3 +1,5 @@
+// src/app/features/orders/order-detail/order-detail.scss
+
 // Status Tracker
 .status-tracker {
   position: relative;
@@ -113,7 +115,99 @@
   }
 }
 
-// Responsividade
+// ============================================
+// 🔥 SEÇÃO DE AVALIAÇÃO (NOVO)
+// ============================================
+.reviewed-badge {
+  padding: 0.35rem 0.85rem;
+  background-color: #d4edda;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #c3e6cb;
+  }
+
+  .text-warning i {
+    font-size: 0.85rem;
+  }
+}
+
+// 🔥 Bloco de avaliação no item do pedido
+.order-item {
+  .border-top {
+    border-color: #f1f1f1 !important;
+  }
+
+  // Botão de avaliar
+  .btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    font-weight: 600;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: #e0a800;
+      border-color: #d39e00;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+    }
+  }
+
+  // Card da avaliação (comentário do cliente)
+  .review-comment {
+    background-color: #fff8e1;
+    border-left: 3px solid #ffc107;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: #495057;
+
+    strong {
+      color: #856404;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    p {
+      margin-bottom: 0;
+      margin-top: 0.35rem;
+      line-height: 1.5;
+    }
+  }
+
+  // Card da resposta do vendedor
+  .seller-reply {
+    background-color: #e7f3ff;
+    border-left: 3px solid #0066b3;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: #495057;
+    margin-top: 0.5rem;
+
+    strong {
+      color: #0066b3;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    p {
+      margin-bottom: 0;
+      margin-top: 0.35rem;
+      line-height: 1.5;
+    }
+  }
+}
+
+// 🔥 Responsividade
 @media (max-width: 768px) {
   .status-tracker {
     .step-item {
@@ -141,6 +235,30 @@
         margin: 0 auto;
       }
     }
+
+    // Em mobile, o bloco de avaliação fica empilhado
+    .d-flex.align-items-center.justify-content-between {
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 0.75rem !important;
+
+      .btn-warning,
+      .reviewed-badge {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+      }
+    }
+  }
+
+  .reviewed-badge {
+    justify-content: center;
+  }
+
+  .review-comment,
+  .seller-reply {
+    font-size: 0.82rem !important;
+    padding: 0.6rem 0.8rem !important;
   }
 }
 

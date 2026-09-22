@@ -1,16 +1,20 @@
+// src/app/features/orders/order-detail/order-detail.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
 import { Order } from '../../../core/models/checkout.model';
 import { AlertService } from '../../../core/services/alert.service';
-import { AuthService } from '../../../core/services/auth.service';   // 🔥 ADICIONAR
+import { AuthService } from '../../../core/services/auth.service';
+import { ReviewService } from '../../../core/services/review.service';
+import { Review } from '../../../core/models/review.model';
+import { ReviewModal } from '../../../shared/components/review-modal/review-modal';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-order-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ReviewModal],
   templateUrl: './order-detail.html',
   styleUrls: ['./order-detail.scss'],
 })
@@ -18,6 +22,15 @@ export class OrderDetail implements OnInit, OnDestroy {
   order: Order | null = null;
   loading = true;
   private routeSub: Subscription = new Subscription();
+
+  // 🔥 Avaliação
+  reviewModalOpen = false;
+  selectedItemForReview: any = null;
+  reviewedItems: { [key: string]: Review } = {};
+
+  // 🔥 CONTROLE: é o comprador? é o vendedor?
+  isBuyer = false;
+  isSeller = false;
 
   statusColors: { [key: string]: string } = {
     pending: 'warning',
@@ -55,7 +68,8 @@ export class OrderDetail implements OnInit, OnDestroy {
     private router: Router,
     private orderService: OrderService,
     private alertService: AlertService,
-    private authService: AuthService,   // 🔥 ADICIONAR
+    private authService: AuthService,
+    private reviewService: ReviewService,
   ) {}
 
   ngOnInit(): void {
@@ -78,16 +92,16 @@ export class OrderDetail implements OnInit, OnDestroy {
     this.orderService.getOrderById(orderId).subscribe({
       next: (order) => {
         if (order) {
-          // 🔥 VALIDAÇÃO: garantir que o usuário tem permissão
           const currentUser = this.authService.getCurrentUser();
           const userId = String(currentUser?.id);
 
-          const isBuyer = String(order.userId) === userId;
-          const isSeller = (order.items || []).some(
+          // 🔥 Define explicitamente quem é comprador e quem é vendedor
+          this.isBuyer = String(order.userId) === userId;
+          this.isSeller = (order.items || []).some(
             (item: any) => String(item.sellerId) === userId,
           );
 
-          if (!isBuyer && !isSeller) {
+          if (!this.isBuyer && !this.isSeller) {
             this.alertService.error(
               'Acesso negado',
               'Você não tem permissão para ver este pedido.',
@@ -98,6 +112,11 @@ export class OrderDetail implements OnInit, OnDestroy {
 
           this.order = order;
           this.loading = false;
+
+          // 🔥 Só carrega avaliações se for comprador
+          if (this.isBuyer) {
+            this.loadExistingReviews(order.id);
+          }
         } else {
           this.alertService.error(
             'Pedido não encontrado',
@@ -113,6 +132,84 @@ export class OrderDetail implements OnInit, OnDestroy {
         this.router.navigate(['/pedidos']);
       },
     });
+  }
+
+  loadExistingReviews(orderId: string): void {
+    if (!this.order) return;
+
+    this.order.items.forEach((item) => {
+      this.reviewService
+        .getReviewByOrderAndProduct(orderId, String(item.productId))
+        .subscribe((review) => {
+          if (review) {
+            this.reviewedItems[String(item.productId)] = review;
+          }
+        });
+    });
+  }
+
+  isItemReviewed(productId: string | number): boolean {
+    return !!this.reviewedItems[String(productId)];
+  }
+
+  getReviewForItem(productId: string | number): Review | undefined {
+    return this.reviewedItems[String(productId)];
+  }
+
+  /**
+   * 🔥 REGRA: só o COMPRADOR pode avaliar
+   * - Se não for comprador (é vendedor), NÃO mostra o botão
+   * - Se já avaliou, NÃO mostra o botão
+   * - Se o pedido não foi entregue, NÃO mostra o botão
+   */
+  canReviewItem(item: any): boolean {
+    return (
+      this.isBuyer &&
+      !this.isSeller &&
+      this.order?.status === 'delivered' &&
+      !this.isItemReviewed(item.productId)
+    );
+  }
+
+  openReviewModal(item: any): void {
+    if (!this.canReviewItem(item)) {
+      // Bloqueio de segurança
+      if (this.isSeller) {
+        this.alertService.info(
+          'Ação não permitida',
+          'Você não pode avaliar um produto que você mesmo vende.'
+        );
+      } else if (this.order?.status !== 'delivered') {
+        this.alertService.warning(
+          'Aguarde a entrega',
+          'Você só pode avaliar produtos após recebê-los.'
+        );
+      } else if (this.isItemReviewed(item.productId)) {
+        this.alertService.info(
+          'Já avaliado',
+          'Você já avaliou este produto. Obrigado!'
+        );
+      }
+      return;
+    }
+
+    this.selectedItemForReview = item;
+    this.reviewModalOpen = true;
+  }
+
+  closeReviewModal(): void {
+    this.reviewModalOpen = false;
+    this.selectedItemForReview = null;
+  }
+
+  onReviewSubmitted(review: Review): void {
+    this.reviewedItems[review.productId] = review;
+    this.closeReviewModal();
+
+    // 🔥 Recarrega o pedido para atualizar a interface
+    if (this.order) {
+      this.loadOrder(this.order.id);
+    }
   }
 
   getStatusColor(status: string): string {
@@ -176,7 +273,10 @@ export class OrderDetail implements OnInit, OnDestroy {
   }
 
   canCancel(): boolean {
-    return this.order?.status === 'pending' || this.order?.status === 'processing';
+    return (
+      this.isBuyer &&
+      (this.order?.status === 'pending' || this.order?.status === 'processing')
+    );
   }
 
   getTotalItems(): number {

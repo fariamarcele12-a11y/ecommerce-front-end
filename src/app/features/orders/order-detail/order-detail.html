@@ -95,6 +95,10 @@
                     <i class="bi bi-tag me-1"></i>
                     {{ item.quantity }}x {{ formatPrice(item.price) }}
                   </div>
+                  <div class="text-muted small" *ngIf="item.sellerName">
+                    <i class="bi bi-shop me-1"></i>
+                    Vendido por {{ item.sellerName }}
+                  </div>
                 </div>
                 <div class="text-end">
                   <div class="fw-bold text-primary">
@@ -104,6 +108,63 @@
                     <i class="bi bi-eye me-1"></i>
                     Ver produto
                   </a>
+                </div>
+              </div>
+
+              <!-- 🔥 BLOCO DE AVALIAÇÃO — só aparece para o COMPRADOR -->
+              <div *ngIf="isBuyer && !isSeller && order.status === 'delivered'" class="mt-3 pt-3 border-top">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                  <!-- Se ainda NÃO avaliou -->
+                  <ng-container *ngIf="!isItemReviewed(item.productId)">
+                    <small class="text-muted">
+                      <i class="bi bi-star me-1"></i>
+                      O que você achou deste produto?
+                    </small>
+                    <button
+                      class="btn btn-sm btn-warning rounded-pill px-3"
+                      (click)="openReviewModal(item)"
+                    >
+                      <i class="bi bi-star-fill me-1"></i>
+                      Avaliar Produto
+                    </button>
+                  </ng-container>
+
+                  <!-- Se JÁ avaliou -->
+                  <ng-container *ngIf="isItemReviewed(item.productId)">
+                    <div class="reviewed-badge d-flex align-items-center gap-2">
+                      <i class="bi bi-check-circle-fill text-success"></i>
+                      <span class="text-success small fw-bold">Avaliado</span>
+                      <span class="text-warning">
+                        <i
+                          *ngFor="let star of [1,2,3,4,5]"
+                          class="bi"
+                          [class.bi-star-fill]="star <= (getReviewForItem(item.productId)?.rating || 0)"
+                          [class.bi-star]="star > (getReviewForItem(item.productId)?.rating || 0)"
+                        ></i>
+                      </span>
+                    </div>
+                  </ng-container>
+
+                </div>
+
+                <!-- Mostrar comentário do cliente se já avaliou -->
+                <div *ngIf="isItemReviewed(item.productId) && getReviewForItem(item.productId)?.comment"
+                     class="mt-2 p-2 rounded"
+                     style="background-color: #f8f9fa; border-left: 3px solid #ffc107; font-size: 0.85rem;">
+                  <strong class="text-muted small">Sua avaliação:</strong>
+                  <p class="mb-0 mt-1">"{{ getReviewForItem(item.productId)?.comment }}"</p>
+                </div>
+
+                <!-- Resposta do vendedor (se houver) -->
+                <div *ngIf="isItemReviewed(item.productId) && getReviewForItem(item.productId)?.sellerReply"
+                     class="mt-2 p-2 rounded"
+                     style="background-color: #e7f3ff; border-left: 3px solid #0066B3; font-size: 0.85rem;">
+                  <strong class="text-primary small">
+                    <i class="bi bi-shop me-1"></i>
+                    {{ getReviewForItem(item.productId)?.sellerName }} respondeu:
+                  </strong>
+                  <p class="mb-0 mt-1">"{{ getReviewForItem(item.productId)?.sellerReply?.content }}"</p>
                 </div>
               </div>
             </div>
@@ -170,9 +231,8 @@
                 <i class="bi bi-truck me-1"></i>
                 {{ order.trackingCode }}
               </p>
+              <hr>
             </div>
-
-            <hr>
 
             <div class="d-grid gap-2">
               <button class="btn btn-outline-secondary rounded-pill" routerLink="/pedidos">
@@ -186,3 +246,13 @@
     </div>
   </div>
 </div>
+
+<!-- 🔥 MODAL DE AVALIAÇÃO -->
+<app-review-modal
+  *ngIf="reviewModalOpen && selectedItemForReview"
+  [item]="selectedItemForReview"
+  [orderId]="order?.id || ''"
+  [sellerName]="selectedItemForReview?.sellerName || 'Vendedor'"
+  (close)="closeReviewModal()"
+  (submitted)="onReviewSubmitted($event)"
+></app-review-modal>

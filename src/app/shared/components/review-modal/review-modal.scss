@@ -1,0 +1,243 @@
+// src/app/shared/components/review-modal/review-modal.scss
+
+.review-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.review-modal-container {
+  background-color: #fff;
+  border-radius: 16px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.25s ease-out;
+}
+
+// ============================================
+// HEADER
+// ============================================
+.review-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+
+  .product-thumb {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #f8f9fa;
+    flex-shrink: 0;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .btn-close-modal {
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 1.1rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover:not(:disabled) {
+      background-color: #f1f3f5;
+      color: #212529;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// ============================================
+// BODY
+// ============================================
+.review-modal-body {
+  padding: 1.5rem;
+}
+
+// ============================================
+// ESTRELAS
+// ============================================
+.stars-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+.stars-wrapper {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.star-btn {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  font-size: 2.5rem;
+  color: #dee2e6;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+
+  &:hover:not(:disabled),
+  &.active {
+    color: #ffc107;
+    transform: scale(1.1);
+  }
+
+  &.selected {
+    animation: starPulse 0.3s ease;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  i {
+    display: block;
+  }
+}
+
+.rating-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: center;
+  min-height: 1.5rem;
+  transition: color 0.2s;
+}
+
+// ============================================
+// COMENTÁRIO
+// ============================================
+.comment-section {
+  .form-label {
+    font-size: 0.9rem;
+    color: #212529;
+  }
+
+  .review-textarea {
+    resize: vertical;
+    min-height: 100px;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+    font-size: 0.9rem;
+    padding: 0.75rem;
+
+    &:focus {
+      border-color: #0066b3;
+      box-shadow: 0 0 0 0.2rem rgba(0, 102, 179, 0.15);
+    }
+
+    &:disabled {
+      background-color: #f8f9fa;
+    }
+  }
+}
+
+// ============================================
+// FOOTER
+// ============================================
+.review-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background-color: #fafbfc;
+  border-radius: 0 0 16px 16px;
+}
+
+// ============================================
+// ANIMAÇÕES
+// ============================================
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes starPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1.1); }
+}
+
+// ============================================
+// RESPONSIVO
+// ============================================
+@media (max-width: 576px) {
+  .review-modal-container {
+    border-radius: 12px;
+    max-height: 95vh;
+  }
+
+  .review-modal-header {
+    padding: 1rem;
+
+    .product-thumb {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  .review-modal-body {
+    padding: 1rem;
+  }
+
+  .star-btn {
+    font-size: 2rem;
+  }
+
+  .review-modal-footer {
+    padding: 1rem;
+    flex-direction: column-reverse;
+
+    .btn {
+      width: 100%;
+    }
+  }
+}

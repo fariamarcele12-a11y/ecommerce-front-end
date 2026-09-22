@@ -90,17 +90,21 @@
       <!-- Título e Avaliação -->
       <h1 class="product-title">{{ product.name }}</h1>
 
-      <div class="d-flex align-items-center gap-3 mb-3">
+      <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <!-- 🔥 Estrelas reais das avaliações -->
         <div class="d-flex align-items-center">
           <i
-            class="bi bi-star-fill text-warning me-1"
-            *ngFor="let star of getStars(product.seller.rating || 0)"
+            class="bi me-1"
+            *ngFor="let star of getReviewStars()"
+            [class.bi-star-fill]="star <= (reviewSummary.average || 0)"
+            [class.bi-star]="star > (reviewSummary.average || 0)"
+            [class.text-warning]="star <= (reviewSummary.average || 0)"
+            [class.text-muted]="star > (reviewSummary.average || 0)"
           ></i>
-          <i
-            class="bi bi-star text-warning me-1"
-            *ngFor="let star of [].constructor(5 - getStars(product.seller.rating || 0).length)"
-          ></i>
-          <span class="ms-2 fw-bold">{{ product.seller.rating || 0 }}</span>
+          <span class="ms-1 fw-bold">{{ reviewSummary.average || 0 }}</span>
+          <span class="text-muted ms-2 small">
+            ({{ reviewSummary.total }} avaliaç{{ reviewSummary.total === 1 ? 'ão' : 'ões' }})
+          </span>
         </div>
         <span class="text-muted">|</span>
         <span class="text-muted">{{ product.seller.sales || 0 }} vendas</span>
@@ -354,6 +358,167 @@
         >
           <i class="bi bi-chat me-1"></i> Perguntar
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔥 NOVA Seção de AVALIAÇÕES -->
+  <div class="reviews-section mt-5" *ngIf="reviews.length > 0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold mb-0">
+        <i class="bi bi-star-fill text-warning me-2"></i>
+        Avaliações dos Clientes
+      </h4>
+      <span class="badge bg-primary fs-6 px-3 py-2">
+        {{ reviewSummary.total }} avaliaç{{ reviewSummary.total === 1 ? 'ão' : 'ões' }}
+      </span>
+    </div>
+
+    <!-- Resumo: média + distribuição -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="row align-items-center g-4">
+
+          <!-- Média grande à esquerda -->
+          <div class="col-md-4 text-center border-end">
+            <div class="display-3 fw-bold text-primary mb-1">
+              {{ reviewSummary.average }}
+            </div>
+            <div class="mb-2">
+              <i
+                *ngFor="let star of getReviewStars()"
+                class="bi fs-5 me-1"
+                [class.bi-star-fill]="star <= reviewSummary.average"
+                [class.bi-star]="star > reviewSummary.average"
+                [class.text-warning]="star <= reviewSummary.average"
+                [class.text-muted]="star > reviewSummary.average"
+              ></i>
+            </div>
+            <p class="text-muted small mb-0">
+              Baseado em {{ reviewSummary.total }} avaliaç{{ reviewSummary.total === 1 ? 'ão' : 'ões' }}
+            </p>
+          </div>
+
+          <!-- Distribuição por estrela -->
+          <div class="col-md-8">
+            <div *ngFor="let rating of [5, 4, 3, 2, 1]" class="d-flex align-items-center gap-2 mb-2">
+              <span class="text-muted small" style="min-width: 60px;">
+                {{ rating }} <i class="bi bi-star-fill text-warning"></i>
+              </span>
+              <div class="progress flex-grow-1" style="height: 8px;">
+                <div
+                  class="progress-bar bg-warning"
+                  role="progressbar"
+                  [style.width.%]="getPercentForRating(rating)"
+                  [attr.aria-valuenow]="getPercentForRating(rating)"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                ></div>
+              </div>
+              <span class="text-muted small" style="min-width: 45px; text-align: right;">
+                {{ getPercentForRating(rating) }}%
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de avaliações -->
+    <div class="reviews-list">
+      <div
+        *ngFor="let review of getVisibleReviews()"
+        class="card border-0 shadow-sm mb-3 review-card"
+      >
+        <div class="card-body p-4">
+          <div class="d-flex gap-3">
+
+            <!-- Avatar do avaliador -->
+            <div class="reviewer-avatar-wrapper">
+              <img
+                *ngIf="review.userAvatar"
+                [src]="review.userAvatar"
+                [alt]="review.userName"
+                class="reviewer-avatar-img"
+                (error)="onReviewerAvatarError($event, review.userName)"
+              />
+              <div *ngIf="!review.userAvatar" class="reviewer-avatar-initials">
+                {{ getReviewerInitials(review.userName) }}
+              </div>
+            </div>
+
+            <div class="flex-grow-1">
+
+              <!-- Cabeçalho -->
+              <div class="d-flex justify-content-between align-items-start flex-wrap mb-2">
+                <div>
+                  <strong class="d-block">{{ review.userName }}</strong>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-warning">
+                      <i
+                        *ngFor="let star of getReviewStars()"
+                        class="bi me-1"
+                        [class.bi-star-fill]="star <= review.rating"
+                        [class.bi-star]="star > review.rating"
+                      ></i>
+                    </span>
+                    <small class="text-muted">{{ formatReviewDate(review.createdAt) }}</small>
+                    <span *ngIf="review.isEdited" class="badge bg-secondary small">editado</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Comentário -->
+              <p *ngIf="review.comment" class="mb-2">{{ review.comment }}</p>
+              <p *ngIf="!review.comment" class="text-muted fst-italic small mb-2">
+                (Sem comentário)
+              </p>
+
+              <!-- Resposta do vendedor -->
+              <div *ngIf="review.sellerReply" class="seller-reply mt-3 p-3 rounded"
+                   style="background-color: #e7f3ff; border-left: 3px solid #0066B3;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-shop text-primary"></i>
+                  <strong class="text-primary small">{{ review.sellerName }} respondeu:</strong>
+                  <small class="text-muted">{{ formatReviewDate(review.sellerReply.createdAt) }}</small>
+                </div>
+                <p class="mb-0 small">{{ review.sellerReply.content }}</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botão "Ver mais" -->
+      <div *ngIf="hasMoreReviews()" class="text-center mt-3">
+        <button
+          class="btn btn-outline-primary rounded-pill px-4"
+          (click)="toggleShowAllReviews()"
+        >
+          <span *ngIf="!showAllReviews">
+            <i class="bi bi-plus-circle me-1"></i>
+            Ver todas as {{ reviews.length }} avaliações
+          </span>
+          <span *ngIf="showAllReviews">
+            <i class="bi bi-dash-circle me-1"></i>
+            Ver menos
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mensagem quando não há avaliações -->
+  <div *ngIf="reviews.length === 0" class="reviews-section mt-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-star display-1 text-muted"></i>
+        <h5 class="mt-3">Ainda não há avaliações</h5>
+        <p class="text-muted mb-0">
+          Este produto ainda não foi avaliado. Seja o primeiro a avaliar após a compra!
+        </p>
       </div>
     </div>
   </div>
