@@ -1,5 +1,5 @@
 // src/app/shared/components/cookie-consent/cookie-consent.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CookieService, CookieConsentSettings } from '../../../core/services/cookie.service';
@@ -10,7 +10,8 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './cookie-consent.html',
-  styleUrls: ['./cookie-consent.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./cookie-consent.scss'],
 })
 export class CookieConsent implements OnInit, OnDestroy {
   showBanner = false;
@@ -21,7 +22,7 @@ export class CookieConsent implements OnInit, OnDestroy {
     preferences: false,
     analytics: false,
     marketing: false,
-    accepted: false
+    accepted: false,
   };
 
   private subscriptions: Subscription = new Subscription();
@@ -38,7 +39,7 @@ export class CookieConsent implements OnInit, OnDestroy {
         preferences: false,
         analytics: false,
         marketing: false,
-        accepted: false
+        accepted: false,
       };
     } else {
       this.consent = existingConsent;

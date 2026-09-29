@@ -1,5 +1,5 @@
 // src/app/app.ts
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Navbar } from './shared/components/navbar/navbar';
 import { Footer } from './shared/components/footer/footer';
@@ -10,6 +10,7 @@ import { CookieConsent } from './shared/components/cookie-consent/cookie-consent
   selector: 'app-root',
   imports: [RouterOutlet, Navbar, Footer, CookieConsent],
   templateUrl: './app.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './app.scss',
 })
 export class App implements OnInit {

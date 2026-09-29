@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { Product } from '../../core/models/ProductModel/product.model';
@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink, ProductCard],
   templateUrl: './favorites.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./favorites.scss'],
 })
 export class Favorites implements OnInit, OnDestroy {

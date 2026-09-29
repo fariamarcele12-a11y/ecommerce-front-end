@@ -1,6 +1,6 @@
 // src/app/features/checkout/checkout.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
@@ -19,6 +19,7 @@ import { Order, OrderItem, PaymentMethod } from '../../core/models/checkout.mode
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './checkout.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./checkout.scss'],
 })
 export class Checkout implements OnInit, OnDestroy {
@@ -608,8 +609,7 @@ export class Checkout implements OnInit, OnDestroy {
         paymentMethod: {
           id: this.form.paymentMethod,
           name:
-            this.paymentMethods.find((m) => m.id === this.form.paymentMethod)?.name ||
-            'Pagamento',
+            this.paymentMethods.find((m) => m.id === this.form.paymentMethod)?.name || 'Pagamento',
           icon: '',
           type: (this.paymentMethods.find((m) => m.id === this.form.paymentMethod)?.type ||
             'pix') as any,
@@ -622,9 +622,7 @@ export class Checkout implements OnInit, OnDestroy {
         createdAt: new Date(),
       };
 
-      const createdOrder = await firstValueFrom(
-        this.orderService.createOrder(orderData)
-      );
+      const createdOrder = await firstValueFrom(this.orderService.createOrder(orderData));
       await firstValueFrom(this.orderService.processPayment(createdOrder));
 
       this.alertService.close();
@@ -638,7 +636,6 @@ export class Checkout implements OnInit, OnDestroy {
         `Seu pedido ${createdOrder.id} foi realizado. Você e o vendedor foram notificados.`,
         5000,
       );
-
     } catch (error: any) {
       console.error('❌ Erro no checkout:', error);
       this.alertService.close();

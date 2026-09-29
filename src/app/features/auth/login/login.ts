@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -10,12 +10,13 @@ import { AuthService } from '../../../core/services/auth.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './login.html',
-  styleUrls: ['./login.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./login.scss'],
 })
 export class Login {
   credentials = {
     email: '',
-    password: ''
+    password: '',
   };
   loading = false;
   showPassword = false;
@@ -23,7 +24,7 @@ export class Login {
   constructor(
     private authService: AuthService,
     private router: Router,
-    private alertService: AlertService
+    private alertService: AlertService,
   ) {}
 
   onSubmit(): void {
@@ -47,7 +48,7 @@ export class Login {
         this.loading = false;
         console.error('❌ Erro no login:', error);
         this.alertService.error('Erro', 'Não foi possível realizar o login.');
-      }
+      },
     });
   }
 
@@ -55,4 +56,3 @@ export class Login {
     this.showPassword = !this.showPassword;
   }
 }
-

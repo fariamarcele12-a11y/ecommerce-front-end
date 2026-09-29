@@ -1,5 +1,5 @@
 // src/app/features/auth/register/register.ts
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -14,7 +14,8 @@ import { DocumentValidator } from '../../../core/utils/validators';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './register.html',
-  styleUrls: ['./register.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./register.scss'],
 })
 export class Register {
   documentType: 'pf' | 'pj' = 'pf';
@@ -36,8 +37,8 @@ export class Register {
       city: '',
       state: '',
       cep: '',
-      country: 'Brasil'
-    }
+      country: 'Brasil',
+    },
   };
 
   birthDate = '';
@@ -61,7 +62,7 @@ export class Register {
     private authService: AuthService,
     private router: Router,
     private alertService: AlertService,
-    private cepService: CepService
+    private cepService: CepService,
   ) {}
 
   onDocumentTypeChange(type: 'pf' | 'pj'): void {
@@ -125,7 +126,7 @@ export class Register {
         this.isSearchingCep = false;
         console.error('❌ Erro ao buscar CEP:', error);
         this.alertService.warning('CEP não encontrado', 'Preencha os dados manualmente.');
-      }
+      },
     });
   }
 
@@ -164,7 +165,7 @@ export class Register {
       if (!DocumentValidator.isValidCPF(docClean)) {
         this.alertService.error(
           'CPF inválido',
-          'O CPF informado não é válido. Verifique os dígitos e tente novamente.'
+          'O CPF informado não é válido. Verifique os dígitos e tente novamente.',
         );
         return false;
       }
@@ -177,7 +178,7 @@ export class Register {
       if (!DocumentValidator.isValidCNPJ(docClean)) {
         this.alertService.error(
           'CNPJ inválido',
-          'O CNPJ informado não é válido. Verifique os dígitos e tente novamente.'
+          'O CNPJ informado não é válido. Verifique os dígitos e tente novamente.',
         );
         return false;
       }
@@ -228,7 +229,7 @@ export class Register {
     if (!this.termsAccepted) {
       this.alertService.warning(
         'Aceite os termos',
-        'Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.'
+        'Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.',
       );
       return false;
     }
@@ -267,7 +268,7 @@ export class Register {
         this.loading = false;
         console.error('❌ Erro no cadastro:', error);
         this.alertService.error('Erro', 'Não foi possível realizar o cadastro.');
-      }
+      },
     });
   }
 
@@ -290,7 +291,8 @@ export class Register {
       if (numbers.length <= 2) return numbers;
       if (numbers.length <= 5) return numbers.replace(/(\d{2})(\d{1,3})/, '$1.$2');
       if (numbers.length <= 8) return numbers.replace(/(\d{2})(\d{3})(\d{1,3})/, '$1.$2.$3');
-      if (numbers.length <= 12) return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{1,4})/, '$1.$2.$3/$4');
+      if (numbers.length <= 12)
+        return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{1,4})/, '$1.$2.$3/$4');
       return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, '$1.$2.$3/$4-$5');
     }
   }

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, Input } from '@angular/core';
+import { Component, EventEmitter, Output, Input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -8,7 +8,8 @@ import { Router } from '@angular/router';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './search-bar.html',
-  styleUrls: ['./search-bar.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./search-bar.scss'],
 })
 export class SearchBar {
   @Input() placeholder: string = 'Buscar produtos, marcas e vendedores...';
@@ -25,7 +26,7 @@ export class SearchBar {
     if (this.searchTerm.trim()) {
       this.search.emit(this.searchTerm);
       this.router.navigate(['/busca'], {
-        queryParams: { q: this.searchTerm }
+        queryParams: { q: this.searchTerm },
       });
       this.showSuggestions = false;
     }
@@ -52,12 +53,20 @@ export class SearchBar {
 
   loadSuggestions(): void {
     const allSuggestions = [
-      'iPhone', 'Samsung', 'Notebook', 'Camiseta', 'Tênis',
-      'Sofá', 'Bicicleta', 'TV', 'Fone de ouvido', 'Monitor'
+      'iPhone',
+      'Samsung',
+      'Notebook',
+      'Camiseta',
+      'Tênis',
+      'Sofá',
+      'Bicicleta',
+      'TV',
+      'Fone de ouvido',
+      'Monitor',
     ];
-    this.suggestions = allSuggestions.filter(s =>
-      s.toLowerCase().includes(this.searchTerm.toLowerCase())
-    ).slice(0, 5);
+    this.suggestions = allSuggestions
+      .filter((s) => s.toLowerCase().includes(this.searchTerm.toLowerCase()))
+      .slice(0, 5);
   }
 
   selectSuggestion(suggestion: string): void {

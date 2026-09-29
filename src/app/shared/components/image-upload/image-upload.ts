@@ -1,5 +1,14 @@
 // src/app/shared/components/image-upload/image-upload.ts
-import { Component, EventEmitter, Input, Output, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  OnInit,
+  OnChanges,
+  SimpleChanges,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UploadService } from '../../../core/services/upload.service';
@@ -10,7 +19,8 @@ import { AlertService } from '../../../core/services/alert.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './image-upload.html',
-  styleUrls: ['./image-upload.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./image-upload.scss'],
 })
 export class ImageUpload implements OnInit, OnChanges {
   @Input() type: 'avatar' | 'logo' | 'banner' = 'avatar';
@@ -30,7 +40,7 @@ export class ImageUpload implements OnInit, OnChanges {
 
   constructor(
     private uploadService: UploadService,
-    private alertService: AlertService
+    private alertService: AlertService,
   ) {}
 
   ngOnInit(): void {
@@ -112,7 +122,6 @@ export class ImageUpload implements OnInit, OnChanges {
       this.previewUrl = processedImage;
       this.imageUploaded.emit(processedImage);
       this.alertService.success('Imagem carregada!', 'A imagem foi processada com sucesso.', 2000);
-
     } catch (error: any) {
       this.isProcessing = false;
       this.errorMessage = error.message || 'Erro ao processar imagem';
@@ -126,22 +135,24 @@ export class ImageUpload implements OnInit, OnChanges {
     event.preventDefault();
     event.stopPropagation();
 
-    this.alertService.confirm(
-      'Remover imagem?',
-      'Tem certeza que deseja remover esta imagem?',
-      'Sim, remover',
-      'Cancelar'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        this.previewUrl = this.placeholder;
-        this.selectedFile = null;
-        this.errorMessage = '';
+    this.alertService
+      .confirm(
+        'Remover imagem?',
+        'Tem certeza que deseja remover esta imagem?',
+        'Sim, remover',
+        'Cancelar',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.previewUrl = this.placeholder;
+          this.selectedFile = null;
+          this.errorMessage = '';
 
-        this.imageRemoved.emit();
+          this.imageRemoved.emit();
 
-        this.alertService.success('Imagem removida', 'A imagem foi removida com sucesso.', 2000);
-      }
-    });
+          this.alertService.success('Imagem removida', 'A imagem foi removida com sucesso.', 2000);
+        }
+      });
   }
 
   openFileSelector(): void {

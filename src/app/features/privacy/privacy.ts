@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ScrollService } from '../../core/services/scroll.service';
@@ -8,6 +8,7 @@ import { ScrollService } from '../../core/services/scroll.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './privacy.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./privacy.scss'],
 })
 export class Privacy implements OnInit {

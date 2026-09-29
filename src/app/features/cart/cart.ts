@@ -1,6 +1,6 @@
 // src/app/features/cart/cart.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -12,6 +12,7 @@ import { AlertService } from '../../core/services/alert.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './cart.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./cart.scss'],
 })
 export class Cart implements OnInit, OnDestroy {
@@ -103,20 +104,22 @@ export class Cart implements OnInit, OnDestroy {
 
   // 🔥 CORRIGIDO: productId como string
   removeItem(productId: string): void {
-    const product = this.cartItems.find(item => String(item.product.id) === productId);
+    const product = this.cartItems.find((item) => String(item.product.id) === productId);
     const productName = product?.product.name || 'Produto';
 
-    this.alertService.confirm(
-      `Remover "${productName}"?`,
-      'Tem certeza que deseja remover este item do carrinho?',
-      'Sim, remover',
-      'Cancelar'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        this.cartService.removeFromCart(productId);
-        this.alertService.toast('Item removido do carrinho!', 'success');
-      }
-    });
+    this.alertService
+      .confirm(
+        `Remover "${productName}"?`,
+        'Tem certeza que deseja remover este item do carrinho?',
+        'Sim, remover',
+        'Cancelar',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.cartService.removeFromCart(productId);
+          this.alertService.toast('Item removido do carrinho!', 'success');
+        }
+      });
   }
 
   clearCart(): void {
@@ -125,22 +128,24 @@ export class Cart implements OnInit, OnDestroy {
       return;
     }
 
-    this.alertService.confirm(
-      'Esvaziar Carrinho?',
-      'Tem certeza que deseja remover todos os itens do carrinho? Esta ação não pode ser desfeita.',
-      'Sim, esvaziar',
-      'Cancelar'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        this.cartService.clearCart();
-        this.couponApplied = false;
-        this.couponCode = '';
-        this.alertService.success(
-          'Carrinho esvaziado!',
-          'Todos os itens foram removidos do seu carrinho.'
-        );
-      }
-    });
+    this.alertService
+      .confirm(
+        'Esvaziar Carrinho?',
+        'Tem certeza que deseja remover todos os itens do carrinho? Esta ação não pode ser desfeita.',
+        'Sim, esvaziar',
+        'Cancelar',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.cartService.clearCart();
+          this.couponApplied = false;
+          this.couponCode = '';
+          this.alertService.success(
+            'Carrinho esvaziado!',
+            'Todos os itens foram removidos do seu carrinho.',
+          );
+        }
+      });
   }
 
   applyCoupon(): void {
@@ -164,7 +169,7 @@ export class Cart implements OnInit, OnDestroy {
           this.alertService.success(
             'Cupom aplicado! 🎉',
             `Desconto de ${this.formatPrice(result.discountAmount || 0)} aplicado.`,
-            3000
+            3000,
           );
           this.couponCode = '';
           this.updateTotals();
@@ -180,7 +185,7 @@ export class Cart implements OnInit, OnDestroy {
         this.couponMessage = '❌ Erro ao aplicar cupom. Tente novamente.';
         this.alertService.error('Erro', 'Não foi possível aplicar o cupom.');
         console.error('❌ Erro ao aplicar cupom:', error);
-      }
+      },
     });
   }
 
@@ -201,7 +206,7 @@ export class Cart implements OnInit, OnDestroy {
     if (this.cartItems.length === 0) {
       this.alertService.warning(
         'Carrinho vazio',
-        'Adicione itens ao carrinho antes de finalizar a compra.'
+        'Adicione itens ao carrinho antes de finalizar a compra.',
       );
       return;
     }

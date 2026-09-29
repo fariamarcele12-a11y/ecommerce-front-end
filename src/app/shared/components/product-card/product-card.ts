@@ -1,6 +1,6 @@
 // src/app/shared/components/product-card/product-card.ts
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Product } from '../../../core/models/ProductModel/product.model';
 
@@ -9,6 +9,7 @@ import { Product } from '../../../core/models/ProductModel/product.model';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './product-card.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './product-card.scss',
 })
 export class ProductCard {

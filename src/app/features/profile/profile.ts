@@ -1,5 +1,5 @@
 // src/app/features/profile/profile.ts
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -16,6 +16,7 @@ import { ImageUpload } from '../../shared/components/image-upload/image-upload';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ImageUpload],
   templateUrl: './profile.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./profile.scss'],
 })
 export class Profile implements OnInit {
@@ -141,7 +142,7 @@ export class Profile implements OnInit {
     if (!this.user) return;
 
     const updateData: Partial<User> = {
-      ...(avatar ? { avatar } : { avatar: null }) as any
+      ...((avatar ? { avatar } : { avatar: null }) as any),
     };
 
     this.authService.updateUser(updateData).subscribe({
@@ -153,7 +154,7 @@ export class Profile implements OnInit {
       error: (error) => {
         console.error('❌ Erro ao salvar avatar:', error);
         this.alertService.error('Erro', 'Não foi possível salvar a foto de perfil.');
-      }
+      },
     });
   }
 
@@ -203,7 +204,7 @@ export class Profile implements OnInit {
       phone: this.profileData.phone,
       address: this.profileData.address,
       documentType: this.profileData.documentType,
-      ...(this.profileData.avatar ? { avatar: this.profileData.avatar } as any : {})
+      ...(this.profileData.avatar ? ({ avatar: this.profileData.avatar } as any) : {}),
     };
 
     if (this.profileData.documentType === 'pf') {

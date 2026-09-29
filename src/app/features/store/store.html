@@ -128,15 +128,19 @@
             Adicionar Produto
           </button>
 
-          <span class="badge"
-                [class.bg-success]="isOwner"
-                [class.bg-info]="isVisitor"
-                [class.bg-secondary]="!isOwner && !isVisitor"
-                style="font-size: 14px; padding: 8px 16px; align-self: center;">
-            <i class="bi"
-               [class.bi-shop]="isOwner"
-               [class.bi-person]="isVisitor"
-               [class.bi-eye]="!isOwner && !isVisitor"></i>
+          <span
+            class="badge"
+            [class.bg-success]="isOwner"
+            [class.bg-info]="isVisitor"
+            [class.bg-secondary]="!isOwner && !isVisitor"
+            style="font-size: 14px; padding: 8px 16px; align-self: center"
+          >
+            <i
+              class="bi"
+              [class.bi-shop]="isOwner"
+              [class.bi-person]="isVisitor"
+              [class.bi-eye]="!isOwner && !isVisitor"
+            ></i>
             {{ isOwner ? 'Dono da loja' : isVisitor ? 'Visitante' : 'Visualizando' }}
           </span>
         </div>
@@ -282,7 +286,10 @@
             <div class="d-flex gap-2 mt-1">
               <a
                 *ngIf="store.socialMedia?.instagram"
-                [href]="'https://instagram.com/' + store.socialMedia?.instagram"
+                [href]="
+                  'https://instagram.com/' +
+                  $safeNavigationMigration($safeNavigationMigration(store.socialMedia?.instagram))
+                "
                 target="_blank"
                 class="btn btn-sm btn-outline-secondary"
               >
@@ -290,7 +297,10 @@
               </a>
               <a
                 *ngIf="store.socialMedia?.facebook"
-                [href]="'https://facebook.com/' + store.socialMedia?.facebook"
+                [href]="
+                  'https://facebook.com/' +
+                  $safeNavigationMigration($safeNavigationMigration(store.socialMedia?.facebook))
+                "
                 target="_blank"
                 class="btn btn-sm btn-outline-secondary"
               >
@@ -298,7 +308,10 @@
               </a>
               <a
                 *ngIf="store.socialMedia?.youtube"
-                [href]="'https://youtube.com/@' + store.socialMedia?.youtube"
+                [href]="
+                  'https://youtube.com/@' +
+                  $safeNavigationMigration($safeNavigationMigration(store.socialMedia?.youtube))
+                "
                 target="_blank"
                 class="btn btn-sm btn-outline-secondary"
               >
@@ -445,12 +458,7 @@
       <!-- Nome -->
       <div class="mb-3">
         <label class="form-label fw-bold">Nome da Loja *</label>
-        <input
-          type="text"
-          class="form-control"
-          [(ngModel)]="editForm.storeName"
-          required
-        />
+        <input type="text" class="form-control" [(ngModel)]="editForm.storeName" required />
       </div>
 
       <!-- Categoria -->
@@ -465,11 +473,7 @@
       <!-- Descrição -->
       <div class="mb-3">
         <label class="form-label fw-bold">Descrição</label>
-        <textarea
-          class="form-control"
-          rows="3"
-          [(ngModel)]="editForm.description"
-        ></textarea>
+        <textarea class="form-control" rows="3" [(ngModel)]="editForm.description"></textarea>
       </div>
 
       <!-- 🔥 Telefone / Email COM LIMITE -->
@@ -487,11 +491,7 @@
         </div>
         <div class="col-md-6">
           <label class="form-label fw-bold">E-mail</label>
-          <input
-            type="email"
-            class="form-control"
-            [(ngModel)]="editForm.email"
-          />
+          <input type="email" class="form-control" [(ngModel)]="editForm.email" />
         </div>
       </div>
     </div>
@@ -500,11 +500,7 @@
       <button class="btn btn-outline-secondary rounded-pill" (click)="closeEditModal()">
         Cancelar
       </button>
-      <button
-        class="btn btn-primary rounded-pill px-4"
-        (click)="saveStore()"
-        [disabled]="saving"
-      >
+      <button class="btn btn-primary rounded-pill px-4" (click)="saveStore()" [disabled]="saving">
         <span *ngIf="!saving">
           <i class="bi bi-check-lg me-1"></i>
           Salvar

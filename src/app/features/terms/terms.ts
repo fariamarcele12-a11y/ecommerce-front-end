@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ScrollService } from '../../core/services/scroll.service';
@@ -8,7 +8,8 @@ import { ScrollService } from '../../core/services/scroll.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './terms.html',
-  styleUrls: ['./terms.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./terms.scss'],
 })
 export class Terms implements OnInit {
   lastUpdated = '10 de Agosto de 2026';

@@ -1,5 +1,12 @@
 // src/app/features/products/products.ts
-import { Component, OnInit, OnChanges, Input, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnChanges,
+  Input,
+  SimpleChanges,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProductService, ProductResponse } from '../../core/services/product.service';
 import { Product } from '../../core/models/ProductModel/product.model';
@@ -12,7 +19,8 @@ import { ProductFilters } from '../../core/models/ProductModel/product-filters.m
   standalone: true,
   imports: [CommonModule, ProductCard, Pagination],
   templateUrl: './products.html',
-  styleUrls: ['./products.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./products.scss'],
 })
 export class Products implements OnInit, OnChanges {
   @Input() filters: ProductFilters = {};
@@ -78,7 +86,9 @@ export class Products implements OnInit, OnChanges {
 
         if (this.products.length === 0) {
           console.warn('⚠️ Nenhum produto encontrado para os filtros:', filters);
-          console.warn('⚠️ Verifique se a categoria "' + filters.category + '" existe nos produtos');
+          console.warn(
+            '⚠️ Verifique se a categoria "' + filters.category + '" existe nos produtos',
+          );
         }
       },
       error: (error: any) => {
@@ -87,21 +97,21 @@ export class Products implements OnInit, OnChanges {
         this.products = [];
         this.totalProducts = 0;
         this.totalPages = 1;
-      }
+      },
     });
   }
 
   onFavoriteToggle(productId: string): void {
     this.productService.toggleFavorite(productId).subscribe({
       next: () => {
-        const product = this.products.find(p => String(p.id) === productId);
+        const product = this.products.find((p) => String(p.id) === productId);
         if (product) {
           product.isFavorite = !product.isFavorite;
         }
       },
       error: (error) => {
         console.error('❌ Erro ao alternar favorito:', error);
-      }
+      },
     });
   }
 

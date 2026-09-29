@@ -1,5 +1,5 @@
 // src/app/features/store/store.ts
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -18,6 +18,7 @@ import { ImageUpload } from '../../shared/components/image-upload/image-upload';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ImageUpload],
   templateUrl: './store.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./store.scss'],
 })
 export class Store implements OnInit {
@@ -48,7 +49,7 @@ export class Store implements OnInit {
     socialMedia: {
       instagram: '',
       facebook: '',
-      youtube: ''
+      youtube: '',
     },
     address: {
       street: '',
@@ -58,8 +59,8 @@ export class Store implements OnInit {
       city: '',
       state: '',
       cep: '',
-      country: 'Brasil'
-    }
+      country: 'Brasil',
+    },
   };
 
   categories: string[] = [
@@ -77,7 +78,7 @@ export class Store implements OnInit {
     'Saúde',
     'Pet Shop',
     'Papelaria',
-    'Outros'
+    'Outros',
   ];
 
   constructor(
@@ -162,8 +163,8 @@ export class Store implements OnInit {
         queryParams: {
           sellerId: this.store.userId,
           sellerName: this.store.storeName,
-          store: 'true'
-        }
+          store: 'true',
+        },
       });
     }
   }
@@ -187,7 +188,7 @@ export class Store implements OnInit {
       socialMedia: {
         instagram: this.store.socialMedia?.instagram || '',
         facebook: this.store.socialMedia?.facebook || '',
-        youtube: this.store.socialMedia?.youtube || ''
+        youtube: this.store.socialMedia?.youtube || '',
       },
       address: {
         street: this.store.address?.street || '',
@@ -197,8 +198,8 @@ export class Store implements OnInit {
         city: this.store.address?.city || '',
         state: this.store.address?.state || '',
         cep: this.store.address?.cep || '',
-        country: this.store.address?.country || 'Brasil'
-      }
+        country: this.store.address?.country || 'Brasil',
+      },
     };
     this.showEditModal = true;
   }
@@ -248,7 +249,7 @@ export class Store implements OnInit {
       website: this.editForm.website,
       socialMedia: this.editForm.socialMedia,
       address: this.editForm.address,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     if (this.logoRemoved) {
@@ -269,14 +270,17 @@ export class Store implements OnInit {
         this.store = updatedStore;
         this.logoRemoved = false;
         this.bannerRemoved = false;
-        this.alertService.success('Loja atualizada!', 'Suas alterações foram salvas com sucesso. 🎉');
+        this.alertService.success(
+          'Loja atualizada!',
+          'Suas alterações foram salvas com sucesso. 🎉',
+        );
         this.closeEditModal();
       },
       error: (error) => {
         this.saving = false;
         console.error('❌ Erro ao atualizar loja:', error);
         this.alertService.error('Erro', 'Não foi possível salvar as alterações.');
-      }
+      },
     });
   }
 
@@ -294,7 +298,7 @@ export class Store implements OnInit {
         },
         error: () => {
           this.isSearchingCep = false;
-        }
+        },
       });
     }
   }

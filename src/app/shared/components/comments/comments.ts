@@ -1,5 +1,5 @@
 // src/app/shared/components/comments/comments.ts
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CommentService } from '../../../core/services/comment.service';
@@ -13,7 +13,8 @@ import { StoreService } from '../../../core/services/store.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './comments.html',
-  styleUrls: ['./comments.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./comments.scss'],
 })
 export class Comments implements OnInit {
   @Input() productId!: string;
@@ -37,7 +38,7 @@ export class Comments implements OnInit {
     private commentService: CommentService,
     private authService: AuthService,
     private alertService: AlertService,
-    private storeService: StoreService
+    private storeService: StoreService,
   ) {}
 
   ngOnInit(): void {
@@ -54,7 +55,12 @@ export class Comments implements OnInit {
   }
 
   getAvatarUrl(userName: string, userAvatar?: string, isSeller = false): string {
-    if (userAvatar && userAvatar.trim() !== '' && userAvatar !== 'null' && userAvatar !== 'undefined') {
+    if (
+      userAvatar &&
+      userAvatar.trim() !== '' &&
+      userAvatar !== 'null' &&
+      userAvatar !== 'undefined'
+    ) {
       return userAvatar;
     }
     const name = encodeURIComponent(userName || 'Usuário');
@@ -72,7 +78,7 @@ export class Comments implements OnInit {
         },
         error: () => {
           this.isVendor = false;
-        }
+        },
       });
     }
   }
@@ -87,7 +93,7 @@ export class Comments implements OnInit {
       error: () => {
         this.loading = false;
         this.comments = [];
-      }
+      },
     });
   }
 
@@ -104,25 +110,27 @@ export class Comments implements OnInit {
 
     this.isSubmitting = true;
 
-    this.commentService.createComment({
-      productId: this.productId,
-      content: this.newComment
-    }).subscribe({
-      next: (comment) => {
-        const commentWithAvatar = {
-          ...comment,
-          userAvatar: comment.userAvatar || this.getAvatarUrl(comment.userName, '', false)
-        };
-        this.comments.unshift(commentWithAvatar);
-        this.newComment = '';
-        this.isSubmitting = false;
-        this.alertService.success('Comentário adicionado!', 'Publicado com sucesso! 🎉');
-      },
-      error: () => {
-        this.isSubmitting = false;
-        this.alertService.error('Erro', 'Não foi possível publicar.');
-      }
-    });
+    this.commentService
+      .createComment({
+        productId: this.productId,
+        content: this.newComment,
+      })
+      .subscribe({
+        next: (comment) => {
+          const commentWithAvatar = {
+            ...comment,
+            userAvatar: comment.userAvatar || this.getAvatarUrl(comment.userName, '', false),
+          };
+          this.comments.unshift(commentWithAvatar);
+          this.newComment = '';
+          this.isSubmitting = false;
+          this.alertService.success('Comentário adicionado!', 'Publicado com sucesso! 🎉');
+        },
+        error: () => {
+          this.isSubmitting = false;
+          this.alertService.error('Erro', 'Não foi possível publicar.');
+        },
+      });
   }
 
   submitReply(commentId: string): void {
@@ -138,25 +146,27 @@ export class Comments implements OnInit {
 
     const isFromSeller = this.isVendor;
 
-    this.commentService.addReply(commentId, {
-      commentId: commentId,
-      content: this.replyContent,
-      isFromSeller: isFromSeller
-    }).subscribe({
-      next: (updatedComment) => {
-        const processedComment = this.ensureAvatars(updatedComment);
-        const index = this.comments.findIndex(c => c.id === commentId);
-        if (index !== -1) {
-          this.comments[index] = processedComment;
-        }
-        this.replyContent = '';
-        this.showReplyForm = null;
-        this.alertService.success('Resposta adicionada!', 'Publicada com sucesso! 🎉');
-      },
-      error: () => {
-        this.alertService.error('Erro', 'Não foi possível adicionar a resposta.');
-      }
-    });
+    this.commentService
+      .addReply(commentId, {
+        commentId: commentId,
+        content: this.replyContent,
+        isFromSeller: isFromSeller,
+      })
+      .subscribe({
+        next: (updatedComment) => {
+          const processedComment = this.ensureAvatars(updatedComment);
+          const index = this.comments.findIndex((c) => c.id === commentId);
+          if (index !== -1) {
+            this.comments[index] = processedComment;
+          }
+          this.replyContent = '';
+          this.showReplyForm = null;
+          this.alertService.success('Resposta adicionada!', 'Publicada com sucesso! 🎉');
+        },
+        error: () => {
+          this.alertService.error('Erro', 'Não foi possível adicionar a resposta.');
+        },
+      });
   }
 
   private ensureAvatars(comment: Comment): Comment {
@@ -165,17 +175,17 @@ export class Comments implements OnInit {
     updatedComment.userAvatar = this.getAvatarUrl(
       updatedComment.userName,
       updatedComment.userAvatar,
-      false
+      false,
     );
 
     if (updatedComment.replies && updatedComment.replies.length > 0) {
-      updatedComment.replies = updatedComment.replies.map(reply => ({
+      updatedComment.replies = updatedComment.replies.map((reply) => ({
         ...reply,
         userAvatar: this.getAvatarUrl(
           reply.userName,
           reply.userAvatar,
-          reply.isFromSeller || false
-        )
+          reply.isFromSeller || false,
+        ),
       }));
     }
 
@@ -183,53 +193,57 @@ export class Comments implements OnInit {
   }
 
   deleteReply(commentId: string, replyId: string): void {
-    this.alertService.confirm(
-      'Excluir resposta?',
-      'Tem certeza que deseja excluir esta resposta?',
-      'Sim, excluir',
-      'Cancelar'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        this.commentService.deleteReply(commentId, replyId).subscribe({
-          next: (updatedComment) => {
-            const index = this.comments.findIndex(c => c.id === commentId);
-            if (index !== -1) {
-              this.comments[index] = this.ensureAvatars(updatedComment);
-            }
-            this.alertService.success('Resposta removida!', 'Excluída com sucesso.');
-          },
-          error: () => {
-            this.alertService.error('Erro', 'Não foi possível excluir.');
-          }
-        });
-      }
-    });
+    this.alertService
+      .confirm(
+        'Excluir resposta?',
+        'Tem certeza que deseja excluir esta resposta?',
+        'Sim, excluir',
+        'Cancelar',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.commentService.deleteReply(commentId, replyId).subscribe({
+            next: (updatedComment) => {
+              const index = this.comments.findIndex((c) => c.id === commentId);
+              if (index !== -1) {
+                this.comments[index] = this.ensureAvatars(updatedComment);
+              }
+              this.alertService.success('Resposta removida!', 'Excluída com sucesso.');
+            },
+            error: () => {
+              this.alertService.error('Erro', 'Não foi possível excluir.');
+            },
+          });
+        }
+      });
   }
 
   deleteComment(commentId: string): void {
-    this.alertService.confirm(
-      'Excluir comentário?',
-      'Tem certeza que deseja excluir este comentário?',
-      'Sim, excluir',
-      'Cancelar'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        const previousComments = [...this.comments];
-        this.comments = this.comments.filter(c => c.id !== commentId);
+    this.alertService
+      .confirm(
+        'Excluir comentário?',
+        'Tem certeza que deseja excluir este comentário?',
+        'Sim, excluir',
+        'Cancelar',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          const previousComments = [...this.comments];
+          this.comments = this.comments.filter((c) => c.id !== commentId);
 
-        this.commentService.deleteComment(commentId).subscribe({
-          next: () => {
-            this.alertService.success('Comentário removido!', 'Excluído com sucesso.');
-          },
-          error: (error) => {
-            if (error.status !== 404) {
-              this.comments = previousComments;
-              this.alertService.error('Erro', 'Não foi possível excluir.');
-            }
-          }
-        });
-      }
-    });
+          this.commentService.deleteComment(commentId).subscribe({
+            next: () => {
+              this.alertService.success('Comentário removido!', 'Excluído com sucesso.');
+            },
+            error: (error) => {
+              if (error.status !== 404) {
+                this.comments = previousComments;
+                this.alertService.error('Erro', 'Não foi possível excluir.');
+              }
+            },
+          });
+        }
+      });
   }
 
   toggleLike(commentId: string): void {
@@ -240,14 +254,14 @@ export class Comments implements OnInit {
 
     this.commentService.toggleLike(commentId).subscribe({
       next: (updated) => {
-        const index = this.comments.findIndex(c => c.id === commentId);
+        const index = this.comments.findIndex((c) => c.id === commentId);
         if (index !== -1) {
           this.comments[index] = this.ensureAvatars(updated);
         }
       },
       error: () => {
         this.alertService.error('Erro', 'Não foi possível curtir.');
-      }
+      },
     });
   }
 
@@ -270,7 +284,7 @@ export class Comments implements OnInit {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 

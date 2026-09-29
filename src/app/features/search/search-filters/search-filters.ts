@@ -1,5 +1,14 @@
 // src/app/features/search/search-filters/search-filters.ts
-import { Component, EventEmitter, Output, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Output,
+  Input,
+  OnInit,
+  OnChanges,
+  SimpleChanges,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CategoryService } from '../../../core/services/category.service';
@@ -11,7 +20,8 @@ import { ProductFilters } from '../../../core/models/ProductModel/product-filter
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './search-filters.html',
-  styleUrls: ['./search-filters.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./search-filters.scss'],
 })
 export class SearchFilters implements OnInit, OnChanges {
   @Input() filters: ProductFilters = {};
@@ -32,13 +42,13 @@ export class SearchFilters implements OnInit, OnChanges {
     { value: 'newest', label: 'Mais recentes' },
     { value: 'popular', label: 'Mais populares' },
     { value: 'price_asc', label: 'Menor preço' },
-    { value: 'price_desc', label: 'Maior preço' }
+    { value: 'price_desc', label: 'Maior preço' },
   ];
 
   conditionOptions = [
     { value: 'all', label: 'Todos' },
     { value: 'new', label: 'Novo' },
-    { value: 'used', label: 'Usado' }
+    { value: 'used', label: 'Usado' },
   ];
 
   states: { uf: string; name: string }[] = [
@@ -76,7 +86,15 @@ export class SearchFilters implements OnInit, OnChanges {
     AL: ['Maceió', 'Arapiraca', 'Palmeira dos Índios', 'Rio Largo'],
     AP: ['Macapá', 'Santana', 'Laranjal do Jari', 'Oiapoque'],
     AM: ['Manaus', 'Parintins', 'Itacoatiara', 'Manacapuru', 'Coari'],
-    BA: ['Salvador', 'Feira de Santana', 'Vitória da Conquista', 'Camaçari', 'Itabuna', 'Ilhéus', 'Porto Seguro'],
+    BA: [
+      'Salvador',
+      'Feira de Santana',
+      'Vitória da Conquista',
+      'Camaçari',
+      'Itabuna',
+      'Ilhéus',
+      'Porto Seguro',
+    ],
     CE: ['Fortaleza', 'Caucaia', 'Juazeiro do Norte', 'Maracanaú', 'Sobral', 'Crato'],
     DF: ['Brasília', 'Ceilândia', 'Taguatinga', 'Samambaia', 'Águas Claras'],
     ES: ['Vitória', 'Vila Velha', 'Serra', 'Cariacica', 'Linhares', 'Guarapari'],
@@ -84,19 +102,88 @@ export class SearchFilters implements OnInit, OnChanges {
     MA: ['São Luís', 'Imperatriz', 'Timon', 'Caxias', 'Codó'],
     MT: ['Cuiabá', 'Várzea Grande', 'Rondonópolis', 'Sinop', 'Tangará da Serra'],
     MS: ['Campo Grande', 'Dourados', 'Três Lagoas', 'Corumbá', 'Ponta Porã'],
-    MG: ['Belo Horizonte', 'Uberlândia', 'Contagem', 'Juiz de Fora', 'Betim', 'Montes Claros', 'Uberaba', 'Governador Valadares', 'Ipatinga', 'Divinópolis'],
+    MG: [
+      'Belo Horizonte',
+      'Uberlândia',
+      'Contagem',
+      'Juiz de Fora',
+      'Betim',
+      'Montes Claros',
+      'Uberaba',
+      'Governador Valadares',
+      'Ipatinga',
+      'Divinópolis',
+    ],
     PA: ['Belém', 'Ananindeua', 'Santarém', 'Marabá', 'Castanhal', 'Parauapebas'],
     PB: ['João Pessoa', 'Campina Grande', 'Santa Rita', 'Patos', 'Bayeux'],
-    PR: ['Curitiba', 'Londrina', 'Maringá', 'Ponta Grossa', 'Cascavel', 'Foz do Iguaçu', 'São José dos Pinhais'],
+    PR: [
+      'Curitiba',
+      'Londrina',
+      'Maringá',
+      'Ponta Grossa',
+      'Cascavel',
+      'Foz do Iguaçu',
+      'São José dos Pinhais',
+    ],
     PE: ['Recife', 'Jaboatão dos Guararapes', 'Olinda', 'Caruaru', 'Petrolina', 'Paulista'],
     PI: ['Teresina', 'Parnaíba', 'Picos', 'Piripiri', 'Floriano'],
-    RJ: ['Rio de Janeiro', 'Niterói', 'Nova Iguaçu', 'Duque de Caxias', 'Campos dos Goytacazes', 'Macaé', 'São Gonçalo', 'Belford Roxo', 'Petrópolis', 'Volta Redonda', 'Cabo Frio'],
+    RJ: [
+      'Rio de Janeiro',
+      'Niterói',
+      'Nova Iguaçu',
+      'Duque de Caxias',
+      'Campos dos Goytacazes',
+      'Macaé',
+      'São Gonçalo',
+      'Belford Roxo',
+      'Petrópolis',
+      'Volta Redonda',
+      'Cabo Frio',
+    ],
     RN: ['Natal', 'Mossoró', 'Parnamirim', 'São Gonçalo do Amarante', 'Caicó'],
-    RS: ['Porto Alegre', 'Caxias do Sul', 'Pelotas', 'Canoas', 'Santa Maria', 'Gravataí', 'Novo Hamburgo', 'São Leopoldo', 'Rio Grande', 'Passo Fundo'],
+    RS: [
+      'Porto Alegre',
+      'Caxias do Sul',
+      'Pelotas',
+      'Canoas',
+      'Santa Maria',
+      'Gravataí',
+      'Novo Hamburgo',
+      'São Leopoldo',
+      'Rio Grande',
+      'Passo Fundo',
+    ],
     RO: ['Porto Velho', 'Ji-Paraná', 'Ariquemes', 'Vilhena', 'Cacoal'],
     RR: ['Boa Vista', 'Rorainópolis', 'Caracaraí', 'Mucajaí'],
-    SC: ['Florianópolis', 'Joinville', 'Blumenau', 'São José', 'Criciúma', 'Chapecó', 'Itajaí', 'Jaraguá do Sul', 'Palhoça', 'Balneário Camboriú'],
-    SP: ['São Paulo', 'Campinas', 'Guarulhos', 'São Bernardo do Campo', 'Santo André', 'Osasco', 'Ribeirão Preto', 'Santos', 'Sorocaba', 'São José dos Campos', 'Mauá', 'Diadema', 'Jundiaí', 'Piracicaba', 'Bauru'],
+    SC: [
+      'Florianópolis',
+      'Joinville',
+      'Blumenau',
+      'São José',
+      'Criciúma',
+      'Chapecó',
+      'Itajaí',
+      'Jaraguá do Sul',
+      'Palhoça',
+      'Balneário Camboriú',
+    ],
+    SP: [
+      'São Paulo',
+      'Campinas',
+      'Guarulhos',
+      'São Bernardo do Campo',
+      'Santo André',
+      'Osasco',
+      'Ribeirão Preto',
+      'Santos',
+      'Sorocaba',
+      'São José dos Campos',
+      'Mauá',
+      'Diadema',
+      'Jundiaí',
+      'Piracicaba',
+      'Bauru',
+    ],
     SE: ['Aracaju', 'Nossa Senhora do Socorro', 'Lagarto', 'Itabaiana', 'Estância'],
     TO: ['Palmas', 'Araguaína', 'Gurupi', 'Porto Nacional', 'Paraíso do Tocantins'],
   };
@@ -121,7 +208,7 @@ export class SearchFilters implements OnInit, OnChanges {
       },
       error: (error) => {
         console.error('❌ Erro ao carregar categorias:', error);
-      }
+      },
     });
   }
 
@@ -131,7 +218,7 @@ export class SearchFilters implements OnInit, OnChanges {
       hasDiscount: false,
       freeShipping: false,
       inStock: false,
-      ...this.filters
+      ...this.filters,
     };
     this.priceRange = [this.filters.minPrice || 0, this.filters.maxPrice || 10000];
     this.selectedState = this.filters.state || '';
@@ -158,7 +245,7 @@ export class SearchFilters implements OnInit, OnChanges {
     this.filters = {
       ...this.filters,
       minPrice: this.priceRange[0],
-      maxPrice: this.priceRange[1]
+      maxPrice: this.priceRange[1],
     };
     this.filtersChange.emit(this.filters);
   }
@@ -223,7 +310,7 @@ export class SearchFilters implements OnInit, OnChanges {
     this.filters = {
       ...this.filters,
       state: this.selectedState || undefined,
-      city: this.selectedCity || undefined
+      city: this.selectedCity || undefined,
     };
 
     this.filtersChange.emit(this.filters);
@@ -237,7 +324,7 @@ export class SearchFilters implements OnInit, OnChanges {
     this.filters = {
       ...this.filters,
       state: undefined,
-      city: undefined
+      city: undefined,
     };
 
     this.filtersChange.emit(this.filters);
@@ -253,7 +340,7 @@ export class SearchFilters implements OnInit, OnChanges {
       sortBy: 'newest',
       hasDiscount: false,
       freeShipping: false,
-      inStock: false
+      inStock: false,
     };
 
     this.clearFilters.emit();
@@ -278,7 +365,7 @@ export class SearchFilters implements OnInit, OnChanges {
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(price);
   }
 }

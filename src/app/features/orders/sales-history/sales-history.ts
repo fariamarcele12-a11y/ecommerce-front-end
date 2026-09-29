@@ -1,10 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
 import { Order } from '../../../core/models/checkout.model';
 import { AlertService } from '../../../core/services/alert.service';
-import { AuthService } from '../../../core/services/auth.service';   // 🔥 ADICIONAR
+import { AuthService } from '../../../core/services/auth.service'; // 🔥 ADICIONAR
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -12,7 +12,8 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './sales-history.html',
-  styleUrls: ['./sales-history.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./sales-history.scss'],
 })
 export class SalesHistory implements OnInit, OnDestroy {
   orders: Order[] = [];
@@ -28,7 +29,7 @@ export class SalesHistory implements OnInit, OnDestroy {
     { value: 'processing', label: 'Processando' },
     { value: 'shipped', label: 'Enviado' },
     { value: 'delivered', label: 'Entregue' },
-    { value: 'cancelled', label: 'Cancelado' }
+    { value: 'cancelled', label: 'Cancelado' },
   ];
 
   statusColors: { [key: string]: string } = {
@@ -36,13 +37,13 @@ export class SalesHistory implements OnInit, OnDestroy {
     processing: 'info',
     shipped: 'primary',
     delivered: 'success',
-    cancelled: 'danger'
+    cancelled: 'danger',
   };
 
   constructor(
     private orderService: OrderService,
     private alertService: AlertService,
-    private authService: AuthService   // 🔥 ADICIONAR
+    private authService: AuthService, // 🔥 ADICIONAR
   ) {}
 
   ngOnInit(): void {
@@ -69,10 +70,7 @@ export class SalesHistory implements OnInit, OnDestroy {
     if (!currentUser.hasStore) {
       this.loading = false;
       this.orders = [];
-      this.alertService.info(
-        'Você ainda não é vendedor',
-        'Crie uma loja para começar a vender.'
-      );
+      this.alertService.info('Você ainda não é vendedor', 'Crie uma loja para começar a vender.');
       return;
     }
 
@@ -91,24 +89,24 @@ export class SalesHistory implements OnInit, OnDestroy {
           this.loading = false;
           this.orders = [];
           this.alertService.error('Erro', 'Não foi possível carregar seu histórico de vendas.');
-        }
-      })
+        },
+      }),
     );
   }
 
   calculateStats(): void {
-    const delivered = this.orders.filter(o => o.status === 'delivered');
+    const delivered = this.orders.filter((o) => o.status === 'delivered');
     this.totalSales = delivered.length;
     this.totalRevenue = delivered.reduce((sum, o) => sum + o.total, 0);
   }
 
   getFilteredOrders(): Order[] {
     if (this.filterStatus === 'all') return this.orders;
-    return this.orders.filter(o => o.status === this.filterStatus);
+    return this.orders.filter((o) => o.status === this.filterStatus);
   }
 
   getStatusLabel(status: string): string {
-    const option = this.statusOptions.find(o => o.value === status);
+    const option = this.statusOptions.find((o) => o.value === status);
     return option ? option.label : status;
   }
 
@@ -119,7 +117,7 @@ export class SalesHistory implements OnInit, OnDestroy {
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(price);
   }
 
@@ -129,7 +127,7 @@ export class SalesHistory implements OnInit, OnDestroy {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 
@@ -139,7 +137,7 @@ export class SalesHistory implements OnInit, OnDestroy {
       processing: 'bi-arrow-repeat',
       shipped: 'bi-truck',
       delivered: 'bi-check-circle',
-      cancelled: 'bi-x-circle'
+      cancelled: 'bi-x-circle',
     };
     return icons[status] || 'bi-question-circle';
   }

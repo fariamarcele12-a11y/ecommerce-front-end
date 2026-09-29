@@ -1,5 +1,12 @@
 // src/app/shared/components/review-modal/review-modal.ts
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnInit,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReviewService } from '../../../core/services/review.service';
@@ -13,6 +20,7 @@ import { OrderItem } from '../../../core/models/checkout.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './review-modal.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./review-modal.scss'],
 })
 export class ReviewModal implements OnInit {
@@ -35,7 +43,7 @@ export class ReviewModal implements OnInit {
   constructor(
     private reviewService: ReviewService,
     private alertService: AlertService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -72,12 +80,18 @@ export class ReviewModal implements OnInit {
    */
   getRatingLabel(rating: number): string {
     switch (rating) {
-      case 1: return 'Muito ruim';
-      case 2: return 'Ruim';
-      case 3: return 'Regular';
-      case 4: return 'Bom';
-      case 5: return 'Excelente';
-      default: return 'Selecione uma nota';
+      case 1:
+        return 'Muito ruim';
+      case 2:
+        return 'Ruim';
+      case 3:
+        return 'Regular';
+      case 4:
+        return 'Bom';
+      case 5:
+        return 'Excelente';
+      default:
+        return 'Selecione uma nota';
     }
   }
 
@@ -110,10 +124,7 @@ export class ReviewModal implements OnInit {
    */
   onSubmit(): void {
     if (this.rating === 0) {
-      this.alertService.warning(
-        'Avaliação incompleta',
-        'Selecione uma nota de 1 a 5 estrelas.'
-      );
+      this.alertService.warning('Avaliação incompleta', 'Selecione uma nota de 1 a 5 estrelas.');
       return;
     }
 
@@ -145,7 +156,7 @@ export class ReviewModal implements OnInit {
         this.alertService.success(
           '⭐ Avaliação enviada!',
           'Obrigado por avaliar este produto!',
-          3000
+          3000,
         );
         this.submitted.emit(review);
         this.close.emit();

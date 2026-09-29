@@ -1,5 +1,5 @@
 // src/app/features/orders/order-detail/order-detail.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
@@ -16,6 +16,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink, ReviewModal],
   templateUrl: './order-detail.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./order-detail.scss'],
 })
 export class OrderDetail implements OnInit, OnDestroy {
@@ -97,9 +98,7 @@ export class OrderDetail implements OnInit, OnDestroy {
 
           // 🔥 Define explicitamente quem é comprador e quem é vendedor
           this.isBuyer = String(order.userId) === userId;
-          this.isSeller = (order.items || []).some(
-            (item: any) => String(item.sellerId) === userId,
-          );
+          this.isSeller = (order.items || []).some((item: any) => String(item.sellerId) === userId);
 
           if (!this.isBuyer && !this.isSeller) {
             this.alertService.error(
@@ -177,18 +176,15 @@ export class OrderDetail implements OnInit, OnDestroy {
       if (this.isSeller) {
         this.alertService.info(
           'Ação não permitida',
-          'Você não pode avaliar um produto que você mesmo vende.'
+          'Você não pode avaliar um produto que você mesmo vende.',
         );
       } else if (this.order?.status !== 'delivered') {
         this.alertService.warning(
           'Aguarde a entrega',
-          'Você só pode avaliar produtos após recebê-los.'
+          'Você só pode avaliar produtos após recebê-los.',
         );
       } else if (this.isItemReviewed(item.productId)) {
-        this.alertService.info(
-          'Já avaliado',
-          'Você já avaliou este produto. Obrigado!'
-        );
+        this.alertService.info('Já avaliado', 'Você já avaliou este produto. Obrigado!');
       }
       return;
     }
@@ -274,8 +270,7 @@ export class OrderDetail implements OnInit, OnDestroy {
 
   canCancel(): boolean {
     return (
-      this.isBuyer &&
-      (this.order?.status === 'pending' || this.order?.status === 'processing')
+      this.isBuyer && (this.order?.status === 'pending' || this.order?.status === 'processing')
     );
   }
 

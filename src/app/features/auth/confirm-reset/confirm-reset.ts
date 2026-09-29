@@ -1,5 +1,5 @@
 // src/app/features/auth/confirm-reset/confirm-reset.ts
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -11,7 +11,8 @@ import { AlertService } from '../../../core/services/alert.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './confirm-reset.html',
-  styleUrls: ['../auth.scss'] // 🔥 Usando estilo compartilhado
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['../auth.scss'], // 🔥 Usando estilo compartilhado
 })
 export class ConfirmReset implements OnInit {
   token = '';
@@ -28,11 +29,11 @@ export class ConfirmReset implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private passwordResetService: PasswordResetService,
-    private alertService: AlertService
+    private alertService: AlertService,
   ) {}
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe((params) => {
       this.token = params['token'] || '';
       if (this.token) {
         this.validateToken();
@@ -62,7 +63,7 @@ export class ConfirmReset implements OnInit {
         this.tokenValid = false;
         console.error('❌ Erro ao validar token:', error);
         this.alertService.error('Erro', 'Não foi possível validar o token.');
-      }
+      },
     });
   }
 
@@ -84,29 +85,31 @@ export class ConfirmReset implements OnInit {
 
     this.loading = true;
 
-    this.passwordResetService.confirmReset({
-      token: this.token,
-      newPassword: this.newPassword,
-      confirmPassword: this.confirmPassword
-    }).subscribe({
-      next: (response) => {
-        this.loading = false;
-        if (response.success) {
-          this.success = true;
-          this.alertService.success('Senha redefinida!', response.message);
-          setTimeout(() => {
-            this.router.navigate(['/login']);
-          }, 3000);
-        } else {
-          this.alertService.error('Erro', response.message);
-        }
-      },
-      error: (error) => {
-        this.loading = false;
-        console.error('❌ Erro ao redefinir senha:', error);
-        this.alertService.error('Erro', 'Não foi possível redefinir sua senha.');
-      }
-    });
+    this.passwordResetService
+      .confirmReset({
+        token: this.token,
+        newPassword: this.newPassword,
+        confirmPassword: this.confirmPassword,
+      })
+      .subscribe({
+        next: (response) => {
+          this.loading = false;
+          if (response.success) {
+            this.success = true;
+            this.alertService.success('Senha redefinida!', response.message);
+            setTimeout(() => {
+              this.router.navigate(['/login']);
+            }, 3000);
+          } else {
+            this.alertService.error('Erro', response.message);
+          }
+        },
+        error: (error) => {
+          this.loading = false;
+          console.error('❌ Erro ao redefinir senha:', error);
+          this.alertService.error('Erro', 'Não foi possível redefinir sua senha.');
+        },
+      });
   }
 
   togglePassword(): void {

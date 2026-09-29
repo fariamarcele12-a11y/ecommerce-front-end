@@ -1,5 +1,12 @@
 // src/app/shared/components/navbar/navbar.ts
-import { Component, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  HostListener,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ProductService } from '../../../core/services/product.service';
@@ -18,7 +25,8 @@ import { Notification } from '../../../core/models/notification.model';
   standalone: true,
   imports: [CommonModule, RouterLink, SearchBar],
   templateUrl: './navbar.html',
-  styleUrls: ['./navbar.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./navbar.scss'],
 })
 export class Navbar implements OnInit, OnDestroy {
   cartCount = 0;
@@ -49,7 +57,7 @@ export class Navbar implements OnInit, OnDestroy {
     private productService: ProductService,
     private authService: AuthService,
     private storeService: StoreService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -73,14 +81,12 @@ export class Navbar implements OnInit, OnDestroy {
     this.notificationsSubscription = this.notificationService.notifications$.subscribe(
       (notifications) => {
         this.notifications = notifications;
-      }
+      },
     );
 
-    this.unreadCountSubscription = this.notificationService.unreadCount$.subscribe(
-      (count) => {
-        this.unreadCount = count;
-      }
-    );
+    this.unreadCountSubscription = this.notificationService.unreadCount$.subscribe((count) => {
+      this.unreadCount = count;
+    });
 
     // ==========================================
     // 🔥 AUTENTICAÇÃO - Detecta login/logout/troca de usuário
@@ -196,23 +202,35 @@ export class Navbar implements OnInit, OnDestroy {
 
   getNotificationIcon(type: string): string {
     switch (type) {
-      case 'message': return 'bi-chat-dots-fill';
-      case 'order': return 'bi-box-seam-fill';
-      case 'sale': return 'bi-cash-coin';
-      case 'review': return 'bi-star-fill';
-      case 'system': return 'bi-info-circle-fill';
-      default: return 'bi-bell-fill';
+      case 'message':
+        return 'bi-chat-dots-fill';
+      case 'order':
+        return 'bi-box-seam-fill';
+      case 'sale':
+        return 'bi-cash-coin';
+      case 'review':
+        return 'bi-star-fill';
+      case 'system':
+        return 'bi-info-circle-fill';
+      default:
+        return 'bi-bell-fill';
     }
   }
 
   getNotificationColor(type: string): string {
     switch (type) {
-      case 'message': return 'text-primary';
-      case 'order': return 'text-info';
-      case 'sale': return 'text-success';
-      case 'review': return 'text-warning';
-      case 'system': return 'text-secondary';
-      default: return 'text-primary';
+      case 'message':
+        return 'text-primary';
+      case 'order':
+        return 'text-info';
+      case 'sale':
+        return 'text-success';
+      case 'review':
+        return 'text-warning';
+      case 'system':
+        return 'text-secondary';
+      default:
+        return 'text-primary';
     }
   }
 
@@ -299,7 +317,7 @@ export class Navbar implements OnInit, OnDestroy {
       error: () => {
         this.hasStore = false;
         this.storeId = null;
-      }
+      },
     });
   }
 }

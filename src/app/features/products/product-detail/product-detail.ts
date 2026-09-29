@@ -1,6 +1,6 @@
 // src/app/features/products/product-detail/product-detail.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProductCard } from '../../../shared/components/product-card/product-card';
@@ -23,6 +23,7 @@ import { Store as StoreModel } from '../../../core/models/store.model';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ProductCard, Comments],
   templateUrl: './product-detail.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./product-detail.scss'],
 })
 export class ProductDetail implements OnInit, OnDestroy {
@@ -167,9 +168,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   getVisibleReviews(): Review[] {
-    return this.showAllReviews
-      ? this.reviews
-      : this.reviews.slice(0, this.MAX_VISIBLE_REVIEWS);
+    return this.showAllReviews ? this.reviews : this.reviews.slice(0, this.MAX_VISIBLE_REVIEWS);
   }
 
   hasMoreReviews(): boolean {
@@ -230,7 +229,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   loadCategorySlug(categoryName: string): void {
     this.categoryService.getCategories().subscribe({
       next: (categories) => {
-        const category = categories.find(c => c.name === categoryName);
+        const category = categories.find((c) => c.name === categoryName);
         if (category && category.slug) {
           this.categorySlug = category.slug;
         } else {
@@ -248,7 +247,7 @@ export class ProductDetail implements OnInit, OnDestroy {
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
           .replace(/[^a-z0-9]+/g, '-');
-      }
+      },
     });
   }
 
@@ -321,7 +320,7 @@ export class ProductDetail implements OnInit, OnDestroy {
       error: (error) => {
         console.error('❌ Erro ao buscar data de cadastro:', error);
         this.loadMemberSinceFromStore(userId);
-      }
+      },
     });
   }
 
@@ -339,7 +338,7 @@ export class ProductDetail implements OnInit, OnDestroy {
       },
       error: () => {
         this.sellerMemberSince = '2024';
-      }
+      },
     });
   }
 
@@ -442,7 +441,10 @@ export class ProductDetail implements OnInit, OnDestroy {
     if (storeId) {
       this.router.navigate(['/loja', storeId]);
     } else {
-      this.alertService.warning('Loja não encontrada', 'Não foi possível encontrar a loja do vendedor.');
+      this.alertService.warning(
+        'Loja não encontrada',
+        'Não foi possível encontrar a loja do vendedor.',
+      );
     }
   }
 

@@ -1,5 +1,12 @@
 // src/app/features/chat/chat.ts
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ElementRef,
+  ViewChild,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -16,7 +23,8 @@ import { IdGeneratorService } from '../../core/services/id-generator.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './chat.html',
-  styleUrls: ['./chat.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./chat.scss'],
 })
 export class Chat implements OnInit, OnDestroy {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
@@ -36,7 +44,7 @@ export class Chat implements OnInit, OnDestroy {
   private sellerIdParam: string | null = null;
   private productNameParam: string | null = null;
   private sellerNameParam: string | null = null;
-  private productImageParam: string | null = null;   // 🔥 NOVO
+  private productImageParam: string | null = null; // 🔥 NOVO
   private isStoreChat: boolean = false;
 
   // 🔥 Cache de imagens dos produtos (evita buscar toda hora)
@@ -51,8 +59,8 @@ export class Chat implements OnInit, OnDestroy {
     private chatService: ChatService,
     private alertService: AlertService,
     private authService: AuthService,
-    private productService: ProductService,   // 🔥 ADICIONAR
-    private idGenerator: IdGeneratorService
+    private productService: ProductService, // 🔥 ADICIONAR
+    private idGenerator: IdGeneratorService,
   ) {}
 
   ngOnInit(): void {
@@ -74,12 +82,12 @@ export class Chat implements OnInit, OnDestroy {
       isSeller: this.isSeller,
     });
 
-    this.routeSub = this.route.queryParams.subscribe(params => {
+    this.routeSub = this.route.queryParams.subscribe((params) => {
       this.productIdParam = params['productId'] || null;
       this.sellerIdParam = params['sellerId'] || null;
       this.productNameParam = params['productName'] || null;
       this.sellerNameParam = params['sellerName'] || null;
-      this.productImageParam = params['productImage'] || null;   // 🔥 NOVO
+      this.productImageParam = params['productImage'] || null; // 🔥 NOVO
       this.isStoreChat = params['store'] === 'true';
 
       if (this.productIdParam && this.sellerIdParam) {
@@ -109,7 +117,7 @@ export class Chat implements OnInit, OnDestroy {
         this.loading = false;
 
         // 🔥 Para cada conversa sem imagem válida, buscar a imagem real do produto
-        this.conversations.forEach(conv => {
+        this.conversations.forEach((conv) => {
           if (!conv.productImage || conv.productImage.includes('placeholder')) {
             this.enrichConversationWithProductImage(conv);
           }
@@ -120,7 +128,7 @@ export class Chat implements OnInit, OnDestroy {
         this.loading = false;
         this.conversations = [];
         this.alertService.error('Erro', 'Não foi possível carregar as conversas.');
-      }
+      },
     });
   }
 
@@ -148,7 +156,7 @@ export class Chat implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.warn('⚠️ Não foi possível buscar imagem do produto', productId, err);
-      }
+      },
     });
   }
 
@@ -159,16 +167,17 @@ export class Chat implements OnInit, OnDestroy {
         this.messages = messages;
         this.loading = false;
 
-        const productName = this.productNameParam
-          || (messages.length > 0 ? messages[0].productName : 'Produto');
-        const sellerName = this.sellerNameParam
-          || (messages.length > 0 ? messages[0].sellerName : 'Vendedor');
+        const productName =
+          this.productNameParam || (messages.length > 0 ? messages[0].productName : 'Produto');
+        const sellerName =
+          this.sellerNameParam || (messages.length > 0 ? messages[0].sellerName : 'Vendedor');
 
         // 🔥 Determinar a imagem do produto (prioridade: URL > mensagem > backend)
-        const imageFromMessages = messages.find(m => m.productImage)?.productImage;
-        const productImage = this.productImageParam
-          || imageFromMessages
-          || 'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto';
+        const imageFromMessages = messages.find((m) => m.productImage)?.productImage;
+        const productImage =
+          this.productImageParam ||
+          imageFromMessages ||
+          'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto';
 
         this.selectedConversation = {
           productId: productId,
@@ -177,10 +186,13 @@ export class Chat implements OnInit, OnDestroy {
           sellerId: sellerId,
           sellerName: sellerName,
           lastMessage: messages.length > 0 ? messages[messages.length - 1]?.content || '' : '',
-          lastMessageDate: messages.length > 0 ? messages[messages.length - 1]?.createdAt || new Date() : new Date(),
+          lastMessageDate:
+            messages.length > 0
+              ? messages[messages.length - 1]?.createdAt || new Date()
+              : new Date(),
           unreadCount: 0,
           messages: messages || [],
-          isStoreChat: false
+          isStoreChat: false,
         };
 
         // 🔥 Se não temos imagem (nem da URL nem das mensagens), buscar do backend
@@ -197,8 +209,9 @@ export class Chat implements OnInit, OnDestroy {
 
         const productName = this.productNameParam || 'Produto';
         const sellerName = this.sellerNameParam || 'Vendedor';
-        const productImage = this.productImageParam
-          || 'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto';
+        const productImage =
+          this.productImageParam ||
+          'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto';
 
         this.selectedConversation = {
           productId: productId,
@@ -210,14 +223,14 @@ export class Chat implements OnInit, OnDestroy {
           lastMessageDate: new Date(),
           unreadCount: 0,
           messages: [],
-          isStoreChat: false
+          isStoreChat: false,
         };
 
         // Tentar buscar imagem do backend como fallback
         if (!this.productImageParam) {
           this.enrichConversationWithProductImage(this.selectedConversation);
         }
-      }
+      },
     });
   }
 
@@ -235,7 +248,7 @@ export class Chat implements OnInit, OnDestroy {
       lastMessageDate: new Date(),
       unreadCount: 0,
       messages: [],
-      isStoreChat: true
+      isStoreChat: true,
     };
 
     this.messages = [];
@@ -247,20 +260,18 @@ export class Chat implements OnInit, OnDestroy {
     this.selectedConversation = conversation;
     this.messages = conversation.messages || [];
 
-    this.chatService.markConversationAsRead(
-      conversation.productId,
-      this.userId,
-      conversation.sellerId
-    ).subscribe({
-      next: () => {
-        if (this.selectedConversation) {
-          this.selectedConversation.unreadCount = 0;
-        }
-      },
-      error: (error) => {
-        console.error('❌ Erro ao marcar conversa como lida:', error);
-      }
-    });
+    this.chatService
+      .markConversationAsRead(conversation.productId, this.userId, conversation.sellerId)
+      .subscribe({
+        next: () => {
+          if (this.selectedConversation) {
+            this.selectedConversation.unreadCount = 0;
+          }
+        },
+        error: (error) => {
+          console.error('❌ Erro ao marcar conversa como lida:', error);
+        },
+      });
 
     this.scrollToBottom();
   }
@@ -295,7 +306,7 @@ export class Chat implements OnInit, OnDestroy {
     const conversationSellerIdStr = String(this.selectedConversation.sellerId || '');
 
     // 🔥 O usuário logado é o VENDEDOR desta conversa?
-    const loggedUserIsSeller = (currentUserIdStr === conversationSellerIdStr) || this.isSeller;
+    const loggedUserIsSeller = currentUserIdStr === conversationSellerIdStr || this.isSeller;
 
     // 🔥 Determinar os IDs corretos para a mensagem
     let messageUserId: string;
@@ -312,7 +323,7 @@ export class Chat implements OnInit, OnDestroy {
 
       // 1. Buscar nas mensagens carregadas
       if (this.messages.length > 0) {
-        const clientMessage = this.messages.find(m => m.isFromSeller === false);
+        const clientMessage = this.messages.find((m) => m.isFromSeller === false);
         if (clientMessage?.userId) {
           clientIdFromConversation = String(clientMessage.userId);
         }
@@ -320,7 +331,9 @@ export class Chat implements OnInit, OnDestroy {
 
       // 2. Buscar nas mensagens da conversa selecionada
       if (!clientIdFromConversation && this.selectedConversation.messages?.length) {
-        const clientMessage = this.selectedConversation.messages.find(m => m.isFromSeller === false);
+        const clientMessage = this.selectedConversation.messages.find(
+          (m) => m.isFromSeller === false,
+        );
         if (clientMessage?.userId) {
           clientIdFromConversation = String(clientMessage.userId);
         }
@@ -338,13 +351,13 @@ export class Chat implements OnInit, OnDestroy {
         console.error('❌ Não foi possível identificar o cliente desta conversa');
         this.alertService.error(
           'Erro',
-          'Não foi possível identificar o cliente desta conversa. Recarregue a página.'
+          'Não foi possível identificar o cliente desta conversa. Recarregue a página.',
         );
         return;
       }
 
       messageUserId = clientIdFromConversation;
-      const clientMessage = this.messages.find(m => m.isFromSeller === false);
+      const clientMessage = this.messages.find((m) => m.isFromSeller === false);
       messageUserName = clientMessage?.userName || 'Cliente';
 
       messageSellerId = conversationSellerIdStr;
@@ -356,7 +369,6 @@ export class Chat implements OnInit, OnDestroy {
         fromSellerId: messageSellerId,
         isFromSeller: messageIsFromSeller,
       });
-
     } else {
       // ============================================
       // CLIENTE enviando mensagem
@@ -375,15 +387,16 @@ export class Chat implements OnInit, OnDestroy {
     }
 
     // 🔥 Determinar a imagem do produto para salvar junto
-    const productImage = this.selectedConversation.productImage
-      || this.productImageParam
-      || this.messages.find(m => m.productImage)?.productImage
-      || '';
+    const productImage =
+      this.selectedConversation.productImage ||
+      this.productImageParam ||
+      this.messages.find((m) => m.productImage)?.productImage ||
+      '';
 
     const message: Partial<Message> = {
       productId: String(this.selectedConversation.productId || ''),
       productName: this.selectedConversation.productName || 'Conversa com a Loja',
-      productImage: productImage,   // 🔥 SALVAR imagem na mensagem
+      productImage: productImage, // 🔥 SALVAR imagem na mensagem
       sellerId: messageSellerId,
       sellerName: messageSellerName,
       userId: messageUserId,
@@ -396,7 +409,7 @@ export class Chat implements OnInit, OnDestroy {
       id: 'temp-' + Date.now(),
       productId: message.productId!,
       productName: message.productName || '',
-      productImage: message.productImage || '',   // 🔥 PRESERVAR na temp
+      productImage: message.productImage || '', // 🔥 PRESERVAR na temp
       sellerId: message.sellerId!,
       sellerName: message.sellerName || '',
       userId: message.userId!,
@@ -413,7 +426,7 @@ export class Chat implements OnInit, OnDestroy {
 
     this.chatService.sendMessage(message).subscribe({
       next: (sentMessage: Message) => {
-        const index = this.messages.findIndex(m => m.id === tempMessage.id);
+        const index = this.messages.findIndex((m) => m.id === tempMessage.id);
         if (index !== -1) {
           this.messages[index] = sentMessage;
         }
@@ -421,15 +434,15 @@ export class Chat implements OnInit, OnDestroy {
       },
       error: (error: Error) => {
         console.error('❌ Erro ao enviar mensagem:', error);
-        const index = this.messages.findIndex(m => m.id === tempMessage.id);
+        const index = this.messages.findIndex((m) => m.id === tempMessage.id);
         if (index !== -1) {
           this.messages[index] = {
             ...this.messages[index],
-            content: this.messages[index].content + ' ⚠️'
+            content: this.messages[index].content + ' ⚠️',
           };
         }
         this.alertService.warning('Aviso', 'Mensagem enviada localmente. Verifique sua conexão.');
-      }
+      },
     });
   }
 
@@ -460,7 +473,12 @@ export class Chat implements OnInit, OnDestroy {
 
   getInitials(name: string): string {
     if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   }
 
   isProductChat(): boolean {

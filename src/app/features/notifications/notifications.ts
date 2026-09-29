@@ -1,6 +1,6 @@
 // src/app/features/notifications/notifications.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription, combineLatest } from 'rxjs';
@@ -23,6 +23,7 @@ interface GroupedNotifications {
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule],
   templateUrl: './notifications.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./notifications.scss'],
 })
 export class NotificationsPageComponent implements OnInit, OnDestroy {
@@ -53,7 +54,7 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
     private notificationService: NotificationService,
     private authService: AuthService,
     private alertService: AlertService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -79,9 +80,9 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
             this.totalCount = notifications.length;
             this.applyFilters();
             this.loading = false;
-          })
+          }),
         )
-        .subscribe()
+        .subscribe(),
     );
   }
 
@@ -125,9 +126,7 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
     const term = this.searchTerm.trim().toLowerCase();
     if (term) {
       filtered = filtered.filter(
-        (n) =>
-          n.title.toLowerCase().includes(term) ||
-          n.message.toLowerCase().includes(term)
+        (n) => n.title.toLowerCase().includes(term) || n.message.toLowerCase().includes(term),
       );
     }
 
@@ -181,15 +180,12 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
         'Marcar todas como lidas?',
         `Você tem ${this.unreadCount} notificação(ões) não lida(s).`,
         'Sim, marcar todas',
-        'Cancelar'
+        'Cancelar',
       )
       .then((result) => {
         if (result.isConfirmed) {
           this.notificationService.markAllAsRead();
-          this.alertService.success(
-            'Pronto!',
-            'Todas as notificações foram marcadas como lidas.'
-          );
+          this.alertService.success('Pronto!', 'Todas as notificações foram marcadas como lidas.');
         }
       });
   }
@@ -202,7 +198,7 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
         'Remover notificação?',
         'Tem certeza que deseja remover esta notificação?',
         'Sim, remover',
-        'Cancelar'
+        'Cancelar',
       )
       .then((result) => {
         if (result.isConfirmed) {
@@ -219,7 +215,7 @@ export class NotificationsPageComponent implements OnInit, OnDestroy {
         'Limpar todas as notificações?',
         'Esta ação não pode ser desfeita.',
         'Sim, limpar tudo',
-        'Cancelar'
+        'Cancelar',
       )
       .then((result) => {
         if (result.isConfirmed) {

@@ -1,6 +1,6 @@
 // src/app/features/home/home.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Products } from '../products/products';
 import { CategoriesList } from '../categories/categories-list/categories-list';
 import { RouterLink } from '@angular/router';
@@ -13,6 +13,7 @@ import { Category } from '../../core/models/category.model';
   standalone: true,
   imports: [CommonModule, Products, CategoriesList, RouterLink],
   templateUrl: './home.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './home.scss',
 })
 export class Home implements OnInit {
@@ -36,7 +37,7 @@ export class Home implements OnInit {
 
   featuredFilters: ProductFilters = {
     sortBy: 'popular',
-    limit: 8
+    limit: 8,
   };
 
   popularCategories: Category[] = [];
@@ -59,17 +60,53 @@ export class Home implements OnInit {
         console.error('❌ Erro ao carregar categorias populares:', error);
         this.loadingCategories = false;
         this.popularCategories = this.getDefaultCategories();
-      }
+      },
     });
   }
 
   private getDefaultCategories(): Category[] {
     const now = new Date().toISOString();
     return [
-      { id: 1, name: 'Eletrônicos', slug: 'eletronicos', active: true, createdAt: now, description: 'Produtos eletrônicos e tecnologia', icon: 'bi-phone', productCount: 156 },
-      { id: 2, name: 'Moda', slug: 'moda', active: true, createdAt: now, description: 'Roupas, calçados e acessórios', icon: 'bi-bag', productCount: 234 },
-      { id: 3, name: 'Casa e Decoração', slug: 'casa-decoracao', active: true, createdAt: now, description: 'Móveis, decoração e utensílios', icon: 'bi-house', productCount: 189 },
-      { id: 4, name: 'Esportes', slug: 'esportes', active: true, createdAt: now, description: 'Equipamentos e acessórios esportivos', icon: 'bi-bicycle', productCount: 98 }
+      {
+        id: 1,
+        name: 'Eletrônicos',
+        slug: 'eletronicos',
+        active: true,
+        createdAt: now,
+        description: 'Produtos eletrônicos e tecnologia',
+        icon: 'bi-phone',
+        productCount: 156,
+      },
+      {
+        id: 2,
+        name: 'Moda',
+        slug: 'moda',
+        active: true,
+        createdAt: now,
+        description: 'Roupas, calçados e acessórios',
+        icon: 'bi-bag',
+        productCount: 234,
+      },
+      {
+        id: 3,
+        name: 'Casa e Decoração',
+        slug: 'casa-decoracao',
+        active: true,
+        createdAt: now,
+        description: 'Móveis, decoração e utensílios',
+        icon: 'bi-house',
+        productCount: 189,
+      },
+      {
+        id: 4,
+        name: 'Esportes',
+        slug: 'esportes',
+        active: true,
+        createdAt: now,
+        description: 'Equipamentos e acessórios esportivos',
+        icon: 'bi-bicycle',
+        productCount: 98,
+      },
     ];
   }
 

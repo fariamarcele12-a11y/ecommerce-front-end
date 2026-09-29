@@ -1,4 +1,11 @@
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Input,
+  Output,
+  EventEmitter,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Category } from '../../../core/models/category.model';
@@ -9,6 +16,7 @@ import { CategoryService } from '../../../core/services/category.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './categories-list.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./categories-list.scss'],
 })
 export class CategoriesList implements OnInit {

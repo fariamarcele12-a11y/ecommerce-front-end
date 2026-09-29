@@ -1,5 +1,5 @@
 // src/app/features/store/store-detail/store-detail.ts
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { StoreService } from '../../../core/services/store.service';
@@ -12,7 +12,8 @@ import { Product } from '../../../core/models/ProductModel/product.model';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './store-detail.html',
-  styleUrls: ['./store-detail.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./store-detail.scss'],
 })
 export class StoreDetailComponent implements OnInit {
   store: Store | null = null;
@@ -23,7 +24,7 @@ export class StoreDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private storeService: StoreService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -51,7 +52,7 @@ export class StoreDetailComponent implements OnInit {
       error: (error) => {
         console.error('Erro ao carregar loja:', error);
         this.loading = false;
-      }
+      },
     });
   }
 
@@ -63,13 +64,13 @@ export class StoreDetailComponent implements OnInit {
       },
       error: (error) => {
         console.error('Erro ao carregar produtos da loja:', error);
-      }
+      },
     });
   }
 
   // 🔥 CORRIGIDO: userId como string
   checkOwnership(userId: string): void {
-    this.authService.currentUser$.subscribe(user => {
+    this.authService.currentUser$.subscribe((user) => {
       this.isOwner = String(user?.id) === userId;
     });
   }
@@ -77,7 +78,7 @@ export class StoreDetailComponent implements OnInit {
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(price);
   }
 }

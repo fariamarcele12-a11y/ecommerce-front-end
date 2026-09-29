@@ -1,5 +1,5 @@
 // src/app/features/categories/category-detail/category-detail.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CategoryService } from '../../../core/services/category.service';
@@ -14,6 +14,7 @@ import { CategoryStatsService } from '../../../core/services/category-stats.serv
   standalone: true,
   imports: [CommonModule, RouterLink, Products],
   templateUrl: './category-detail.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./category-detail.scss'],
 })
 export class CategoryDetail implements OnInit, OnDestroy {
@@ -65,9 +66,8 @@ export class CategoryDetail implements OnInit, OnDestroy {
             category: categoryName,
             sortBy: 'newest',
             page: 1,
-            limit: 12
+            limit: 12,
           };
-
         } else {
           console.warn('⚠️ Categoria não encontrada, redirecionando para home');
           this.router.navigate(['/home']);
@@ -96,7 +96,7 @@ export class CategoryDetail implements OnInit, OnDestroy {
       error: (error) => {
         this.isUpdatingCount = false;
         console.error('❌ Erro ao atualizar contagem:', error);
-      }
+      },
     });
   }
 

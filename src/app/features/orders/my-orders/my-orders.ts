@@ -1,10 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
 import { Order } from '../../../core/models/checkout.model';
 import { AlertService } from '../../../core/services/alert.service';
-import { AuthService } from '../../../core/services/auth.service';   // 🔥 ADICIONAR
+import { AuthService } from '../../../core/services/auth.service'; // 🔥 ADICIONAR
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -12,7 +12,8 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './my-orders.html',
-  styleUrls: ['./my-orders.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./my-orders.scss'],
 })
 export class MyOrders implements OnInit, OnDestroy {
   orders: Order[] = [];
@@ -26,7 +27,7 @@ export class MyOrders implements OnInit, OnDestroy {
     { value: 'processing', label: 'Processando' },
     { value: 'shipped', label: 'Enviado' },
     { value: 'delivered', label: 'Entregue' },
-    { value: 'cancelled', label: 'Cancelado' }
+    { value: 'cancelled', label: 'Cancelado' },
   ];
 
   statusColors: { [key: string]: string } = {
@@ -34,13 +35,13 @@ export class MyOrders implements OnInit, OnDestroy {
     processing: 'info',
     shipped: 'primary',
     delivered: 'success',
-    cancelled: 'danger'
+    cancelled: 'danger',
   };
 
   constructor(
     private orderService: OrderService,
     private alertService: AlertService,
-    private authService: AuthService   // 🔥 ADICIONAR
+    private authService: AuthService, // 🔥 ADICIONAR
   ) {}
 
   ngOnInit(): void {
@@ -66,7 +67,8 @@ export class MyOrders implements OnInit, OnDestroy {
     const userId = String(currentUser.id);
 
     this.subscriptions.add(
-      this.orderService.getMyOrders(userId).subscribe({   // 🔥 USA O ID CORRETO
+      this.orderService.getMyOrders(userId).subscribe({
+        // 🔥 USA O ID CORRETO
         next: (orders) => {
           this.orders = orders;
           this.loading = false;
@@ -76,18 +78,18 @@ export class MyOrders implements OnInit, OnDestroy {
           this.loading = false;
           this.orders = [];
           this.alertService.error('Erro', 'Não foi possível carregar seus pedidos.');
-        }
-      })
+        },
+      }),
     );
   }
 
   getFilteredOrders(): Order[] {
     if (this.filterStatus === 'all') return this.orders;
-    return this.orders.filter(o => o.status === this.filterStatus);
+    return this.orders.filter((o) => o.status === this.filterStatus);
   }
 
   getStatusLabel(status: string): string {
-    const option = this.statusOptions.find(o => o.value === status);
+    const option = this.statusOptions.find((o) => o.value === status);
     return option ? option.label : status;
   }
 
@@ -98,7 +100,7 @@ export class MyOrders implements OnInit, OnDestroy {
   formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(price);
   }
 
@@ -108,7 +110,7 @@ export class MyOrders implements OnInit, OnDestroy {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 
@@ -118,30 +120,32 @@ export class MyOrders implements OnInit, OnDestroy {
       processing: 'bi-arrow-repeat',
       shipped: 'bi-truck',
       delivered: 'bi-check-circle',
-      cancelled: 'bi-x-circle'
+      cancelled: 'bi-x-circle',
     };
     return icons[status] || 'bi-question-circle';
   }
 
   cancelOrder(orderId: string): void {
-    this.alertService.confirm(
-      'Cancelar pedido?',
-      'Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.',
-      'Sim, cancelar',
-      'Não'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        this.orderService.cancelOrder(orderId).subscribe({
-          next: () => {
-            this.alertService.success('Pedido cancelado!', 'O pedido foi cancelado com sucesso.');
-            this.loadOrders();
-          },
-          error: () => {
-            this.alertService.error('Erro', 'Não foi possível cancelar o pedido.');
-          }
-        });
-      }
-    });
+    this.alertService
+      .confirm(
+        'Cancelar pedido?',
+        'Tem certeza que deseja cancelar este pedido? Esta ação não pode ser desfeita.',
+        'Sim, cancelar',
+        'Não',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.orderService.cancelOrder(orderId).subscribe({
+            next: () => {
+              this.alertService.success('Pedido cancelado!', 'O pedido foi cancelado com sucesso.');
+              this.loadOrders();
+            },
+            error: () => {
+              this.alertService.error('Erro', 'Não foi possível cancelar o pedido.');
+            },
+          });
+        }
+      });
   }
 
   getTotalItems(order: Order): number {

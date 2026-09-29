@@ -1,5 +1,5 @@
 // src/app/features/search/search-results/search-results.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -16,6 +16,7 @@ import { ProductFilters } from '../../../core/models/ProductModel/product-filter
   standalone: true,
   imports: [CommonModule, FormsModule, ProductCard, SearchFilters, Pagination, RouterLink],
   templateUrl: './search-results.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./search-results.scss'],
 })
 export class SearchResults implements OnInit, OnDestroy {

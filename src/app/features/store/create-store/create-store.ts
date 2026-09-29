@@ -1,5 +1,5 @@
 // src/app/features/store/create-store/create-store.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -16,7 +16,8 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './create-store.html',
-  styleUrls: ['./create-store.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./create-store.scss'],
 })
 export class CreateStore implements OnInit, OnDestroy {
   user: User | null = null;
@@ -40,7 +41,7 @@ export class CreateStore implements OnInit, OnDestroy {
     socialMedia: {
       instagram: '',
       facebook: '',
-      youtube: ''
+      youtube: '',
     },
     address: {
       street: '',
@@ -50,8 +51,8 @@ export class CreateStore implements OnInit, OnDestroy {
       city: '',
       state: '',
       cep: '',
-      country: 'Brasil'
-    }
+      country: 'Brasil',
+    },
   };
 
   constructor(
@@ -59,7 +60,7 @@ export class CreateStore implements OnInit, OnDestroy {
     private authService: AuthService,
     private router: Router,
     private alertService: AlertService,
-    private cepService: CepService
+    private cepService: CepService,
   ) {}
 
   get socialMedia(): StoreSocialMedia {
@@ -67,7 +68,7 @@ export class CreateStore implements OnInit, OnDestroy {
       this.storeData.socialMedia = {
         instagram: '',
         facebook: '',
-        youtube: ''
+        youtube: '',
       };
     }
     return this.storeData.socialMedia;
@@ -79,7 +80,7 @@ export class CreateStore implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.subscriptions.add(
-      this.authService.currentUser$.subscribe(user => {
+      this.authService.currentUser$.subscribe((user) => {
         if (user) {
           this.user = user;
           const userId = String(user.id);
@@ -88,7 +89,7 @@ export class CreateStore implements OnInit, OnDestroy {
         } else {
           this.router.navigate(['/login']);
         }
-      })
+      }),
     );
   }
 
@@ -115,7 +116,7 @@ export class CreateStore implements OnInit, OnDestroy {
             error: (error) => {
               this.checkingStore = false;
               console.error('❌ Erro ao buscar loja existente:', error);
-            }
+            },
           });
         } else {
           this.checkingStore = false;
@@ -126,14 +127,14 @@ export class CreateStore implements OnInit, OnDestroy {
         this.checkingStore = false;
         console.error('❌ Erro ao verificar loja:', error);
         this.hasExistingStore = false;
-      }
+      },
     });
   }
 
   showStoreExistsAlert(): void {
     this.alertService.warning(
       'Loja já existente',
-      'Você já possui uma loja cadastrada. Acesse o painel da sua loja.'
+      'Você já possui uma loja cadastrada. Acesse o painel da sua loja.',
     );
   }
 
@@ -145,7 +146,7 @@ export class CreateStore implements OnInit, OnDestroy {
       if (user.address) {
         this.storeData.address = {
           ...this.storeData.address,
-          ...user.address
+          ...user.address,
         };
       }
 
@@ -181,7 +182,7 @@ export class CreateStore implements OnInit, OnDestroy {
         this.isSearchingCep = false;
         console.error('❌ Erro ao buscar CEP:', error);
         this.alertService.warning('CEP não encontrado', 'Preencha os dados manualmente.');
-      }
+      },
     });
   }
 
@@ -204,7 +205,10 @@ export class CreateStore implements OnInit, OnDestroy {
     }
 
     if (!this.storeData.storeName || this.storeData.storeName.trim().length < 3) {
-      this.alertService.warning('Nome da loja inválido', 'Digite um nome para sua loja (mínimo 3 caracteres).');
+      this.alertService.warning(
+        'Nome da loja inválido',
+        'Digite um nome para sua loja (mínimo 3 caracteres).',
+      );
       return;
     }
 
@@ -232,8 +236,8 @@ export class CreateStore implements OnInit, OnDestroy {
       socialMedia: {
         instagram: this.socialMedia.instagram || '',
         facebook: this.socialMedia.facebook || '',
-        youtube: this.socialMedia.youtube || ''
-      }
+        youtube: this.socialMedia.youtube || '',
+      },
     };
 
     this.storeService.createStore(storeDataWithDefaults, this.user).subscribe({
@@ -241,7 +245,7 @@ export class CreateStore implements OnInit, OnDestroy {
         this.loading = false;
         this.alertService.success(
           '🎉 Loja criada com sucesso!',
-          `A loja "${store.storeName}" foi criada e está pronta para vender.`
+          `A loja "${store.storeName}" foi criada e está pronta para vender.`,
         );
         this.router.navigate(['/loja', store.id]);
       },
@@ -258,13 +262,16 @@ export class CreateStore implements OnInit, OnDestroy {
                 if (store) {
                   this.router.navigate(['/loja', store.id]);
                 }
-              }
+              },
             });
           }
         } else {
-          this.alertService.error('Erro', error.message || 'Não foi possível criar a loja. Tente novamente.');
+          this.alertService.error(
+            'Erro',
+            error.message || 'Não foi possível criar a loja. Tente novamente.',
+          );
         }
-      }
+      },
     });
   }
 
@@ -278,7 +285,7 @@ export class CreateStore implements OnInit, OnDestroy {
           if (store) {
             this.router.navigate(['/loja', store.id]);
           }
-        }
+        },
       });
     }
   }
