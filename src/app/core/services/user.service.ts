@@ -1,15 +1,16 @@
 // src/app/core/services/user.service.ts
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, catchError, map } from 'rxjs';
 import { User } from '../models/user.model';
 import { AuthService } from './auth.service';
+import { environment } from '../../../environments/enviroment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private apiUrl = 'http://localhost:3000/users';
+  private apiUrl = `${environment.apiUrl}/users`;
 
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
@@ -22,11 +23,9 @@ export class UserService {
       return of(currentUser);
     }
 
-    return this.http.get<User>(`${this.apiUrl}/${userId}`).pipe(
-      map((user) => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword as User;
-      }),
+    return this.http.get<User>(`${this.apiUrl}/${userId}`, {
+      headers: this.authHeaders()
+    }).pipe(
       catchError((error) => {
         console.error(`❌ Erro ao buscar usuário ${userId}:`, error);
         return of(null);
@@ -38,9 +37,8 @@ export class UserService {
     const userId = String(id);
     console.log('📝 UserService.updateUser:', userId, data);
 
-    return this.http.patch<User>(`${this.apiUrl}/${userId}`, {
-      ...data,
-      updatedAt: new Date().toISOString()
+    return this.http.patch<User>(`${this.apiUrl}/${userId}`, data, {
+      headers: this.authHeaders()
     }).pipe(
       map((user) => {
         console.log('✅ Resposta da API:', user);
@@ -69,14 +67,24 @@ export class UserService {
   }
 
   getAllUsers(): Observable<User[]> {
-    return this.http.get<User[]>(this.apiUrl).pipe(
+    return this.http.get<User[]>(this.apiUrl, {
+      headers: this.authHeaders()
+    }).pipe(
       catchError(() => of([]))
     );
   }
 
   searchUsers(term: string): Observable<User[]> {
-    return this.http.get<User[]>(`${this.apiUrl}?q=${term}`).pipe(
-      catchError(() => of([]))
-    );
+    // Backend atual não tem endpoint de busca.
+    // Retorna vazio por enquanto para manter compatibilidade.
+    return of([]);
+  }
+
+  private authHeaders(): HttpHeaders {
+    const token = this.authService.getToken();
+    return new HttpHeaders({
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    });
   }
 }

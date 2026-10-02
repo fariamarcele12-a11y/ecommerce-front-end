@@ -1,23 +1,23 @@
 // src/app/core/services/auth.service.ts
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of, throwError, catchError, tap, map, switchMap } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { BehaviorSubject, Observable, of, catchError, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { User, LoginCredentials, RegisterCredentials, AuthResponse } from '../models/user.model';
-import { IdGeneratorService } from './id-generator.service';
+import { environment } from '../../../environments/enviroment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:3000/users';
+  private authUrl = `${environment.apiUrl}/auth`;
+  private usersUrl = `${environment.apiUrl}/users`;
 
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
   private isBrowser: boolean;
   private readonly http = inject(HttpClient);
-  private readonly idGenerator = inject(IdGeneratorService);
 
   constructor() {
     const platformId = inject(PLATFORM_ID);
@@ -28,139 +28,143 @@ export class AuthService {
     }
   }
 
+  // ============================================================
+  // LOGIN
+  // ============================================================
   login(credentials: LoginCredentials): Observable<AuthResponse> {
-    return this.http.get<User[]>(`${this.apiUrl}?email=${credentials.email}`).pipe(
-      map((users) => {
-        if (users.length === 0) {
-          console.warn('⚠️ Usuário não encontrado');
-          return { success: false, message: 'Usuário não encontrado.' };
-        }
+    const payload = {
+      email: credentials.email,
+      password: credentials.password,
+      rememberMe: credentials.rememberMe ?? false
+    };
 
-        const user = users[0];
-        if (user.password !== credentials.password) {
-          console.warn('⚠️ Senha incorreta');
-          return { success: false, message: 'Senha incorreta.' };
+    return this.http.post<AuthResponse>(`${this.authUrl}/login`, payload).pipe(
+      map((response) => {
+        if (!response.success || !response.user) {
+          return response;
         }
-
-        const { password, ...userWithoutPassword } = user;
 
         const userToStore = {
-          ...userWithoutPassword,
-          hasStore: userWithoutPassword.hasStore || false,
-          storeId: userWithoutPassword.storeId || null
-        };
+          ...response.user,
+          hasStore: response.user.hasStore ?? false,
+          storeId: response.user.storeId ?? null,
+          token: response.token ?? null
+        } as User & { token?: string | null };
 
         if (this.isBrowser) {
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
           localStorage.setItem('userBackup', JSON.stringify(userToStore));
+
+          if (response.token) {
+            localStorage.setItem('accessToken', response.token);
+          }
+
+          if (credentials.rememberMe) {
+            localStorage.setItem('rememberMe', 'true');
+          } else {
+            localStorage.removeItem('rememberMe');
+          }
         }
 
         this.currentUserSubject.next(userToStore as User);
 
         return {
           success: true,
-          message: 'Login realizado com sucesso!',
+          message: response.message || 'Login realizado com sucesso!',
           user: userToStore as User,
-          token: `token_${user.id}_${Date.now()}`,
-          expiresIn: credentials.rememberMe ? 604800 : 86400
+          token: response.token,
+          expiresIn: response.expiresIn ?? (credentials.rememberMe ? 604800 : 86400)
         };
       }),
       catchError((error) => {
         console.error('❌ Erro no login:', error);
-        return of({ success: false, message: 'Erro ao realizar login.' });
+        const message =
+          error?.error?.message ||
+          (error?.status === 401 ? 'Email ou senha inválidos.' : 'Erro ao realizar login.');
+        return of({ success: false, message });
       })
     );
   }
 
+  // ============================================================
+  // REGISTER
+  // ============================================================
   register(credentials: RegisterCredentials): Observable<AuthResponse> {
-    const userId = this.idGenerator.generateUUID();
+    const payload = {
+      documentType: credentials.documentType,
+      name: credentials.name,
+      email: credentials.email,
+      password: credentials.password,
+      confirmPassword: credentials.confirmPassword ?? credentials.password,
+      document: credentials.document,
+      phone: credentials.phone,
+      birthDate: credentials.birthDate ?? null,
+      companyName: credentials.companyName ?? null,
+      tradeName: credentials.tradeName ?? null,
+      termsAccepted: credentials.termsAccepted ?? true,
+      address: credentials.address
+        ? {
+            street: credentials.address.street ?? '',
+            number: credentials.address.number ?? '',
+            complement: credentials.address.complement ?? null,
+            neighborhood: credentials.address.neighborhood ?? '',
+            city: credentials.address.city ?? '',
+            state: credentials.address.state ?? '',
+            cep: credentials.address.cep ?? '',
+            country: credentials.address.country ?? 'Brasil'
+          }
+        : null
+    };
 
-    return this.http.get<User[]>(`${this.apiUrl}?email=${credentials.email}`).pipe(
-      switchMap((users) => {
-        if (users.length > 0) {
-          return of({ success: false, message: 'Este email já está cadastrado.' });
+    return this.http.post<AuthResponse>(`${this.authUrl}/register`, payload).pipe(
+      map((response) => {
+        if (!response.success || !response.user) {
+          return response;
         }
 
-        return this.http.get<User[]>(this.apiUrl).pipe(
-          switchMap((allUsers) => {
-            const docExists = allUsers.some(user => user.document === credentials.document);
+        const userToStore = {
+          ...response.user,
+          hasStore: response.user.hasStore ?? false,
+          storeId: response.user.storeId ?? null,
+          token: response.token ?? null
+        } as User & { token?: string | null };
 
-            if (docExists) {
-              return of({
-                success: false,
-                message: credentials.documentType === 'pf'
-                  ? 'Este CPF já está cadastrado.'
-                  : 'Este CNPJ já está cadastrado.'
-              });
-            }
+        if (this.isBrowser) {
+          localStorage.setItem('currentUser', JSON.stringify(userToStore));
+          localStorage.setItem('userBackup', JSON.stringify(userToStore));
 
-            const newUser: any = {
-              id: userId,
-              documentType: credentials.documentType,
-              name: credentials.name,
-              email: credentials.email,
-              password: credentials.password,
-              document: credentials.document,
-              phone: credentials.phone,
-              avatar: '',
-              address: credentials.address || {
-                street: '',
-                number: '',
-                complement: '',
-                neighborhood: '',
-                city: '',
-                state: '',
-                cep: '',
-                country: 'Brasil'
-              },
-              addresses: [],
-              hasStore: false,
-              storeId: null,
-              createdAt: new Date().toISOString()
-            };
+          if (response.token) {
+            localStorage.setItem('accessToken', response.token);
+          }
+        }
 
-            if (credentials.documentType === 'pj') {
-              newUser.companyName = credentials.companyName || '';
-              newUser.tradeName = credentials.tradeName || '';
-            } else {
-              newUser.birthDate = credentials.birthDate || '';
-            }
+        this.currentUserSubject.next(userToStore as User);
 
-            return this.http.post<User>(this.apiUrl, newUser).pipe(
-              map((createdUser) => {
-                const { password, ...userWithoutPassword } = createdUser;
-
-                if (this.isBrowser) {
-                  localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-                  localStorage.setItem('userBackup', JSON.stringify(userWithoutPassword));
-                }
-
-                this.currentUserSubject.next(userWithoutPassword as User);
-
-                return {
-                  success: true,
-                  message: 'Cadastro realizado com sucesso!',
-                  user: userWithoutPassword as User,
-                  token: `token_${createdUser.id}_${Date.now()}`,
-                  expiresIn: 86400
-                };
-              })
-            );
-          })
-        );
+        return {
+          success: true,
+          message: response.message || 'Cadastro realizado com sucesso!',
+          user: userToStore as User,
+          token: response.token,
+          expiresIn: response.expiresIn ?? 86400
+        };
       }),
       catchError((error) => {
         console.error('❌ Erro no registro:', error);
-        return of({ success: false, message: 'Erro ao realizar cadastro.' });
+        const message = error?.error?.message || 'Erro ao realizar cadastro.';
+        return of({ success: false, message });
       })
     );
   }
 
+  // ============================================================
+  // LOGOUT
+  // ============================================================
   logout(): void {
     if (this.isBrowser) {
       localStorage.removeItem('currentUser');
       localStorage.removeItem('currentStore');
       localStorage.removeItem('rememberMe');
+      localStorage.removeItem('accessToken');
       // 🔥 NÃO remover userBackup (preserva para próxima sessão)
     }
 
@@ -176,6 +180,11 @@ export class AuthService {
    */
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
+  }
+
+  getToken(): string | null {
+    if (!this.isBrowser) return null;
+    return localStorage.getItem('accessToken');
   }
 
   private loadUserFromStorage(): void {
@@ -207,15 +216,17 @@ export class AuthService {
     }
   }
 
+  // ============================================================
+  // ATUALIZAR USUÁRIO
+  // ============================================================
   updateUser(userData: Partial<User>): Observable<AuthResponse> {
     const currentUser = this.currentUserSubject.value;
     if (!currentUser) {
       return of({ success: false, message: 'Usuário não está logado.' });
     }
 
-    return this.http.patch<User>(`${this.apiUrl}/${currentUser.id}`, {
-      ...userData,
-      updatedAt: new Date().toISOString()
+    return this.http.patch<User>(`${this.usersUrl}/${currentUser.id}`, userData, {
+      headers: this.authHeaders()
     }).pipe(
       map((updatedUser) => {
         const mergedUser: User = {
@@ -234,25 +245,23 @@ export class AuthService {
           storeId: updatedUser.storeId !== undefined ? updatedUser.storeId : currentUser.storeId,
         };
 
-        const { password, ...userWithoutPassword } = mergedUser;
-
         if (this.isBrowser) {
-          localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-          localStorage.setItem('userBackup', JSON.stringify(userWithoutPassword));
+          localStorage.setItem('currentUser', JSON.stringify(mergedUser));
+          localStorage.setItem('userBackup', JSON.stringify(mergedUser));
         }
 
-        this.currentUserSubject.next(userWithoutPassword as User);
+        this.currentUserSubject.next(mergedUser);
 
         return {
           success: true,
           message: 'Dados atualizados com sucesso!',
-          user: userWithoutPassword as User
+          user: mergedUser
         };
       }),
       catchError((error) => {
         console.error('❌ Erro ao atualizar:', error);
 
-        // 🔥 Fallback: mesclar localmente
+        // 🔥 Fallback: mesclar localmente (mantido do original)
         const fallbackUser: User = {
           ...currentUser,
           ...userData,
@@ -310,35 +319,56 @@ export class AuthService {
     this.currentUserSubject.next(mergedUser);
   }
 
+  // ============================================================
+  // GET USER BY ID
+  // ============================================================
   getUserById(id: string | number): Observable<User | null> {
     const userId = String(id);
-    return this.http.get<User>(`${this.apiUrl}/${userId}`).pipe(
-      map((user) => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword as User;
-      }),
+    return this.http.get<User>(`${this.usersUrl}/${userId}`, {
+      headers: this.authHeaders()
+    }).pipe(
       catchError(() => of(null))
     );
   }
 
+  // ============================================================
+  // CHECK EMAIL
+  // ============================================================
   checkEmailExists(email: string): Observable<boolean> {
-    return this.http.get<User[]>(`${this.apiUrl}?email=${email}`).pipe(
-      map((users) => users && users.length > 0),
-      catchError(() => of(false))
-    );
+    // O backend valida email duplicado no /register.
+    // Retornamos false para não bloquear o fluxo do formulário.
+    return of(false);
   }
 
+  // ============================================================
+  // GET ALL USERS
+  // ============================================================
   getAllUsers(): Observable<User[]> {
-    return this.http.get<User[]>(this.apiUrl).pipe(
-      map((users) => users.map(({ password, ...user }) => user as User)),
+    return this.http.get<User[]>(this.usersUrl, {
+      headers: this.authHeaders()
+    }).pipe(
       catchError(() => of([]))
     );
   }
 
+  // ============================================================
+  // HEALTH CHECK
+  // ============================================================
   checkApiHealth(): Observable<{ status: string; timestamp: string }> {
-    return this.http.get<{ status: string; timestamp: string }>(`http://localhost:3000/`).pipe(
+    return this.http.get(`${environment.apiUrl.replace('/api', '')}/swagger/index.html`).pipe(
       map(() => ({ status: 'online', timestamp: new Date().toISOString() })),
       catchError(() => of({ status: 'offline', timestamp: new Date().toISOString() }))
     );
+  }
+
+  // ============================================================
+  // HEADERS
+  // ============================================================
+  private authHeaders(): HttpHeaders {
+    const token = this.getToken();
+    return new HttpHeaders({
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    });
   }
 }
