@@ -25,7 +25,7 @@
     <div class="col-lg-4">
       <div class="card border-0 shadow-sm">
         <div class="card-body text-center p-4">
-          <!-- 🔥 Avatar com Upload -->
+          <!-- Avatar com Upload -->
           <div class="avatar-wrapper mx-auto mb-3">
             <app-image-upload
               type="avatar"
@@ -56,7 +56,10 @@
             </div>
             <div class="d-flex justify-content-between py-2 border-bottom">
               <span class="text-muted">Documento</span>
-              <span class="fw-semibold">{{ user.document || 'Não informado' }}</span>
+              <span class="fw-semibold">
+                <i class="bi bi-shield-lock text-success me-1" title="Documento protegido"></i>
+                {{ user.document || 'Não informado' }}
+              </span>
             </div>
             <div class="d-flex justify-content-between py-2" *ngIf="hasStore && store">
               <span class="text-muted">Loja</span>
@@ -104,7 +107,6 @@
                     class="form-check-input"
                     id="pf"
                     [checked]="profileData.documentType === 'pf'"
-                    (change)="profileData.documentType = 'pf'"
                     disabled
                   />
                   <label class="form-check-label" for="pf">
@@ -118,7 +120,6 @@
                     class="form-check-input"
                     id="pj"
                     [checked]="profileData.documentType === 'pj'"
-                    (change)="profileData.documentType = 'pj'"
                     disabled
                   />
                   <label class="form-check-label" for="pj">
@@ -247,7 +248,7 @@
               </div>
             </div>
 
-            <!-- Documento (apenas leitura) -->
+            <!-- Documento (mascarado, apenas leitura) -->
             <div class="form-group mb-3">
               <label class="form-label fw-bold small">
                 {{ profileData.documentType === 'pf' ? 'CPF' : 'CNPJ' }}
@@ -260,13 +261,19 @@
                   type="text"
                   class="form-control"
                   [value]="profileData.document"
+                  readonly
                   disabled
+                  [attr.aria-label]="profileData.documentType === 'pf' ? 'CPF mascarado' : 'CNPJ mascarado'"
                 />
-                <span class="input-group-text bg-light text-muted">
-                  <i class="bi bi-lock"></i>
+                <span class="input-group-text bg-success-subtle text-success" title="Documento protegido por LGPD">
+                  <i class="bi bi-shield-lock-fill"></i>
                 </span>
               </div>
-              <small class="text-muted">O documento não pode ser alterado.</small>
+              <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>
+                Por segurança (LGPD), o documento não pode ser alterado pelo perfil.
+                Contate o suporte se precisar corrigir.
+              </small>
             </div>
 
             <!-- Endereço -->

@@ -44,12 +44,12 @@ export class AuthService {
           return response;
         }
 
-        const userToStore = {
+        const userToStore: User = {
           ...response.user,
           hasStore: response.user.hasStore ?? false,
           storeId: response.user.storeId ?? null,
           token: response.token ?? null
-        } as User & { token?: string | null };
+        };
 
         if (this.isBrowser) {
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
@@ -66,12 +66,12 @@ export class AuthService {
           }
         }
 
-        this.currentUserSubject.next(userToStore as User);
+        this.currentUserSubject.next(userToStore);
 
         return {
           success: true,
           message: response.message || 'Login realizado com sucesso!',
-          user: userToStore as User,
+          user: userToStore,
           token: response.token,
           expiresIn: response.expiresIn ?? (credentials.rememberMe ? 604800 : 86400)
         };
@@ -122,12 +122,12 @@ export class AuthService {
           return response;
         }
 
-        const userToStore = {
+        const userToStore: User = {
           ...response.user,
           hasStore: response.user.hasStore ?? false,
           storeId: response.user.storeId ?? null,
           token: response.token ?? null
-        } as User & { token?: string | null };
+        };
 
         if (this.isBrowser) {
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
@@ -138,12 +138,12 @@ export class AuthService {
           }
         }
 
-        this.currentUserSubject.next(userToStore as User);
+        this.currentUserSubject.next(userToStore);
 
         return {
           success: true,
           message: response.message || 'Cadastro realizado com sucesso!',
-          user: userToStore as User,
+          user: userToStore,
           token: response.token,
           expiresIn: response.expiresIn ?? 86400
         };
@@ -229,20 +229,12 @@ export class AuthService {
       headers: this.authHeaders()
     }).pipe(
       map((updatedUser) => {
+        // 🔥 backend sempre retorna o UserResponse completo → substitui tudo
         const mergedUser: User = {
           ...currentUser,
           ...updatedUser,
           id: updatedUser.id || currentUser.id,
-          name: updatedUser.name || currentUser.name,
-          email: updatedUser.email || currentUser.email,
-          document: updatedUser.document || currentUser.document,
-          documentType: updatedUser.documentType || currentUser.documentType,
-          phone: updatedUser.phone || currentUser.phone,
-          avatar: updatedUser.avatar !== undefined ? updatedUser.avatar : currentUser.avatar,
-          address: updatedUser.address || currentUser.address,
-          addresses: updatedUser.addresses || currentUser.addresses,
-          hasStore: updatedUser.hasStore !== undefined ? updatedUser.hasStore : currentUser.hasStore,
-          storeId: updatedUser.storeId !== undefined ? updatedUser.storeId : currentUser.storeId,
+          token: currentUser.token,
         };
 
         if (this.isBrowser) {
@@ -260,24 +252,8 @@ export class AuthService {
       }),
       catchError((error) => {
         console.error('❌ Erro ao atualizar:', error);
-
-        // 🔥 Fallback: mesclar localmente (mantido do original)
-        const fallbackUser: User = {
-          ...currentUser,
-          ...userData,
-        };
-
-        if (this.isBrowser) {
-          localStorage.setItem('currentUser', JSON.stringify(fallbackUser));
-          localStorage.setItem('userBackup', JSON.stringify(fallbackUser));
-        }
-        this.currentUserSubject.next(fallbackUser);
-
-        return of({
-          success: true,
-          message: 'Dados atualizados localmente!',
-          user: fallbackUser
-        });
+        const message = error?.error?.message || 'Erro ao atualizar dados.';
+        return of({ success: false, message });
       })
     );
   }
@@ -310,6 +286,12 @@ export class AuthService {
       storeId: user.storeId !== undefined
         ? (user.storeId ? String(user.storeId) : null)
         : (currentUser?.storeId || null),
+      birthDate: user.birthDate !== undefined ? user.birthDate : currentUser?.birthDate,
+      companyName: user.companyName !== undefined ? user.companyName : currentUser?.companyName,
+      tradeName: user.tradeName !== undefined ? user.tradeName : currentUser?.tradeName,
+      createdAt: user.createdAt || currentUser?.createdAt,
+      updatedAt: user.updatedAt || currentUser?.updatedAt,
+      token: currentUser?.token ?? null,
     } as User;
 
     if (this.isBrowser) {
@@ -320,14 +302,34 @@ export class AuthService {
   }
 
   // ============================================================
-  // GET USER BY ID
+  // GET USER BY ID — sempre do backend (dados frescos)
   // ============================================================
   getUserById(id: string | number): Observable<User | null> {
     const userId = String(id);
     return this.http.get<User>(`${this.usersUrl}/${userId}`, {
       headers: this.authHeaders()
     }).pipe(
-      catchError(() => of(null))
+      map((user) => {
+        if (!user) return null;
+
+        // Se for o usuário atual, sincroniza o estado local
+        const current = this.currentUserSubject.value;
+        if (current && String(current.id) === userId) {
+          const merged: User = { ...current, ...user, token: current.token };
+          if (this.isBrowser) {
+            localStorage.setItem('currentUser', JSON.stringify(merged));
+            localStorage.setItem('userBackup', JSON.stringify(merged));
+          }
+          this.currentUserSubject.next(merged);
+          return merged;
+        }
+
+        return user;
+      }),
+      catchError((error) => {
+        console.error(`❌ Erro ao buscar usuário ${userId}:`, error);
+        return of(null);
+      })
     );
   }
 
@@ -335,8 +337,7 @@ export class AuthService {
   // CHECK EMAIL
   // ============================================================
   checkEmailExists(email: string): Observable<boolean> {
-    // O backend valida email duplicado no /register.
-    // Retornamos false para não bloquear o fluxo do formulário.
+    // Backend valida email duplicado no /register.
     return of(false);
   }
 

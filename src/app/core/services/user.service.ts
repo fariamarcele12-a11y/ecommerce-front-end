@@ -15,13 +15,9 @@ export class UserService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
 
+  // 🔥 SEMPRE vai ao backend
   getUserById(id: string | number): Observable<User | null> {
     const userId = String(id);
-
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser && String(currentUser.id) === userId) {
-      return of(currentUser);
-    }
 
     return this.http.get<User>(`${this.apiUrl}/${userId}`, {
       headers: this.authHeaders()
@@ -51,6 +47,37 @@ export class UserService {
     );
   }
 
+  // ============================================================
+  // 🔥 UPLOAD DE AVATAR — envia base64 ao backend, que manda ao Cloudinary
+  // ============================================================
+  uploadAvatar(base64Image: string): Observable<{ avatarUrl: string }> {
+    return this.http.post<{ avatarUrl: string }>(
+      `${this.apiUrl}/avatar`,
+      { base64Image },
+      { headers: this.authHeaders() }
+    ).pipe(
+      catchError((error) => {
+        console.error('❌ Erro ao enviar avatar:', error);
+        throw error;
+      })
+    );
+  }
+
+  // ============================================================
+  // 🔥 REMOVER AVATAR
+  // ============================================================
+  deleteAvatar(): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(
+      `${this.apiUrl}/avatar`,
+      { headers: this.authHeaders() }
+    ).pipe(
+      catchError((error) => {
+        console.error('❌ Erro ao remover avatar:', error);
+        throw error;
+      })
+    );
+  }
+
   getMemberSince(userId: string | number): Observable<string> {
     return this.getUserById(userId).pipe(
       map((user) => {
@@ -75,8 +102,6 @@ export class UserService {
   }
 
   searchUsers(term: string): Observable<User[]> {
-    // Backend atual não tem endpoint de busca.
-    // Retorna vazio por enquanto para manter compatibilidade.
     return of([]);
   }
 

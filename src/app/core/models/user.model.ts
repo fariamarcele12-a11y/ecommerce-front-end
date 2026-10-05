@@ -21,11 +21,19 @@ export interface User {
   email: string;
   password?: string;
   avatar?: string;
+
+  /** Documento MASCARADO para LGPD. Ex: 123.***.***-10 */
   document?: string;
+
   documentType?: 'pf' | 'pj';
   phone?: string;
+
+  /** Endereço principal (compatibilidade) */
   address?: UserAddress;
+
+  /** Lista completa de endereços */
   addresses?: UserAddress[];
+
   hasStore?: boolean;
   storeId?: string | null;
   companyName?: string;
@@ -33,6 +41,9 @@ export interface User {
   birthDate?: string;
   createdAt?: string;
   updatedAt?: string;
+
+  /** Token JWT — usado apenas no client para chamadas autenticadas */
+  token?: string | null;
 }
 
 export interface LoginCredentials {

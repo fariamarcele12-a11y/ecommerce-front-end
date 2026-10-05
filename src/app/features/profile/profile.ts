@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { UserService } from '../../core/services/user.service';
 import { AlertService } from '../../core/services/alert.service';
 import { CepService } from '../../core/services/cep.service';
 import { User } from '../../core/models/user.model';
@@ -16,7 +17,7 @@ import { ImageUpload } from '../../shared/components/image-upload/image-upload';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ImageUpload],
   templateUrl: './profile.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.Default,
   styleUrls: ['./profile.scss'],
 })
 export class Profile implements OnInit {
@@ -24,17 +25,17 @@ export class Profile implements OnInit {
   store: Store | null = null;
   loading = true;
   saving = false;
+  uploadingAvatar = false;
   isSearchingCep = false;
   hasStore = false;
 
-  // 🔥 Dados do formulário
   profileData = {
     name: '',
     email: '',
     phone: '',
     document: '',
     documentType: 'pf' as 'pf' | 'pj',
-    avatar: '', // 🔥 NOVO: Avatar do usuário
+    avatar: '',
     address: {
       street: '',
       number: '',
@@ -47,13 +48,13 @@ export class Profile implements OnInit {
     },
   };
 
-  // 🔥 Dados específicos
   birthDate = '';
   companyName = '';
   tradeName = '';
 
   constructor(
     private authService: AuthService,
+    private userService: UserService,
     private storeService: StoreService,
     private router: Router,
     private alertService: AlertService,
@@ -66,15 +67,49 @@ export class Profile implements OnInit {
 
   loadUserData(): void {
     this.loading = true;
-    const user = this.authService.getCurrentUser();
 
-    if (!user) {
+    const cached = this.authService.getCurrentUser();
+    if (!cached) {
       this.alertService.warning('Login necessário', 'Faça login para acessar seu perfil.');
       this.router.navigate(['/login']);
       this.loading = false;
       return;
     }
 
+    this.userService.getUserById(cached.id).subscribe({
+      next: (user) => {
+        this.loading = false;
+
+        if (!user) {
+          this.applyUser(cached);
+          return;
+        }
+
+        this.applyUser(user);
+
+        if (this.hasStore && user.storeId) {
+          this.storeService.getStoreById(user.storeId).subscribe({
+            next: (store) => (this.store = store),
+            error: (error) => {
+              console.error('❌ Erro ao carregar loja:', error);
+              if (error.status === 404) {
+                this.hasStore = false;
+                this.store = null;
+                this.authService.updateUser({ hasStore: false, storeId: null }).subscribe();
+              }
+            },
+          });
+        }
+      },
+      error: (error) => {
+        this.loading = false;
+        console.error('❌ Erro ao carregar usuário do backend:', error);
+        this.applyUser(cached);
+      },
+    });
+  }
+
+  private applyUser(user: User): void {
     this.user = user;
     this.hasStore = user.hasStore || false;
 
@@ -84,7 +119,7 @@ export class Profile implements OnInit {
       phone: user.phone || '',
       document: user.document || '',
       documentType: user.documentType || 'pf',
-      avatar: (user as any).avatar || '',
+      avatar: user.avatar || '',
       address: {
         street: user.address?.street || '',
         number: user.address?.number || '',
@@ -98,7 +133,7 @@ export class Profile implements OnInit {
     };
 
     if (user.documentType === 'pf') {
-      this.birthDate = user.birthDate || '';
+      this.birthDate = user.birthDate ? String(user.birthDate).substring(0, 10) : '';
       this.companyName = '';
       this.tradeName = '';
     } else {
@@ -107,57 +142,73 @@ export class Profile implements OnInit {
       this.birthDate = '';
       this.profileData.name = user.name || user.companyName || '';
     }
-
-    if (this.hasStore && user.storeId) {
-      this.storeService.getStoreById(user.storeId).subscribe({
-        next: (store) => {
-          this.store = store;
-        },
-        error: (error) => {
-          console.error('❌ Erro ao carregar loja:', error);
-          if (error.status === 404) {
-            this.hasStore = false;
-            this.store = null;
-            this.authService.updateUser({ hasStore: false, storeId: null }).subscribe();
-          }
-        },
-      });
-    }
-
-    this.loading = false;
   }
 
+  // ============================================================
+  // AVATAR — upload para Cloudinary via backend
+  // ============================================================
   onAvatarUploaded(base64: string): void {
+    // Preview local imediato
     this.profileData.avatar = base64;
+    this.uploadingAvatar = true;
 
-    this.saveAvatar(base64);
-  }
+    this.userService.uploadAvatar(base64).subscribe({
+      next: (res) => {
+        this.uploadingAvatar = false;
 
-  onAvatarRemoved(): void {
-    this.profileData.avatar = '';
-    this.saveAvatar('');
-  }
+        // Atualiza com a URL final do Cloudinary
+        this.profileData.avatar = res.avatarUrl;
 
-  private saveAvatar(avatar: string): void {
-    if (!this.user) return;
+        // Atualiza o estado global
+        this.authService.forceUpdateUser({ avatar: res.avatarUrl });
 
-    const updateData: Partial<User> = {
-      ...((avatar ? { avatar } : { avatar: null }) as any),
-    };
-
-    this.authService.updateUser(updateData).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.user = this.authService.getCurrentUser();
+        if (this.user) {
+          this.user.avatar = res.avatarUrl;
         }
+
+        this.alertService.toast('Foto atualizada! 📸', 'success', 2000);
       },
       error: (error) => {
-        console.error('❌ Erro ao salvar avatar:', error);
-        this.alertService.error('Erro', 'Não foi possível salvar a foto de perfil.');
+        this.uploadingAvatar = false;
+        console.error('❌ Erro ao enviar avatar:', error);
+        this.alertService.error(
+          'Erro',
+          error?.error?.message || 'Não foi possível enviar a foto.'
+        );
+
+        // Reverte o preview
+        this.profileData.avatar = this.user?.avatar || '';
       },
     });
   }
 
+  onAvatarRemoved(): void {
+    this.uploadingAvatar = true;
+
+    this.userService.deleteAvatar().subscribe({
+      next: () => {
+        this.uploadingAvatar = false;
+        this.profileData.avatar = '';
+
+        this.authService.forceUpdateUser({ avatar: '' });
+        if (this.user) {
+          this.user.avatar = '';
+        }
+
+        this.alertService.toast('Foto removida.', 'success', 2000);
+      },
+      error: (error) => {
+        this.uploadingAvatar = false;
+        console.error('❌ Erro ao remover avatar:', error);
+        this.alertService.error('Erro', 'Não foi possível remover a foto.');
+        this.profileData.avatar = this.user?.avatar || '';
+      },
+    });
+  }
+
+  // ============================================================
+  // CEP
+  // ============================================================
   onCepBlur(): void {
     const cep = this.profileData.address.cep.replace(/\D/g, '');
     if (cep.length === 8) {
@@ -190,31 +241,29 @@ export class Profile implements OnInit {
     return this.cepService.formatarCep(value);
   }
 
+  // ============================================================
+  // SALVAR PERFIL (sem avatar — agora só dados textuais)
+  // ============================================================
   saveProfile(): void {
-    if (!this.validateForm()) {
-      return;
-    }
+    if (!this.validateForm()) return;
 
     this.saving = true;
     this.alertService.info('Salvando...', 'Atualizando seus dados.');
 
     const updateData: Partial<User> = {
       name: this.profileData.name,
-      email: this.profileData.email,
       phone: this.profileData.phone,
       address: this.profileData.address,
       documentType: this.profileData.documentType,
-      ...(this.profileData.avatar ? ({ avatar: this.profileData.avatar } as any) : {}),
     };
 
+    // ⚠️ Não envia avatar mais — só via /api/users/avatar
+
     if (this.profileData.documentType === 'pf') {
-      updateData.birthDate = this.birthDate;
-      updateData.companyName = undefined;
-      updateData.tradeName = undefined;
+      updateData.birthDate = this.birthDate || undefined;
     } else {
       updateData.companyName = this.profileData.name;
       updateData.tradeName = this.tradeName;
-      updateData.birthDate = undefined;
     }
 
     this.authService.updateUser(updateData).subscribe({
@@ -291,9 +340,7 @@ export class Profile implements OnInit {
   getInitials(name: string): string {
     if (!name) return '?';
     const words = name.trim().split(' ');
-    if (words.length === 1) {
-      return words[0].charAt(0).toUpperCase();
-    }
+    if (words.length === 1) return words[0].charAt(0).toUpperCase();
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
