@@ -18,7 +18,7 @@ import { ImageUpload } from '../../shared/components/image-upload/image-upload';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ImageUpload],
   templateUrl: './store.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.Default,
   styleUrls: ['./store.scss'],
 })
 export class Store implements OnInit {
@@ -33,6 +33,10 @@ export class Store implements OnInit {
   showEditModal = false;
   saving = false;
   isSearchingCep = false;
+
+  // 🔥 NOVO: flags de upload em andamento
+  uploadingLogo = false;
+  uploadingBanner = false;
 
   logoRemoved = false;
   bannerRemoved = false;
@@ -172,7 +176,6 @@ export class Store implements OnInit {
   openEditModal(): void {
     if (!this.store) return;
 
-    // 🔥 Resetar flags de remoção
     this.logoRemoved = false;
     this.bannerRemoved = false;
 
@@ -210,26 +213,121 @@ export class Store implements OnInit {
     this.bannerRemoved = false;
   }
 
+  // ============================================================
+  // 🔥 LOGO — upload imediato ao Cloudinary via backend
+  // ============================================================
   onLogoUploaded(base64: string): void {
+    if (!this.storeId) return;
+
+    // Preview local enquanto o upload acontece
     this.editForm.logo = base64;
     this.logoRemoved = false;
+    this.uploadingLogo = true;
+
+    this.storeService.uploadStoreLogo(this.storeId, base64).subscribe({
+      next: (res) => {
+        this.uploadingLogo = false;
+        this.editForm.logo = res.logoUrl;
+
+        if (this.store) {
+          this.store.logo = res.logoUrl;
+        }
+
+        this.alertService.toast('Logo atualizada! 🎨', 'success', 2000);
+      },
+      error: (err) => {
+        this.uploadingLogo = false;
+        console.error('❌ Erro ao enviar logo:', err);
+        this.alertService.error(
+          'Erro',
+          err?.error?.message || 'Não foi possível enviar a logo.',
+        );
+        // Reverte o preview
+        this.editForm.logo = this.store?.logo || '';
+      },
+    });
   }
 
   onLogoRemoved(): void {
-    this.editForm.logo = '';
-    this.logoRemoved = true;
+    if (!this.storeId) return;
+
+    this.uploadingLogo = true;
+
+    this.storeService.updateStore(this.storeId, { logo: '' } as any).subscribe({
+      next: () => {
+        this.uploadingLogo = false;
+        this.editForm.logo = '';
+        this.logoRemoved = true;
+        if (this.store) this.store.logo = '';
+        this.alertService.toast('Logo removida.', 'success', 2000);
+      },
+      error: (err) => {
+        this.uploadingLogo = false;
+        console.error('❌ Erro ao remover logo:', err);
+        this.alertService.error('Erro', 'Não foi possível remover a logo.');
+        this.editForm.logo = this.store?.logo || '';
+      },
+    });
   }
 
+  // ============================================================
+  // 🔥 BANNER — upload imediato ao Cloudinary via backend
+  // ============================================================
   onBannerUploaded(base64: string): void {
+    if (!this.storeId) return;
+
     this.editForm.banner = base64;
     this.bannerRemoved = false;
+    this.uploadingBanner = true;
+
+    this.storeService.uploadStoreBanner(this.storeId, base64).subscribe({
+      next: (res) => {
+        this.uploadingBanner = false;
+        this.editForm.banner = res.bannerUrl;
+
+        if (this.store) {
+          this.store.banner = res.bannerUrl;
+        }
+
+        this.alertService.toast('Banner atualizado! 🖼️', 'success', 2000);
+      },
+      error: (err) => {
+        this.uploadingBanner = false;
+        console.error('❌ Erro ao enviar banner:', err);
+        this.alertService.error(
+          'Erro',
+          err?.error?.message || 'Não foi possível enviar o banner.',
+        );
+        this.editForm.banner = this.store?.banner || '';
+      },
+    });
   }
 
   onBannerRemoved(): void {
-    this.editForm.banner = '';
-    this.bannerRemoved = true;
+    if (!this.storeId) return;
+
+    this.uploadingBanner = true;
+
+    this.storeService.updateStore(this.storeId, { banner: '' } as any).subscribe({
+      next: () => {
+        this.uploadingBanner = false;
+        this.editForm.banner = '';
+        this.bannerRemoved = true;
+        if (this.store) this.store.banner = '';
+        this.alertService.toast('Banner removido.', 'success', 2000);
+      },
+      error: (err) => {
+        this.uploadingBanner = false;
+        console.error('❌ Erro ao remover banner:', err);
+        this.alertService.error('Erro', 'Não foi possível remover o banner.');
+        this.editForm.banner = this.store?.banner || '';
+      },
+    });
   }
 
+  // ============================================================
+  // SALVAR — só campos textuais (logo/banner já foram)
+  // ============================================================
   saveStore(): void {
     if (!this.store || !this.storeId) return;
 
@@ -249,20 +347,9 @@ export class Store implements OnInit {
       website: this.editForm.website,
       socialMedia: this.editForm.socialMedia,
       address: this.editForm.address,
-      updatedAt: new Date().toISOString(),
     };
 
-    if (this.logoRemoved) {
-      updateData.logo = '';
-    } else if (this.editForm.logo) {
-      updateData.logo = this.editForm.logo;
-    }
-
-    if (this.bannerRemoved) {
-      updateData.banner = '';
-    } else if (this.editForm.banner) {
-      updateData.banner = this.editForm.banner;
-    }
+    // ⚠️ NÃO envia logo/banner — já são salvos via uploadStoreLogo/Banner
 
     this.storeService.updateStore(this.storeId, updateData).subscribe({
       next: (updatedStore) => {
