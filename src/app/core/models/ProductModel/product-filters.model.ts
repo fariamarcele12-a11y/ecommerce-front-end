@@ -20,4 +20,5 @@ export interface ProductFilters {
   limit?: number;
   page?: number;
   sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'popular' | 'rating' | 'sales';
+  storeId?: string;
 }

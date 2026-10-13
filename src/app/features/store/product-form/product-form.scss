@@ -75,3 +75,28 @@
 .badge.bg-warning {
   animation: pulse 2s infinite;
 }
+
+.image-preview-card {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f0f0f0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.upload-btn {
+  border-style: dashed !important;
+  border-width: 2px !important;
+  border-color: #ccc !important;
+
+  &:hover {
+    border-color: var(--bs-primary) !important;
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+  }
+}
