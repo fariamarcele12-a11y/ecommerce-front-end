@@ -187,7 +187,7 @@ export class ProductForm implements OnInit {
             oldPrice: product.originalPrice || product.oldPrice || 0,
             category: product.category || '',
             categorySlug: '',
-            condition: product.condition || 'new',
+            condition: (product.condition as 'new' | 'used') || 'new',
             location: product.location || '',
             stock: product.stock || 1,
             freeShipping: product.freeShipping || false,
@@ -195,6 +195,7 @@ export class ProductForm implements OnInit {
 
           this.parseLocation(product.location || '');
 
+          // Localiza a categoria pelo NOME (o backend retorna apenas o nome)
           const category = this.categories.find((c) => c.name === product.category);
           if (category) this.product.categorySlug = category.slug;
 
@@ -231,13 +232,17 @@ export class ProductForm implements OnInit {
   loadCategories(): void {
     this.categoryService.getCategories().subscribe({
       next: (categories: Category[]) => {
-        this.categories = categories.filter((cat) => cat.active);
+        // 🔥 Filtra apenas as ativas E as que NÃO têm parentId (categorias raiz)
+        this.categories = categories.filter((cat) => cat.active && !cat.parentId);
+
+        // Se está editando, tenta casar a categoria do produto com uma da lista
         if (this.isEditing && this.product.category) {
           const category = this.categories.find((c) => c.name === this.product.category);
           if (category) this.product.categorySlug = category.slug;
         }
       },
-      error: () => {
+      error: (err) => {
+        console.warn('⚠️ Erro ao carregar categorias, usando fallback local:', err);
         this.categories = this.getDefaultCategories();
       },
     });
@@ -246,12 +251,12 @@ export class ProductForm implements OnInit {
   private getDefaultCategories(): Category[] {
     const now = new Date().toISOString();
     return [
-      { id: 1, name: 'Eletrônicos', slug: 'eletronicos', active: true, createdAt: now, description: '', icon: 'bi-phone', productCount: 0 },
-      { id: 2, name: 'Moda', slug: 'moda', active: true, createdAt: now, description: '', icon: 'bi-bag', productCount: 0 },
-      { id: 3, name: 'Casa e Decoração', slug: 'casa-decoracao', active: true, createdAt: now, description: '', icon: 'bi-house', productCount: 0 },
-      { id: 4, name: 'Esportes', slug: 'esportes', active: true, createdAt: now, description: '', icon: 'bi-bicycle', productCount: 0 },
-      { id: 5, name: 'Automóveis', slug: 'automoveis', active: true, createdAt: now, description: '', icon: 'bi-car-front', productCount: 0 },
-      { id: 6, name: 'Imóveis', slug: 'imoveis', active: true, createdAt: now, description: '', icon: 'bi-building', productCount: 0 },
+      { id: '1', name: 'Eletrônicos', slug: 'eletronicos', active: true, createdAt: now, description: '', icon: 'bi-phone', productCount: 0, subcategories: [], parentId: null },
+      { id: '2', name: 'Moda', slug: 'moda', active: true, createdAt: now, description: '', icon: 'bi-bag', productCount: 0, subcategories: [], parentId: null },
+      { id: '3', name: 'Casa e Decoração', slug: 'casa-decoracao', active: true, createdAt: now, description: '', icon: 'bi-house', productCount: 0, subcategories: [], parentId: null },
+      { id: '4', name: 'Esportes', slug: 'esportes', active: true, createdAt: now, description: '', icon: 'bi-bicycle', productCount: 0, subcategories: [], parentId: null },
+      { id: '5', name: 'Automóveis', slug: 'automoveis', active: true, createdAt: now, description: '', icon: 'bi-car-front', productCount: 0, subcategories: [], parentId: null },
+      { id: '6', name: 'Imóveis', slug: 'imoveis', active: true, createdAt: now, description: '', icon: 'bi-building', productCount: 0, subcategories: [], parentId: null },
     ];
   }
 
@@ -287,7 +292,8 @@ export class ProductForm implements OnInit {
       const base64 = reader.result as string;
       this.uploadImage(base64);
     };
-    reader.onerror = () => this.alertService.error('Erro', 'Não foi possível ler o arquivo.');
+    reader.onerror = () =>
+      this.alertService.error('Erro', 'Não foi possível ler o arquivo.');
     reader.readAsDataURL(file);
 
     input.value = '';
@@ -318,11 +324,13 @@ export class ProductForm implements OnInit {
   moveImage(index: number, direction: -1 | 1): void {
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= this.imageUrls.length) return;
-    [this.imageUrls[index], this.imageUrls[newIndex]] =
-      [this.imageUrls[newIndex], this.imageUrls[index]];
+    [this.imageUrls[index], this.imageUrls[newIndex]] = [
+      this.imageUrls[newIndex],
+      this.imageUrls[index],
+    ];
   }
 
-  // 🔥 Aliases para manter compatibilidade com o HTML atual
+  // Aliases para compatibilidade com HTML antigo (input de URL)
   addImageField(): void {
     if (this.imageUrls.length < 5) {
       this.imageUrls.push('');
@@ -343,6 +351,9 @@ export class ProductForm implements OnInit {
     if (category) {
       this.product.category = category.name;
       this.product.categorySlug = slug;
+    } else {
+      this.product.category = '';
+      this.product.categorySlug = '';
     }
   }
 
@@ -363,8 +374,10 @@ export class ProductForm implements OnInit {
   }
 
   formatPrice(price: number): string {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
-      .format(price);
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(price);
   }
 
   // ============================================================
@@ -398,7 +411,10 @@ export class ProductForm implements OnInit {
         },
         error: (error: any) => {
           this.loading = false;
-          this.alertService.error('Erro', error?.message || 'Não foi possível atualizar.');
+          this.alertService.error(
+            'Erro',
+            error?.message || 'Não foi possível atualizar.'
+          );
         },
       });
     } else {

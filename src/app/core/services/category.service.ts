@@ -1,24 +1,28 @@
 // src/app/core/services/category.service.ts
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, throwError, catchError, shareReplay, tap, map, of } from 'rxjs';
 import { Category, CategoryFilter } from '../models/category.model';
+import { AuthService } from './auth.service';
+import { environment } from '../../../environments/enviroment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CategoryService {
-  private apiUrl = 'http://localhost:3000/categories';
-  //private apiUrl = 'https://ecommerce-api-mf.vercel.app/categories';
+  private apiUrl = `${environment.apiUrl}/categories`;
 
   private categoriesCache$: Observable<Category[]> | null = null;
   private cacheDuration = 5 * 60 * 1000; // 5 minutos
   private lastCacheTime = 0;
 
   private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
 
+  // ============================================================
+  // GET CATEGORIES (com cache opcional)
+  // ============================================================
   getCategories(useCache = true): Observable<Category[]> {
-    // Se usar cache e tiver cache válido
     if (useCache && this.categoriesCache$ && Date.now() - this.lastCacheTime < this.cacheDuration) {
       return this.categoriesCache$;
     }
@@ -35,106 +39,105 @@ export class CategoryService {
     return request;
   }
 
+  // ============================================================
+  // GET COM FILTROS
+  // ============================================================
   getCategoriesWithFilters(filters?: CategoryFilter): Observable<Category[]> {
-    let url = this.apiUrl;
-    const params: string[] = [];
+    let params = new HttpParams();
 
     if (filters) {
-      if (filters.limit) {
-        params.push(`_limit=${filters.limit}`);
-      }
-      if (filters.sortBy === 'name') {
-        params.push('_sort=name');
-        params.push(`_order=${filters.order || 'asc'}`);
-      }
-      if (filters.sortBy === 'productCount') {
-        params.push('_sort=productCount');
-        params.push(`_order=${filters.order || 'desc'}`);
-      }
-      if (filters.categoryId) {
-        params.push(`id=${filters.categoryId}`);
-      }
-      if (filters.active !== undefined) {
-        params.push(`active=${filters.active}`);
-      }
-      if (filters.search) {
-        params.push(`q=${filters.search}`);
-      }
+      if (filters.limit) params = params.set('limit', String(filters.limit));
+      if (filters.sortBy) params = params.set('sortBy', filters.sortBy);
+      if (filters.order) params = params.set('order', filters.order);
+      if (filters.active !== undefined) params = params.set('active', String(filters.active));
+      if (filters.search) params = params.set('search', filters.search);
     }
 
-    if (params.length > 0) {
-      url += `?${params.join('&')}`;
-    }
-
-    return this.http.get<Category[]>(url).pipe(catchError(this.handleError));
+    return this.http.get<Category[]>(this.apiUrl, { params }).pipe(catchError(this.handleError));
   }
 
+  // ============================================================
+  // GET BY ID
+  // ============================================================
   getCategoryById(id: string | number): Observable<Category> {
-    return this.http.get<Category>(`${this.apiUrl}/${id}`).pipe(catchError(this.handleError));
+    return this.http
+      .get<Category>(`${this.apiUrl}/${id}`)
+      .pipe(catchError(this.handleError));
   }
 
+  // ============================================================
+  // GET BY SLUG
+  // ============================================================
   getCategoryBySlug(slug: string): Observable<Category | null> {
-    return this.http.get<Category[]>(`${this.apiUrl}?slug=${slug}`).pipe(
-      map((categories) => {
-        return categories.length ? categories[0] : null;
-      }),
+    return this.http.get<Category>(`${this.apiUrl}/slug/${slug}`).pipe(
       catchError((error) => {
+        if (error.status === 404) return of(null);
         console.error('❌ Erro ao buscar categoria por slug:', error);
         return of(null);
       }),
     );
   }
 
-  getSubcategories(parentId: number): Observable<Category[]> {
+  // ============================================================
+  // SUBCATEGORIAS
+  // ============================================================
+  getSubcategories(parentId: string | number): Observable<Category[]> {
     return this.http
-      .get<Category[]>(`${this.apiUrl}?parentId=${parentId}`)
+      .get<Category[]>(`${this.apiUrl}/${parentId}/subcategories`)
       .pipe(catchError(this.handleError));
   }
 
+  // ============================================================
+  // POPULARES
+  // ============================================================
   getPopularCategories(limit = 6): Observable<Category[]> {
     return this.http
-      .get<Category[]>(`${this.apiUrl}?_sort=productCount&_order=desc&_limit=${limit}`)
+      .get<Category[]>(`${this.apiUrl}/popular`, {
+        params: new HttpParams().set('limit', String(limit)),
+      })
       .pipe(catchError(this.handleError));
   }
 
+  // ============================================================
+  // COM ÍCONE
+  // ============================================================
   getCategoriesWithIcons(): Observable<Category[]> {
     return this.http
-      .get<Category[]>(`${this.apiUrl}?icon_ne=&icon_nnull=true`)
+      .get<Category[]>(`${this.apiUrl}/with-icons`)
       .pipe(catchError(this.handleError));
   }
 
+  // ============================================================
+  // ATIVAS
+  // ============================================================
   getActiveCategories(): Observable<Category[]> {
     return this.http
-      .get<Category[]>(`${this.apiUrl}?active=true`)
+      .get<Category[]>(this.apiUrl, {
+        params: new HttpParams().set('active', 'true'),
+      })
       .pipe(catchError(this.handleError));
   }
 
+  // ============================================================
+  // CREATE
+  // ============================================================
   createCategory(category: Partial<Category>): Observable<Category> {
     return this.http
-      .post<Category>(this.apiUrl, {
-        ...category,
-        active: true,
-        createdAt: new Date().toISOString(),
-      })
+      .post<Category>(this.apiUrl, category, { headers: this.authHeaders() })
       .pipe(
-        tap(() => {
-          // Invalidar cache
-          this.invalidateCache();
-        }),
+        tap(() => this.invalidateCache()),
         catchError(this.handleError),
       );
   }
 
+  // ============================================================
+  // UPDATE
+  // ============================================================
   updateCategory(id: string | number, category: Partial<Category>): Observable<Category> {
     return this.http
-      .patch<Category>(`${this.apiUrl}/${id}`, {
-        ...category,
-        updatedAt: new Date().toISOString(),
-      })
+      .patch<Category>(`${this.apiUrl}/${id}`, category, { headers: this.authHeaders() })
       .pipe(
-        tap((updated) => {
-          this.invalidateCache();
-        }),
+        tap(() => this.invalidateCache()),
         catchError((error) => {
           console.error('❌ Erro ao atualizar categoria:', error);
           return throwError(() => new Error('Erro ao atualizar categoria.'));
@@ -142,22 +145,32 @@ export class CategoryService {
       );
   }
 
-  deleteCategory(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
-      tap(() => {
-        // Invalidar cache
-        this.invalidateCache();
-      }),
-      catchError(this.handleError),
-    );
+  // ============================================================
+  // DELETE
+  // ============================================================
+  deleteCategory(id: string | number): Observable<void> {
+    return this.http
+      .delete<void>(`${this.apiUrl}/${id}`, { headers: this.authHeaders() })
+      .pipe(
+        tap(() => this.invalidateCache()),
+        catchError(this.handleError),
+      );
   }
 
+  // ============================================================
+  // SEARCH
+  // ============================================================
   searchCategories(searchTerm: string): Observable<Category[]> {
     return this.http
-      .get<Category[]>(`${this.apiUrl}?q=${searchTerm}`)
+      .get<Category[]>(this.apiUrl, {
+        params: new HttpParams().set('search', searchTerm),
+      })
       .pipe(catchError(this.handleError));
   }
 
+  // ============================================================
+  // CACHE
+  // ============================================================
   invalidateCache(): void {
     this.categoriesCache$ = null;
     this.lastCacheTime = 0;
@@ -168,6 +181,30 @@ export class CategoryService {
     return this.getCategories(false);
   }
 
+  // ============================================================
+  // HEALTH CHECK
+  // ============================================================
+  checkApiHealth(): Observable<{ status: string; timestamp: string }> {
+    return this.http.get(`${environment.apiUrl.replace('/api', '')}/swagger/index.html`).pipe(
+      map(() => ({ status: 'online', timestamp: new Date().toISOString() })),
+      catchError(() => of({ status: 'offline', timestamp: new Date().toISOString() })),
+    );
+  }
+
+  // ============================================================
+  // HEADERS
+  // ============================================================
+  private authHeaders(): HttpHeaders {
+    const token = this.authService.getToken();
+    return new HttpHeaders({
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    });
+  }
+
+  // ============================================================
+  // ERROR
+  // ============================================================
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'Ocorreu um erro ao processar sua requisição.';
 
@@ -176,37 +213,26 @@ export class CategoryService {
     } else {
       switch (error.status) {
         case 0:
-          errorMessage =
-            'Não foi possível conectar ao servidor local. Verifique se o JSON Server está rodando.';
+          errorMessage = 'Não foi possível conectar ao servidor.';
+          break;
+        case 401:
+          errorMessage = 'Sessão expirada. Faça login novamente.';
+          break;
+        case 403:
+          errorMessage = 'Você não tem permissão para esta ação.';
           break;
         case 404:
-          errorMessage = 'Recurso não encontrado. Verifique a URL.';
+          errorMessage = 'Categoria não encontrada.';
           break;
         case 500:
-          errorMessage = 'Erro interno do servidor. Tente novamente mais tarde.';
+          errorMessage = error?.error?.message || 'Erro interno do servidor.';
           break;
         default:
-          errorMessage = `Código do erro: ${error.status}, Mensagem: ${error.message}`;
+          errorMessage = `Código: ${error.status}, Mensagem: ${error.message}`;
       }
     }
 
     console.error('❌ Erro no CategoryService:', errorMessage);
     return throwError(() => new Error(errorMessage));
-  }
-
-  checkApiHealth(): Observable<{ status: string; timestamp: string }> {
-    return this.http.get<{ status: string; timestamp: string }>(`http://localhost:3000/`).pipe(
-      map(() => ({
-        status: 'online',
-        timestamp: new Date().toISOString(),
-      })),
-      catchError((error) => {
-        console.error('❌ API local não está respondendo:', error);
-        return throwError(
-          () =>
-            new Error('API local indisponível. Execute: json-server --watch db.json --port 3000'),
-        );
-      }),
-    );
   }
 }
