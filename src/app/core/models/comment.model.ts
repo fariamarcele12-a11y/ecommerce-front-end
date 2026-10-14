@@ -1,8 +1,8 @@
 // src/app/core/models/comment.model.ts
 export interface Comment {
-  id: string;
-  productId: string;
-  userId: string;
+  id: string;              // Guid
+  productId: string;       // Guid
+  userId: string;          // Guid
   userName: string;
   userAvatar?: string;
   content: string;
@@ -15,9 +15,9 @@ export interface Comment {
 }
 
 export interface CommentReply {
-  id: string;
-  commentId: string;
-  userId: string;
+  id: string;              // Guid
+  commentId: string;       // Guid
+  userId: string;          // Guid
   userName: string;
   userAvatar?: string;
   content: string;
