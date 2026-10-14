@@ -1,7 +1,7 @@
 // src/app/core/services/comment.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of, throwError, catchError, map, switchMap } from 'rxjs';
+import { Observable, of, throwError, catchError, map } from 'rxjs';
 import { Comment, CommentReply, CreateComment, CreateReply } from '../models/comment.model';
 import { AuthService } from './auth.service';
 import { environment } from '../../../environments/enviroment';
@@ -11,7 +11,6 @@ import { environment } from '../../../environments/enviroment';
 })
 export class CommentService {
   private apiUrl = `${environment.apiUrl}/comments`;
-  private productsApiUrl = `${environment.apiUrl}/products`;
 
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
@@ -36,21 +35,6 @@ export class CommentService {
     const name = encodeURIComponent(userName || 'Usuário');
     const bgColor = isSeller ? '28a745' : '667eea';
     return `https://ui-avatars.com/api/?name=${name}&background=${bgColor}&color=fff&size=80&bold=true`;
-  }
-
-  // ============================================================
-  // LISTAR COMENTÁRIOS POR PRODUTO
-  // ============================================================
-  getCommentsByProduct(productId: string): Observable<Comment[]> {
-    return this.http
-      .get<Comment[]>(`${this.apiUrl}/product/${productId}`)
-      .pipe(
-        map((comments) => this.applyAvatarFallback(comments)),
-        catchError((error) => {
-          console.error('❌ Erro ao buscar comentários:', error);
-          return of([]);
-        }),
-      );
   }
 
   private applyAvatarFallback(comments: Comment[]): Comment[] {
@@ -80,7 +64,23 @@ export class CommentService {
   }
 
   // ============================================================
+  // LISTAR COMENTÁRIOS POR PRODUTO
+  // ============================================================
+  getCommentsByProduct(productId: string): Observable<Comment[]> {
+    return this.http
+      .get<Comment[]>(`${this.apiUrl}/product/${productId}`)
+      .pipe(
+        map((comments) => this.applyAvatarFallback(comments)),
+        catchError((error) => {
+          console.error('❌ Erro ao buscar comentários:', error);
+          return of([]);
+        }),
+      );
+  }
+
+  // ============================================================
   // CRIAR COMENTÁRIO
+  // ⚠️ O backend cria a notificação para o vendedor automaticamente
   // ============================================================
   createComment(commentData: CreateComment): Observable<Comment> {
     const user = this.authService.getCurrentUser();
@@ -116,6 +116,8 @@ export class CommentService {
 
   // ============================================================
   // ADICIONAR RESPOSTA
+  // ⚠️ O backend cria a notificação para o autor se for o vendedor
+  // ⚠️ Não enviamos isFromSeller — o backend calcula pelo SellerId
   // ============================================================
   addReply(commentId: string, replyData: CreateReply): Observable<Comment> {
     const user = this.authService.getCurrentUser();
@@ -128,7 +130,7 @@ export class CommentService {
         `${this.apiUrl}/${commentId}/replies`,
         {
           content: replyData.content,
-          isFromSeller: replyData.isFromSeller ?? false,
+          // 🔒 isFromSeller NÃO é enviado — backend decide
         },
         { headers: this.authHeaders() },
       )
@@ -160,20 +162,13 @@ export class CommentService {
   // ============================================================
   // REMOVER RESPOSTA
   // ============================================================
-  deleteReply(commentId: string, replyId: string): Observable<Comment> {
+  deleteReply(commentId: string, replyId: string): Observable<void> {
     return this.http
       .delete<void>(
         `${this.apiUrl}/${commentId}/replies/${replyId}`,
         { headers: this.authHeaders() },
       )
       .pipe(
-        switchMap(() =>
-          // Depois de deletar, busca a lista atualizada e devolve o comentário
-          this.http.get<Comment>(`${this.apiUrl}/product/${commentId}`).pipe(
-            catchError(() => of(null as any)),
-          ),
-        ),
-        // Se não conseguirmos pegar o comentário atualizado, apenas retornamos sucesso vazio
         catchError((error) => {
           console.error('❌ Erro ao remover resposta:', error);
           const msg = error?.error?.message || 'Erro ao remover resposta.';
@@ -208,6 +203,22 @@ export class CommentService {
     return this.http
       .post<Comment>(`${this.apiUrl}/${id}/like`, {}, { headers: this.authHeaders() })
       .pipe(
+        map((comment) => ({
+          ...comment,
+          userAvatar: this.generateAvatarUrl(
+            comment.userName || 'Usuário',
+            comment.userAvatar,
+            comment.isFromSeller || false,
+          ),
+          replies: (comment.replies || []).map((reply) => ({
+            ...reply,
+            userAvatar: this.generateAvatarUrl(
+              reply.userName || 'Usuário',
+              reply.userAvatar,
+              reply.isFromSeller || false,
+            ),
+          })),
+        })),
         catchError((error) => {
           console.error('❌ Erro ao alternar like:', error);
           return throwError(() => new Error('Erro ao alternar like.'));
