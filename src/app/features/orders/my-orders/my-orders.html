@@ -70,7 +70,7 @@
           <span class="fw-bold">Pedido: {{ order.id }}</span>
           <span class="text-muted ms-3 small">
             <i class="bi bi-calendar me-1"></i>
-            {{ formatDate(order.createdAt) }}
+            {{ formatDateOnly(order.createdAt) }} às {{ formatTime(order.createdAt) }}
           </span>
         </div>
         <div class="d-flex align-items-center gap-2">

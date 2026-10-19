@@ -10,7 +10,6 @@ import { AlertService } from '../../core/services/alert.service';
 import { CepService, Endereco } from '../../core/services/cep.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
-import { DocumentValidator } from '../../core/utils/validators';
 import { User, UserAddress } from '../../core/models/user.model';
 import { Order, OrderItem, PaymentMethod } from '../../core/models/checkout.model';
 
@@ -19,7 +18,7 @@ import { Order, OrderItem, PaymentMethod } from '../../core/models/checkout.mode
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './checkout.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.Default,
   styleUrls: ['./checkout.scss'],
 })
 export class Checkout implements OnInit, OnDestroy {
@@ -67,7 +66,6 @@ export class Checkout implements OnInit, OnDestroy {
   orderId = '';
   paymentError = '';
   isSearchingCep = false;
-  documentError: string = '';
 
   private subscriptions: Subscription = new Subscription();
 
@@ -96,18 +94,31 @@ export class Checkout implements OnInit, OnDestroy {
     return this.userAddresses.find((a) => a.id === this.selectedAddressId) || null;
   }
 
-  isDocumentValid(): boolean {
-    if (!this.form.cpfCnpj) return false;
-    const numbers = this.form.cpfCnpj.replace(/\D/g, '');
-
-    if (numbers.length === 11) {
-      return DocumentValidator.isValidCPF(numbers);
-    } else if (numbers.length === 14) {
-      return DocumentValidator.isValidCNPJ(numbers);
-    }
-    return false;
+  // ============================================================
+  // 🔥 DOCUMENTO — usa o mascarado que vem do backend (LGPD)
+  // ============================================================
+  /**
+   * Retorna o documento mascarado do usuário (ex: "123.***.***-10")
+   * O backend já envia o documento mascarado — NÃO tenta validar aqui.
+   */
+  getMaskedDocument(): string {
+    return this.currentUser?.document || '';
   }
 
+  /**
+   * Verifica se o usuário TEM documento cadastrado (mesmo mascarado).
+   * Não valida o valor — apenas verifica existência.
+   */
+  hasDocument(): boolean {
+    const doc = this.currentUser?.document;
+    if (!doc) return false;
+    // Se o documento mascarado tem pelo menos 1 caractere, considera cadastrado
+    return doc.trim().length > 0;
+  }
+
+  // ============================================================
+  // CARREGAMENTO DE DADOS
+  // ============================================================
   loadUserData(): void {
     const user = this.authService.getCurrentUser();
     if (!user) {
@@ -118,9 +129,9 @@ export class Checkout implements OnInit, OnDestroy {
 
     this.currentUser = user;
 
-    if (user.document) {
-      this.form.cpfCnpj = this.formatCpfCnpj(user.document);
-    }
+    // 🔒 NÃO usa user.document para preencher cpfCnpj porque está mascarado.
+    // O documento já foi validado no cadastro. Aqui apenas exibimos o mascarado.
+    // (o backend tem o documento completo e usa no pedido, não precisa do front)
 
     this.loadUserAddresses(user);
   }
@@ -175,6 +186,9 @@ export class Checkout implements OnInit, OnDestroy {
     return 'ADDR-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 8);
   }
 
+  // ============================================================
+  // ENDEREÇOS
+  // ============================================================
   selectAddress(addressId: string): void {
     const address = this.userAddresses.find((a) => a.id === addressId);
     if (address) {
@@ -305,6 +319,7 @@ export class Checkout implements OnInit, OnDestroy {
           id: this.currentUser?.id || updatedUser.id,
           name: this.currentUser?.name || updatedUser.name,
           email: this.currentUser?.email || updatedUser.email,
+          // 🔒 NÃO sobrescreve `document` (vem mascarado do backend)
           document: this.currentUser?.document || updatedUser.document,
           documentType: this.currentUser?.documentType || updatedUser.documentType,
           phone: this.currentUser?.phone || updatedUser.phone,
@@ -348,6 +363,9 @@ export class Checkout implements OnInit, OnDestroy {
     );
   }
 
+  // ============================================================
+  // CARRINHO
+  // ============================================================
   loadCartData(): void {
     this.subscriptions.add(
       this.cartService.getCartItems().subscribe((items: CartItem[]) => {
@@ -355,12 +373,6 @@ export class Checkout implements OnInit, OnDestroy {
         if (items.length === 0) {
           this.alertService.warning('Carrinho vazio', 'Adicione itens ao carrinho.');
           this.router.navigate(['/carrinho']);
-        } else {
-          items.forEach((item) => {
-            console.log({
-              produto: item.product.name,
-            });
-          });
         }
       }),
     );
@@ -395,6 +407,9 @@ export class Checkout implements OnInit, OnDestroy {
     this.total = summary.total;
   }
 
+  // ============================================================
+  // CEP
+  // ============================================================
   onCepBlur(): void {
     const cep = this.form.address.cep.replace(/\D/g, '');
     if (cep.length === 8) {
@@ -440,48 +455,13 @@ export class Checkout implements OnInit, OnDestroy {
     return this.cepService.formatarCep(value);
   }
 
-  formatCpfCnpj(value: string): string {
-    const numbers = value.replace(/\D/g, '');
-    if (numbers.length === 0) return '';
-
-    if (numbers.length <= 11) {
-      return numbers
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-        .slice(0, 14);
-    } else {
-      return numbers
-        .replace(/(\d{2})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1/$2')
-        .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
-        .slice(0, 18);
-    }
-  }
-
-  onCpfCnpjChange(value: string): void {
-    this.form.cpfCnpj = this.formatCpfCnpj(value);
-
-    const numbers = value.replace(/\D/g, '');
-
-    if (numbers.length === 11) {
-      this.documentError = DocumentValidator.isValidCPF(numbers)
-        ? ''
-        : 'CPF inválido. Verifique os dígitos.';
-    } else if (numbers.length === 14) {
-      this.documentError = DocumentValidator.isValidCNPJ(numbers)
-        ? ''
-        : 'CNPJ inválido. Verifique os dígitos.';
-    } else {
-      this.documentError = '';
-    }
-  }
-
   isValidCep(cep: string): boolean {
     return this.cepService.validarCep(cep);
   }
 
+  // ============================================================
+  // PAGAMENTO
+  // ============================================================
   onPaymentMethodChange(methodId: string): void {
     this.selectedPaymentMethod = methodId;
     this.form.paymentMethod = methodId;
@@ -502,6 +482,9 @@ export class Checkout implements OnInit, OnDestroy {
     }).format(price);
   }
 
+  // ============================================================
+  // VALIDAÇÃO
+  // ============================================================
   validateForm(): boolean {
     const address = this.selectedAddress;
 
@@ -535,8 +518,12 @@ export class Checkout implements OnInit, OnDestroy {
       return false;
     }
 
-    if (!this.isDocumentValid()) {
-      this.alertService.error('CPF/CNPJ inválido', 'O documento cadastrado não é válido.');
+    // 🔥 Verifica apenas se o usuário TEM documento (não valida o valor mascarado)
+    if (!this.hasDocument()) {
+      this.alertService.error(
+        'CPF/CNPJ não cadastrado',
+        'Cadastre seu CPF ou CNPJ no perfil antes de finalizar a compra.',
+      );
       return false;
     }
 
@@ -547,6 +534,9 @@ export class Checkout implements OnInit, OnDestroy {
     return true;
   }
 
+  // ============================================================
+  // SUBMIT
+  // ============================================================
   async onSubmit(): Promise<void> {
     if (!this.validateForm()) {
       return;
@@ -564,7 +554,6 @@ export class Checkout implements OnInit, OnDestroy {
     );
 
     try {
-      // 🔥 Atualiza endereço principal se solicitado
       if (this.form.updateAsMainAddress && this.selectedAddressId) {
         this.userAddresses.forEach((a) => (a.isDefault = a.id === this.selectedAddressId));
         this.saveAddressesToUser();
@@ -575,7 +564,6 @@ export class Checkout implements OnInit, OnDestroy {
 
       const checkoutItems = this.cartService.getCheckoutItems();
 
-      // 🔥 CORREÇÃO: manter productId como STRING
       const mappedItems: OrderItem[] = checkoutItems.map((item) => ({
         productId: String(item.productId),
         productName: item.productName,
@@ -590,8 +578,6 @@ export class Checkout implements OnInit, OnDestroy {
       const orderData: Partial<Order> = {
         userId: String(this.currentUser.id),
         buyerName: this.currentUser.name,
-
-        // 🔥 NOVOS CAMPOS — contato do comprador para envio
         buyerEmail: this.currentUser.email,
         buyerPhone: this.currentUser.phone,
 
@@ -645,6 +631,9 @@ export class Checkout implements OnInit, OnDestroy {
     }
   }
 
+  // ============================================================
+  // NAVEGAÇÃO
+  // ============================================================
   continueShopping(): void {
     this.router.navigate(['/home']);
   }

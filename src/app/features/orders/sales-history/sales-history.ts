@@ -1,10 +1,11 @@
+// src/app/features/orders/sales-history/sales-history.ts
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { OrderService } from '../../../core/services/order.service';
 import { Order } from '../../../core/models/checkout.model';
 import { AlertService } from '../../../core/services/alert.service';
-import { AuthService } from '../../../core/services/auth.service'; // 🔥 ADICIONAR
+import { AuthService } from '../../../core/services/auth.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -12,7 +13,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './sales-history.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.Default,
   styleUrls: ['./sales-history.scss'],
 })
 export class SalesHistory implements OnInit, OnDestroy {
@@ -43,7 +44,7 @@ export class SalesHistory implements OnInit, OnDestroy {
   constructor(
     private orderService: OrderService,
     private alertService: AlertService,
-    private authService: AuthService, // 🔥 ADICIONAR
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -57,7 +58,6 @@ export class SalesHistory implements OnInit, OnDestroy {
   loadSales(): void {
     this.loading = true;
 
-    // 🔥 CORREÇÃO: pegar o ID do usuário LOGADO
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser?.id) {
       this.loading = false;
@@ -66,7 +66,6 @@ export class SalesHistory implements OnInit, OnDestroy {
       return;
     }
 
-    // 🔥 CORREÇÃO: verificar se o usuário é vendedor
     if (!currentUser.hasStore) {
       this.loading = false;
       this.orders = [];
@@ -76,7 +75,6 @@ export class SalesHistory implements OnInit, OnDestroy {
 
     const sellerId = String(currentUser.id);
 
-    // 🔥 CORREÇÃO: usar getSellerOrders em vez de getOrders
     this.subscriptions.add(
       this.orderService.getSellerOrders(sellerId).subscribe({
         next: (orders) => {
@@ -121,11 +119,73 @@ export class SalesHistory implements OnInit, OnDestroy {
     }).format(price);
   }
 
-  formatDate(date: Date): string {
-    return new Date(date).toLocaleDateString('pt-BR', {
+  // ============================================================
+  // 🔥 FORMATAÇÃO DE DATA/HORA — infalível
+  // ============================================================
+
+  /**
+   * Converte qualquer string de data para um objeto Date garantindo que seja UTC.
+   */
+  private parseDate(date: string | Date): Date {
+    if (!date) return new Date();
+    if (date instanceof Date) return date;
+
+    // Se a string NÃO termina com 'Z' e NÃO tem fuso horário explícito (ex: +03:00),
+    // significa que o backend mandou o UTC cru sem o 'Z'. Nós adicionamos o 'Z'.
+    let dateStr = String(date);
+    if (!dateStr.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(dateStr)) {
+      dateStr += 'Z';
+    }
+
+    return new Date(dateStr);
+  }
+
+  /**
+   * Formata data + hora completa: "19/10/2026 às 19:49"
+   */
+  formatDate(date: string | Date): string {
+    if (!date) return '';
+
+    const d = this.parseDate(date);
+
+    if (isNaN(d.getTime())) return '';
+
+    return d.toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).replace(',', ' às');
+  }
+
+  /**
+   * Formata só a data: "19/10/2026"
+   */
+  formatDateOnly(date: string | Date): string {
+    if (!date) return '';
+    const d = this.parseDate(date);
+    if (isNaN(d.getTime())) return '';
+
+    return d.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  /**
+   * Formata só a hora: "19:49"
+   */
+  formatTime(date: string | Date): string {
+    if (!date) return '';
+    const d = this.parseDate(date);
+    if (isNaN(d.getTime())) return '';
+
+    return d.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
       hour: '2-digit',
       minute: '2-digit',
     });

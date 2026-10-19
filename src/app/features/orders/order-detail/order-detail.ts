@@ -16,7 +16,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, RouterLink, ReviewModal],
   templateUrl: './order-detail.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.Default,
   styleUrls: ['./order-detail.scss'],
 })
 export class OrderDetail implements OnInit, OnDestroy {
@@ -233,11 +233,73 @@ export class OrderDetail implements OnInit, OnDestroy {
     }).format(price);
   }
 
-  formatDate(date: Date): string {
-    return new Date(date).toLocaleDateString('pt-BR', {
+  // ============================================================
+  // 🔥 FORMATAÇÃO DE DATA/HORA — infalível
+  // ============================================================
+
+  /**
+   * Converte qualquer string de data para um objeto Date garantindo que seja UTC.
+   */
+  private parseDate(date: string | Date): Date {
+    if (!date) return new Date();
+    if (date instanceof Date) return date;
+
+    // Se a string NÃO termina com 'Z' e NÃO tem fuso horário explícito (ex: +03:00),
+    // significa que o backend mandou o UTC cru sem o 'Z'. Nós adicionamos o 'Z'.
+    let dateStr = String(date);
+    if (!dateStr.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(dateStr)) {
+      dateStr += 'Z';
+    }
+
+    return new Date(dateStr);
+  }
+
+  /**
+   * Formata data + hora completa: "19/10/2026 às 19:49"
+   */
+  formatDate(date: string | Date): string {
+    if (!date) return '';
+
+    const d = this.parseDate(date);
+
+    if (isNaN(d.getTime())) return '';
+
+    return d.toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).replace(',', ' às');
+  }
+
+  /**
+   * Formata só a data: "19/10/2026"
+   */
+  formatDateOnly(date: string | Date): string {
+    if (!date) return '';
+    const d = this.parseDate(date);
+    if (isNaN(d.getTime())) return '';
+
+    return d.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  /**
+   * Formata só a hora: "19:49"
+   */
+  formatTime(date: string | Date): string {
+    if (!date) return '';
+    const d = this.parseDate(date);
+    if (isNaN(d.getTime())) return '';
+
+    return d.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
       hour: '2-digit',
       minute: '2-digit',
     });

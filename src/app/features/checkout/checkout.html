@@ -117,7 +117,7 @@
               </div>
             </div>
 
-            <!-- 🔥 Endereço selecionado (resumo) - CORRIGIDO com getter -->
+            <!-- Endereço selecionado (resumo) -->
             <div *ngIf="selectedAddress" class="alert alert-light border mb-3">
               <small class="text-muted d-block mb-1">
                 <i class="bi bi-check-circle-fill text-success me-1"></i>
@@ -149,31 +149,35 @@
             </h5>
 
             <div class="row g-3">
-              <!-- 🔥 CPF/CNPJ - SOMENTE LEITURA -->
+              <!-- 🔥 CPF/CNPJ — EXIBIDO MASCARADO (LGPD) -->
               <div class="col-md-6">
                 <label class="form-label small fw-bold">CPF/CNPJ</label>
                 <div class="input-group">
                   <span class="input-group-text bg-light">
-                    <i class="bi bi-lock"></i>
+                    <i class="bi bi-shield-lock-fill"></i>
                   </span>
                   <input
                     type="text"
                     class="form-control bg-light"
-                    [value]="form.cpfCnpj"
+                    [value]="getMaskedDocument() || 'Não cadastrado'"
                     readonly
                     disabled
-                    placeholder="000.000.000-00"
+                    placeholder="Documento cadastrado"
                   />
-                  <span class="input-group-text bg-success text-white" *ngIf="isDocumentValid()">
+                  <span class="input-group-text bg-success text-white" *ngIf="hasDocument()">
                     <i class="bi bi-check-circle-fill"></i>
                   </span>
-                  <span class="input-group-text bg-danger text-white" *ngIf="form.cpfCnpj && !isDocumentValid()">
-                    <i class="bi bi-x-circle-fill"></i>
+                  <span class="input-group-text bg-warning text-white" *ngIf="!hasDocument()">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
                   </span>
                 </div>
-                <small class="text-muted">
+                <small class="text-muted" *ngIf="hasDocument()">
                   <i class="bi bi-info-circle me-1"></i>
-                  Documento cadastrado no seu perfil
+                  Documento cadastrado e validado no seu perfil
+                </small>
+                <small class="text-danger" *ngIf="!hasDocument()">
+                  <i class="bi bi-exclamation-circle me-1"></i>
+                  Cadastre seu CPF/CNPJ no perfil antes de finalizar
                 </small>
               </div>
 

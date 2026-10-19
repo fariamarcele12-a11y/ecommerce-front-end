@@ -45,11 +45,8 @@ export interface Order {
   id: string;
   userId?: string;
   buyerName?: string;
-
-  // 🔥 Campos usados para notificação de venda
   buyerEmail?: string;
   buyerPhone?: string;
-
   items: OrderItem[];
   address: Address;
   paymentMethod: PaymentMethod;
