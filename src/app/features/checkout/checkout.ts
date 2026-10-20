@@ -4,7 +4,6 @@ import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
-import { CartItem, CartService } from '../../core/services/cart.service';
 import { OrderService } from '../../core/services/order.service';
 import { AlertService } from '../../core/services/alert.service';
 import { CepService, Endereco } from '../../core/services/cep.service';
@@ -12,6 +11,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
 import { User, UserAddress } from '../../core/models/user.model';
 import { Order, OrderItem, PaymentMethod } from '../../core/models/checkout.model';
+import { CartItem } from '../../core/models/cart.model';
+import { CartService } from '../../core/services/cart.service';
 
 @Component({
   selector: 'app-checkout',

@@ -1,54 +1,17 @@
 // src/app/core/services/cart.service.ts
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import {
-  BehaviorSubject,
-  Observable,
-  throwError,
-  catchError,
-  of,
-  tap,
-  switchMap,
-  forkJoin,
-  map,
-} from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { BehaviorSubject, Observable, throwError, catchError, of } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
+import {
+  CartItem,
+  CartSummary,
+  CheckoutItem,
+  ApiCartResponse,
+} from '../models/cart.model';
 import { AuthService } from './auth.service';
-
-export interface CartItem {
-  product: Product;
-  quantity: number;
-  subtotal?: number;
-}
-
-export interface CartSummary {
-  subtotal: number;
-  discount: number;
-  shipping: number;
-  total: number;
-  itemCount: number;
-  savings: number;
-}
-
-export interface ServerCart {
-  id: number;
-  items: {
-    productId: string;
-    quantity: number;
-  }[];
-}
-
-export interface CheckoutItem {
-  productId: string;
-  productName: string;
-  quantity: number;
-  price: number;
-  subtotal: number;
-  image: string;
-  sellerId: string;
-  sellerName: string;
-}
+import { environment } from '../../../environments/enviroment';
 
 type Coupon = Record<string, number>;
 
@@ -56,7 +19,7 @@ type Coupon = Record<string, number>;
   providedIn: 'root',
 })
 export class CartService {
-  private apiUrl = 'http://localhost:3000/cart';
+  private apiUrl = `${environment.apiUrl}/carts`;
 
   private cartItems = new BehaviorSubject<CartItem[]>([]);
   private totalItems = new BehaviorSubject<number>(0);
@@ -66,12 +29,9 @@ export class CartService {
   private couponCode = new BehaviorSubject<string>('');
 
   private isBrowser: boolean;
-  private isSyncing = false;
 
-  // 🔥 Chave do localStorage por usuário
-  private readonly CART_KEY_PREFIX = 'cart_';
+  // Chaves do localStorage para cupom (itens agora ficam no backend)
   private readonly COUPON_KEY_PREFIX = 'appliedCoupon_';
-  private readonly GUEST_CART_KEY = 'cart_guest';
   private readonly GUEST_COUPON_KEY = 'appliedCoupon_guest';
 
   private currentUserId: string | null = null;
@@ -83,110 +43,64 @@ export class CartService {
   constructor() {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
-    // 🔥 Escutar mudanças de usuário
+    // Escutar mudanças de usuário
     this.authService.currentUser$.subscribe((user) => {
       const newUserId = user?.id ? String(user.id) : null;
 
       if (this.currentUserId !== newUserId) {
         console.log('🛒 CartService: usuário mudou', this.currentUserId, '->', newUserId);
         this.currentUserId = newUserId;
-        this.loadCartForCurrentUser();
-      }
-    });
 
-    if (this.isBrowser) {
-      this.loadCartForCurrentUser();
-      this.syncCartWithServer();
-    }
-  }
-
-  /**
-   * 🔥 Gera a chave do carrinho baseada no usuário
-   */
-  private getCartKey(): string {
-    return this.currentUserId
-      ? `${this.CART_KEY_PREFIX}${this.currentUserId}`
-      : this.GUEST_CART_KEY;
-  }
-
-  /**
-   * 🔥 Gera a chave do cupom baseada no usuário
-   */
-  private getCouponKey(): string {
-    return this.currentUserId
-      ? `${this.COUPON_KEY_PREFIX}${this.currentUserId}`
-      : this.GUEST_COUPON_KEY;
-  }
-
-  /**
-   * 🔥 Carrega o carrinho do usuário atual
-   */
-  private loadCartForCurrentUser(): void {
-    if (!this.isBrowser) return;
-
-    try {
-      const cartData = localStorage.getItem(this.getCartKey());
-
-      if (cartData) {
-        const parsedData = JSON.parse(cartData);
-        if (parsedData && parsedData.length > 0) {
-          const items: CartItem[] = parsedData
-            .filter((d: any) => d.product)
-            .map((d: any) => ({
-              product: d.product,
-              quantity: d.quantity,
-              subtotal: d.product.price * d.quantity,
-            }));
-
-          if (items.length > 0) {
-            this.updateCart(items);
-            console.log(`🛒 Carrinho carregado para usuário ${this.currentUserId || 'guest'}:`, items.length);
-            return;
-          }
+        if (user) {
+          this.loadCartFromServer();
+        } else {
+          this.updateCart([]);
+          this.removeDiscount();
         }
       }
-
-      // Nenhum carrinho salvo - limpar estado
-      this.updateCart([]);
-      this.discount.next(0);
-      this.couponCode.next('');
-
-      // Carregar cupom do usuário
-      const couponData = localStorage.getItem(this.getCouponKey());
-      if (couponData) {
-        const coupon = JSON.parse(couponData);
-        this.discount.next(coupon.discount);
-        this.couponCode.next(coupon.code);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar carrinho do localStorage:', error);
-      this.updateCart([]);
-    }
+    });
   }
 
-  getCartItems(): Observable<CartItem[]> {
-    return this.cartItems.asObservable();
+  // ============================================================
+  // CARREGAMENTO DO BACKEND
+  // ============================================================
+  private loadCartFromServer(): void {
+    if (!this.isBrowser) return;
+
+    this.http.get<ApiCartResponse>(this.apiUrl, { headers: this.authHeaders() })
+      .pipe(
+        catchError((error) => {
+          console.warn('⚠️ Erro ao carregar carrinho:', error);
+          return of({ id: '', userId: '', items: [] } as ApiCartResponse);
+        })
+      )
+      .subscribe((cart) => {
+        this.updateFromServer(cart);
+        this.loadCouponFromStorage();
+      });
   }
 
-  getTotalItems(): Observable<number> {
-    return this.totalItems.asObservable();
+  private updateFromServer(cart: ApiCartResponse): void {
+    const items: CartItem[] = (cart.items || [])
+      .filter((i) => i.product !== null)
+      .map((i) => ({
+        product: i.product as Product,
+        quantity: i.quantity,
+        subtotal: (i.product?.price || 0) * i.quantity,
+      }));
+
+    this.updateCart(items);
   }
 
-  getTotalPrice(): Observable<number> {
-    return this.totalPrice.asObservable();
-  }
-
-  getDiscount(): Observable<number> {
-    return this.discount.asObservable();
-  }
-
-  getShipping(): Observable<number> {
-    return this.shipping.asObservable();
-  }
-
-  getCouponCode(): Observable<string> {
-    return this.couponCode.asObservable();
-  }
+  // ============================================================
+  // OBSERVABLES PÚBLICOS
+  // ============================================================
+  getCartItems(): Observable<CartItem[]> { return this.cartItems.asObservable(); }
+  getTotalItems(): Observable<number> { return this.totalItems.asObservable(); }
+  getTotalPrice(): Observable<number> { return this.totalPrice.asObservable(); }
+  getDiscount(): Observable<number> { return this.discount.asObservable(); }
+  getShipping(): Observable<number> { return this.shipping.asObservable(); }
+  getCouponCode(): Observable<string> { return this.couponCode.asObservable(); }
 
   getCheckoutItems(): CheckoutItem[] {
     return this.cartItems.value.map((item) => {
@@ -201,110 +115,89 @@ export class CartService {
         price,
         subtotal: price * quantity,
         image: product.images?.[0] || '',
-        sellerId: this.getSellerIdFromItem(item),
-        sellerName: this.getSellerNameFromItem(item),
+        sellerId: this.getSellerIdFromProduct(product),
+        sellerName: this.getSellerNameFromProduct(product),
       };
     });
   }
 
+  // ============================================================
+  // AÇÕES DO CARRINHO (sincronizadas com backend)
+  // ============================================================
   addToCart(product: Product, quantity = 1): void {
-    const currentItems = this.cartItems.value;
-    const existingItem = currentItems.find((item) => item.product.id === product.id);
-
-    if (existingItem) {
-      const newQuantity = existingItem.quantity + quantity;
-      if (newQuantity <= product.stock) {
-        existingItem.quantity = newQuantity;
-      } else {
-        existingItem.quantity = product.stock;
-        if (this.isBrowser) {
-          alert(`Desculpe, só temos ${product.stock} unidades disponíveis.`);
-        }
+    if (!this.currentUserId) {
+      if (this.isBrowser) {
+        alert('Faça login para adicionar produtos ao carrinho.');
       }
-    } else {
-      if (quantity <= product.stock) {
-        currentItems.push({
-          product,
-          quantity: Math.min(quantity, product.stock),
-          subtotal: product.price * quantity,
-        });
-      } else {
-        if (this.isBrowser) {
-          alert(`Desculpe, só temos ${product.stock} unidades disponíveis.`);
-        }
-        return;
-      }
+      return;
     }
 
-    this.updateCart(currentItems);
-    this.saveToStorageAndServer(currentItems);
+    const payload = { productId: product.id, quantity };
+
+    this.http.post<ApiCartResponse>(`${this.apiUrl}/items`, payload, { headers: this.authHeaders() })
+      .pipe(
+        catchError((error) => {
+          if (this.isBrowser) {
+            alert(error.error?.message || 'Erro ao adicionar item.');
+          }
+          return throwError(() => error);
+        })
+      )
+      .subscribe((cart) => this.updateFromServer(cart));
   }
 
   removeFromCart(productId: string): void {
-    const currentItems = this.cartItems.value.filter((item) => item.product.id !== productId);
-    this.updateCart(currentItems);
-    this.saveToStorageAndServer(currentItems);
+    this.http.delete<ApiCartResponse>(`${this.apiUrl}/items/${productId}`, { headers: this.authHeaders() })
+      .pipe(
+        catchError((error) => {
+          console.error('Erro ao remover', error);
+          return throwError(() => error);
+        })
+      )
+      .subscribe((cart) => this.updateFromServer(cart));
   }
 
   updateQuantity(productId: string, quantity: number): void {
-    const currentItems = this.cartItems.value;
-    const item = currentItems.find((item) => item.product.id === productId);
-
-    if (item) {
-      if (quantity <= 0) {
-        this.removeFromCart(productId);
-      } else if (quantity <= item.product.stock) {
-        item.quantity = quantity;
-        this.updateCart(currentItems);
-        this.saveToStorageAndServer(currentItems);
-      } else {
-        if (this.isBrowser) {
-          alert(`Desculpe, só temos ${item.product.stock} unidades disponíveis.`);
-        }
-      }
+    if (quantity <= 0) {
+      this.removeFromCart(productId);
+      return;
     }
+
+    this.http.patch<ApiCartResponse>(`${this.apiUrl}/items/${productId}`, { quantity }, { headers: this.authHeaders() })
+      .pipe(
+        catchError((error) => {
+          if (this.isBrowser) {
+            alert(error.error?.message || 'Erro ao atualizar quantidade.');
+          }
+          return throwError(() => error);
+        })
+      )
+      .subscribe((cart) => this.updateFromServer(cart));
   }
 
   clearCart(): void {
-    this.updateCart([]);
-    this.discount.next(0);
-    this.couponCode.next('');
-    this.shipping.next(0);
-    this.totalItems.next(0);
-    this.totalPrice.next(0);
-
-    if (this.isBrowser) {
-      // 🔥 Remove APENAS o carrinho do usuário atual
-      localStorage.removeItem(this.getCartKey());
-      localStorage.removeItem(this.getCouponKey());
-    }
-
-    this.saveCartToServer([]);
-  }
-
-  /**
-   * 🔥 Remove TODOS os carrinhos salvos (útil para debug)
-   */
-  clearAllCarts(): void {
-    if (!this.isBrowser) return;
-    Object.keys(localStorage)
-      .filter(key => key.startsWith(this.CART_KEY_PREFIX) || key.startsWith(this.COUPON_KEY_PREFIX))
-      .forEach(key => localStorage.removeItem(key));
-    this.updateCart([]);
-    this.discount.next(0);
-    this.couponCode.next('');
-  }
-
-  applyCoupon(
-    code: string,
-  ): Observable<{ valid: boolean; message: string; discountAmount?: number }> {
-    const currentTotal = this.totalPrice.value;
-
-    if (currentTotal === 0) {
-      return of({
-        valid: false,
-        message: 'Carrinho vazio. Adicione produtos para aplicar o cupom.',
+    this.http.delete(`${this.apiUrl}`, { headers: this.authHeaders() })
+      .pipe(
+        catchError((error) => {
+          console.warn('Erro ao limpar carrinho', error);
+          return of(null);
+        })
+      )
+      .subscribe(() => {
+        this.updateCart([]);
+        this.discount.next(0);
+        this.couponCode.next('');
+        this.removeCouponFromStorage();
       });
+  }
+
+  // ============================================================
+  // CUPONS E CÁLCULOS (mantidos no frontend)
+  // ============================================================
+  applyCoupon(code: string): Observable<{ valid: boolean; message: string; discountAmount?: number }> {
+    const currentTotal = this.totalPrice.value;
+    if (currentTotal === 0) {
+      return of({ valid: false, message: 'Carrinho vazio. Adicione produtos para aplicar o cupom.' });
     }
 
     const upperCode = code.toUpperCase().trim();
@@ -329,32 +222,20 @@ export class CartService {
       if (this.isBrowser) {
         localStorage.setItem(
           this.getCouponKey(),
-          JSON.stringify({
-            code: upperCode,
-            discount: discountAmount,
-          }),
+          JSON.stringify({ code: upperCode, discount: discountAmount })
         );
       }
 
-      return of({
-        valid: true,
-        message: 'Cupom aplicado com sucesso!',
-        discountAmount: discountAmount,
-      });
+      return of({ valid: true, message: 'Cupom aplicado com sucesso!', discountAmount });
     }
 
-    return of({
-      valid: false,
-      message: 'Cupom inválido. Verifique o código digitado.',
-    });
+    return of({ valid: false, message: 'Cupom inválido. Verifique o código digitado.' });
   }
 
   removeDiscount(): void {
     this.discount.next(0);
     this.couponCode.next('');
-    if (this.isBrowser) {
-      localStorage.removeItem(this.getCouponKey());
-    }
+    this.removeCouponFromStorage();
   }
 
   hasDiscount(): boolean {
@@ -364,10 +245,7 @@ export class CartService {
   getAppliedCoupon(): { code: string; discount: number } | null {
     const code = this.couponCode.value;
     const discount = this.discount.value;
-
-    if (code && discount > 0) {
-      return { code, discount };
-    }
+    if (code && discount > 0) return { code, discount };
     return null;
   }
 
@@ -376,13 +254,9 @@ export class CartService {
     let shippingCost = 0;
 
     if (total > 0) {
-      if (total >= 100) {
-        shippingCost = 0;
-      } else if (total >= 50) {
-        shippingCost = 15.9;
-      } else {
-        shippingCost = 25.9;
-      }
+      if (total >= 100) shippingCost = 0;
+      else if (total >= 50) shippingCost = 15.9;
+      else shippingCost = 25.9;
     }
 
     this.shipping.next(shippingCost);
@@ -397,7 +271,7 @@ export class CartService {
 
     const originalTotal = this.cartItems.value.reduce(
       (sum, item) => sum + (item.product.oldPrice || item.product.price) * item.quantity,
-      0,
+      0
     );
     const savings = originalTotal - subtotal;
 
@@ -411,52 +285,29 @@ export class CartService {
     };
   }
 
-  isEmpty(): boolean {
-    return this.cartItems.value.length === 0;
-  }
-
-  getUniqueItemCount(): number {
-    return this.cartItems.value.length;
-  }
+  isEmpty(): boolean { return this.cartItems.value.length === 0; }
+  getUniqueItemCount(): number { return this.cartItems.value.length; }
 
   isProductInCart(productId: string): boolean {
-    return this.cartItems.value.some((item) => item.product.id === productId);
+    return this.cartItems.value.some((item) => String(item.product.id) === String(productId));
   }
 
   getProductQuantity(productId: string): number {
-    const item = this.cartItems.value.find((item) => item.product.id === productId);
+    const item = this.cartItems.value.find((item) => String(item.product.id) === String(productId));
     return item ? item.quantity : 0;
   }
 
+  // ============================================================
+  // HELPERS INTERNOS
+  // ============================================================
   private getSellerIdFromProduct(product: Product): string {
     const p: any = product || {};
-    return String(
-      p.seller?.id ||
-      p.sellerId ||
-      p.storeId ||
-      p.ownerId ||
-      p.userId ||
-      '1'
-    );
+    return String(p.seller?.id || p.sellerId || p.storeId || p.ownerId || p.userId || '1');
   }
 
   private getSellerNameFromProduct(product: Product): string {
     const p: any = product || {};
-    return (
-      p.seller?.name ||
-      p.sellerName ||
-      p.storeName ||
-      p.ownerName ||
-      'Vendedor'
-    );
-  }
-
-  private getSellerIdFromItem(item: CartItem): string {
-    return this.getSellerIdFromProduct(item.product);
-  }
-
-  private getSellerNameFromItem(item: CartItem): string {
-    return this.getSellerNameFromProduct(item.product);
+    return p.seller?.name || p.sellerName || p.storeName || p.ownerName || 'Vendedor';
   }
 
   private updateCart(items: CartItem[]): void {
@@ -465,127 +316,41 @@ export class CartService {
     });
 
     this.cartItems.next(items);
-
-    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-    this.totalItems.next(totalItems);
-
-    const totalPrice = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-    this.totalPrice.next(totalPrice);
+    this.totalItems.next(items.reduce((sum, item) => sum + item.quantity, 0));
+    this.totalPrice.next(items.reduce((sum, item) => sum + item.product.price * item.quantity, 0));
 
     this.calculateShipping();
   }
 
-  private saveToStorageAndServer(items: CartItem[]): void {
-    if (this.isBrowser) {
-      this.saveCartToStorage(items);
+  private getCouponKey(): string {
+    return this.currentUserId
+      ? `${this.COUPON_KEY_PREFIX}${this.currentUserId}`
+      : this.GUEST_COUPON_KEY;
+  }
+
+  private loadCouponFromStorage(): void {
+    if (!this.isBrowser) return;
+    const couponData = localStorage.getItem(this.getCouponKey());
+    if (couponData) {
+      try {
+        const coupon = JSON.parse(couponData);
+        this.discount.next(coupon.discount);
+        this.couponCode.next(coupon.code);
+      } catch (e) {
+        console.error('Erro ao carregar cupom', e);
+      }
     }
-    this.saveCartToServer(items);
   }
 
-  private saveCartToStorage(items: CartItem[]): void {
-    if (!this.isBrowser) return;
-    try {
-      const cartData = items.map((item) => ({
-        product: item.product,
-        quantity: item.quantity,
-      }));
-      // 🔥 Salva na chave do usuário atual
-      localStorage.setItem(this.getCartKey(), JSON.stringify(cartData));
-    } catch (error) {
-      console.error('Erro ao salvar carrinho:', error);
-    }
+  private removeCouponFromStorage(): void {
+    if (this.isBrowser) localStorage.removeItem(this.getCouponKey());
   }
 
-  private saveCartToServer(items: CartItem[]): void {
-    if (this.isSyncing) return;
-
-    const cartData = items.map((item) => ({
-      productId: item.product.id,
-      quantity: item.quantity,
-    }));
-
-    this.http
-      .get<ServerCart[]>(this.apiUrl)
-      .pipe(
-        switchMap((carts) => {
-          if (carts && carts.length > 0) {
-            const cart = carts[0];
-            return this.http.put<ServerCart>(`${this.apiUrl}/${cart.id}`, {
-              ...cart,
-              items: cartData,
-            });
-          } else {
-            return this.http.post<ServerCart>(this.apiUrl, {
-              id: 1,
-              items: cartData,
-            });
-          }
-        }),
-        catchError((error) => {
-          console.warn('⚠️ Erro ao salvar carrinho:', error);
-          return of(null);
-        }),
-      )
-      .subscribe();
-  }
-
-  private syncCartWithServer(): void {
-    if (!this.isBrowser) return;
-
-    this.isSyncing = true;
-
-    this.http
-      .get<ServerCart[]>(this.apiUrl)
-      .pipe(
-        switchMap((carts) => {
-          if (carts && carts.length > 0) {
-            return of(carts[0]);
-          }
-          return this.http.post<ServerCart>(this.apiUrl, {
-            id: 1,
-            items: [],
-          });
-        }),
-        catchError((error) => {
-          console.warn('⚠️ Erro ao sincronizar carrinho:', error);
-          this.isSyncing = false;
-          return of(null);
-        }),
-      )
-      .subscribe((serverCart) => {
-        if (serverCart) {
-          console.log('📦 Carrinho carregado:', serverCart);
-        }
-      });
-  }
-
-  syncCart(): void {
-    if (!this.isBrowser) return;
-    this.cleanupDuplicatedCarts().subscribe(() => {
-      this.syncCartWithServer();
+  private authHeaders(): HttpHeaders {
+    const token = this.authService.getToken();
+    return new HttpHeaders({
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     });
-  }
-
-  private cleanupDuplicatedCarts(): Observable<void> {
-    return this.http.get<ServerCart[]>(this.apiUrl).pipe(
-      switchMap((carts) => {
-        if (!carts || carts.length <= 1) {
-          return of(void 0);
-        }
-        const deleteCarts = carts.slice(1);
-        const deleteRequests = deleteCarts.map((cart) =>
-          this.http.delete(`${this.apiUrl}/${cart.id}`),
-        );
-        return forkJoin(deleteRequests).pipe(
-          map(() => {
-            return void 0;
-          }),
-        );
-      }),
-      catchError((error) => {
-        console.warn('⚠️ Erro ao limpar carrinhos:', error);
-        return of(void 0);
-      }),
-    );
   }
 }

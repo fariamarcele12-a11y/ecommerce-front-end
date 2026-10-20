@@ -4,8 +4,9 @@ import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { CartItem, CartService } from '../../core/services/cart.service';
 import { AlertService } from '../../core/services/alert.service';
+import { CartItem } from '../../core/models/cart.model';
+import { CartService } from '../../core/services/cart.service';
 
 @Component({
   selector: 'app-cart',
