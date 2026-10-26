@@ -23,6 +23,12 @@ export interface ChatConversation {
   productImage: string;
   sellerId: string | number;
   sellerName: string;
+
+  // 🔥 NOVOS CAMPOS: identificam o comprador e o nome exibido
+  buyerId?: string | number;
+  buyerName?: string;
+  displayName?: string;
+
   lastMessage: string;
   lastMessageDate: Date | string;
   unreadCount: number;
@@ -76,6 +82,9 @@ export function createEmptyConversation(): ChatConversation {
     productImage: 'https://via.placeholder.com/100x100/667eea/ffffff?text=Chat',
     sellerId: '',
     sellerName: '',
+    buyerId: '',
+    buyerName: '',
+    displayName: '',
     lastMessage: '',
     lastMessageDate: new Date(),
     unreadCount: 0,

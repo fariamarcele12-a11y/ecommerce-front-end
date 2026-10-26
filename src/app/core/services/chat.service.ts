@@ -1,357 +1,276 @@
 // src/app/core/services/chat.service.ts
-import { Injectable, inject, PLATFORM_ID } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of, throwError, catchError, tap, map } from 'rxjs';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { BehaviorSubject, Observable, of, forkJoin, catchError, tap, map, throwError } from 'rxjs';
 import { Message, ChatConversation } from '../models/message.model';
-import { IdGeneratorService } from './id-generator.service';
-import { NotificationService } from './notification.service';
+import { AuthService } from './auth.service';
+import { environment } from '../../../environments/enviroment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ChatService {
-  private apiUrl = 'http://localhost:3000/messages';
+  private apiUrl = `${environment.apiUrl}/messages`;
 
   private conversations = new BehaviorSubject<ChatConversation[]>([]);
-  private isBrowser: boolean;
   private readonly http = inject(HttpClient);
-  private readonly idGenerator = inject(IdGeneratorService);
-  private readonly notificationService = inject(NotificationService);
+  private readonly authService = inject(AuthService);
 
-  constructor() {
-    const platformId = inject(PLATFORM_ID);
-    this.isBrowser = isPlatformBrowser(platformId);
-  }
+  // ============================================================
+  // CONVERSAS UNIFICADAS (comprador + vendedor)
+  // ============================================================
+  getAllConversations(userId: number | string, isSeller: boolean): Observable<ChatConversation[]> {
+    const buyerReq = this.http
+      .get<Message[]>(`${this.apiUrl}/my-conversations`, { headers: this.authHeaders() })
+      .pipe(catchError(() => of([])));
 
-  getConversations(userId: number | string): Observable<ChatConversation[]> {
-    const id = String(userId);
-    return this.http.get<Message[]>(`${this.apiUrl}?userId=${id}`).pipe(
-      map((messages) => {
-        // 🔥 ORDENAR POR DATA ANTES DE AGRUPAR
-        const sorted = this.sortMessagesByDate(messages);
-        const grouped = this.groupMessagesByProduct(sorted);
-        return this.buildConversations(grouped);
+    const sellerReq = this.http
+      .get<Message[]>(`${this.apiUrl}/seller-conversations`, { headers: this.authHeaders() })
+      .pipe(catchError(() => of([])));
+
+    // Se não for vendedor, só busca como comprador
+    if (!isSeller) {
+      return buyerReq.pipe(
+        map((messages) => this.processMessages(messages, userId)),
+        tap((convs) => this.conversations.next(convs))
+      );
+    }
+
+    // Se for vendedor, busca os dois e mescla
+    return forkJoin([buyerReq, sellerReq]).pipe(
+      map(([buyerMessages, sellerMessages]) => {
+        // Junta as duas listas e remove duplicatas pelo ID da mensagem
+        const allMessages = [...buyerMessages, ...sellerMessages];
+        const uniqueMessages = Array.from(new Map(allMessages.map((m) => [m.id, m])).values());
+        return this.processMessages(uniqueMessages, userId);
       }),
-      tap((conversations) => {
-        this.conversations.next(conversations);
-      }),
+      tap((convs) => this.conversations.next(convs)),
       catchError((error) => {
-        console.warn('⚠️ Erro ao carregar conversas, retornando array vazio:', error);
+        console.warn('⚠️ Erro ao carregar conversas unificadas:', error);
         return of([]);
-      }),
+      })
     );
   }
 
-  getSellerConversations(sellerId: number | string): Observable<ChatConversation[]> {
-    const id = String(sellerId);
-    return this.http
-      .get<Message[]>(`${this.apiUrl}?sellerId=${id}`)
-      .pipe(
-        map((messages) => {
-          // 🔥 ORDENAR POR DATA ANTES DE AGRUPAR
-          const sorted = this.sortMessagesByDate(messages);
-          const grouped = this.groupMessagesByProduct(sorted);
-          return this.buildConversations(grouped);
-        }),
-        tap((conversations) => {
-          this.conversations.next(conversations);
-        }),
-        catchError((error) => {
-          console.warn('⚠️ Erro ao carregar conversas do vendedor:', error);
-          return of([]);
-        }),
-      );
-  }
-
-  getProductMessages(productId: number | string, userId: number | string): Observable<Message[]> {
-    const productIdStr = String(productId);
-    const userIdStr = String(userId);
-    return this.http
-      .get<Message[]>(`${this.apiUrl}?productId=${productIdStr}&userId=${userIdStr}`)
-      .pipe(
-        // 🔥 ORDENAR POR DATA NO CLIENTE (mais confiável que o json-server)
-        map((messages) => this.sortMessagesByDate(messages)),
-        catchError((error) => {
-          console.warn('⚠️ Erro ao carregar mensagens do produto:', error);
-          return of([]);
-        }),
-      );
-  }
-
-  /**
-   * 🔥 Busca as mensagens de uma conversa específica entre cliente e vendedor
-   * E ordena por data de forma GARANTIDA no cliente
-   */
+  // ============================================================
+  // CHAT DE UM PRODUTO (ou loja, se productId = 'empty')
+  // ============================================================
   getProductChat(
     productId: number | string,
     userId: number | string,
     sellerId: number | string,
   ): Observable<Message[]> {
-    const productIdStr = String(productId);
-    const userIdStr = String(userId);
-    const sellerIdStr = String(sellerId);
+    const productIdParam =
+      productId && productId !== 'empty' && productId !== ''
+        ? productId
+        : '00000000-0000-0000-0000-000000000000';
 
-    // 🔥 Buscar TODAS as mensagens do produto (sem filtrar por userId)
-    //    e filtrar no cliente — garante que vendedor e cliente vejam a mesma conversa
     return this.http
-      .get<Message[]>(`${this.apiUrl}?productId=${productIdStr}`)
+      .get<Message[]>(
+        `${this.apiUrl}/product/${productIdParam}/chat?sellerId=${sellerId}&userId=${userId}`,
+        { headers: this.authHeaders() },
+      )
       .pipe(
-        // 🔥 ORDENAR POR DATA NO CLIENTE
-        map((messages) => {
-          // Filtrar as mensagens desta conversa específica
-          const conversationMessages = messages.filter(msg => {
-            // A mensagem pertence a esta conversa se:
-            // - o sellerId bate E
-            // - (o userId bate OU a mensagem é do vendedor)
-            const matchesSeller = String(msg.sellerId) === sellerIdStr;
-            return matchesSeller;
-          });
-
-          // 🔥 ORDENAR POR DATA CRESCENTE (mais antiga primeiro)
-          return this.sortMessagesByDate(conversationMessages);
-        }),
-        tap((messages) => {
-          // Marcar como lidas
-          messages.forEach((msg) => {
-            if (!msg.read) {
-              const msgId = typeof msg.id === 'string' ? parseInt(msg.id, 10) : (msg.id as number);
-              if (!isNaN(msgId)) {
-                this.markAsRead(msgId).subscribe();
-              }
-            }
-          });
-        }),
+        map((messages) => this.sortMessagesByDate(messages)),
         catchError((error) => {
-          console.warn('⚠️ Erro ao carregar chat do produto:', error);
+          console.warn('⚠️ Erro ao carregar chat:', error);
           return of([]);
         }),
       );
   }
 
-  /**
-   * 🔥 ORDENA mensagens por data crescente (mais antiga primeiro)
-   * Aceita `createdAt` como string ISO, Date ou timestamp
-   */
-  private sortMessagesByDate(messages: Message[]): Message[] {
-    if (!messages || messages.length === 0) return [];
-
-    return [...messages].sort((a, b) => {
-      const dateA = this.parseDate(a.createdAt);
-      const dateB = this.parseDate(b.createdAt);
-
-      if (dateA === null && dateB === null) return 0;
-      if (dateA === null) return -1;
-      if (dateB === null) return 1;
-
-      return dateA - dateB; // Crescente: mais antiga primeiro
-    });
-  }
-
-  /**
-   * 🔥 Converte string/Date para timestamp numérico de forma segura
-   */
-  private parseDate(date: Date | string | undefined | null): number | null {
-    if (!date) return null;
-
-    if (date instanceof Date) {
-      const t = date.getTime();
-      return isNaN(t) ? null : t;
-    }
-
-    if (typeof date === 'string') {
-      const t = new Date(date).getTime();
-      return isNaN(t) ? null : t;
-    }
-
-    return null;
-  }
-
+  // ============================================================
+  // ENVIAR MENSAGEM
+  // ============================================================
   sendMessage(message: Partial<Message>): Observable<Message> {
-    const safeUserId = message.userId != null ? String(message.userId) : '';
-    const safeSellerId = message.sellerId != null ? String(message.sellerId) : '';
+    const productId =
+      message.productId && message.productId !== 'empty' && message.productId !== ''
+        ? String(message.productId)
+        : '00000000-0000-0000-0000-000000000000';
 
-    const newMessage: Message = {
-      ...message,
-
-      id: this.idGenerator.generateMessageId(),
-      productId: String(message.productId || ''),
-      productName: message.productName || '',
+    const payload = {
+      productId: productId,
+      productName: message.productName || 'Conversa com a Loja',
       productImage: message.productImage || '',
-      sellerId: safeSellerId,
+      sellerId: String(message.sellerId || ''),
       sellerName: message.sellerName || '',
-      userId: safeUserId,
+      userId: String(message.userId || ''),
       userName: message.userName || '',
       content: message.content || '',
-      createdAt: new Date().toISOString(),   // 🔥 SEMPRE ISO 8601 com timezone
-      read: false,
       isFromSeller: message.isFromSeller || false,
     };
 
-    console.log('📤 Enviando mensagem:', {
-      userId: newMessage.userId,
-      sellerId: newMessage.sellerId,
-      createdAt: newMessage.createdAt,
-      isFromSeller: newMessage.isFromSeller,
-    });
-
-    return this.http.post<Message>(this.apiUrl, newMessage).pipe(
-      tap(() => {
-        if (newMessage.userId && newMessage.userId !== '') {
-          this.refreshConversations(newMessage.userId);
-        }
-        this.sendNotificationForMessage(newMessage);
-      }),
-      catchError((error) => {
-        console.error('❌ Erro ao enviar mensagem:', error);
-        return throwError(() => new Error('Erro ao enviar mensagem.'));
-      }),
-    );
-  }
-
-  private sendNotificationForMessage(message: Message): void {
-    const preview = message.content.length > 60
-      ? message.content.substring(0, 60) + '...'
-      : message.content;
-
-    if (message.isFromSeller) {
-      if (!message.userId || message.userId === '' || message.userId === 'null') {
-        console.warn('⚠️ Não é possível notificar cliente: userId ausente ou inválido');
-        return;
-      }
-
-      this.notificationService.notifyNewMessageToBuyer(
-        String(message.userId),
-        String(message.sellerId),
-        message.sellerName || 'Vendedor',
-        message.productName,
-        preview,
-        String(message.productId)
+    return this.http
+      .post<Message>(this.apiUrl, payload, { headers: this.authHeaders() })
+      .pipe(
+        tap(() => {
+          const user = this.authService.getCurrentUser();
+          if (user) {
+            const isSeller = user.hasStore === true;
+            this.getAllConversations(user.id, isSeller).subscribe();
+          }
+        }),
+        catchError((error) => {
+          console.error('❌ Erro ao enviar mensagem:', error);
+          return throwError(() => new Error('Erro ao enviar mensagem.'));
+        }),
       );
-    } else {
-      if (!message.sellerId || message.sellerId === '' || message.sellerId === 'null') {
-        console.warn('⚠️ Não é possível notificar vendedor: sellerId ausente ou inválido');
-        return;
-      }
+  }
 
-      this.notificationService.notifyNewMessageToSeller(
-        String(message.sellerId),
-        String(message.userId),
-        message.userName || 'Cliente',
-        message.productName,
-        preview,
-        String(message.productId)
+  // ============================================================
+  // MARCAR MENSAGEM COMO LIDA
+  // ============================================================
+  markAsRead(messageId: number | string): Observable<void> {
+    return this.http
+      .patch<void>(`${this.apiUrl}/${messageId}/read`, {}, { headers: this.authHeaders() })
+      .pipe(
+        catchError((error) => {
+          console.warn('⚠️ Erro ao marcar mensagem como lida:', error);
+          return of(void 0);
+        }),
       );
-    }
   }
 
-  markAsRead(messageId: number | string): Observable<Message> {
-    const id = String(messageId);
-    return this.http.patch<Message>(`${this.apiUrl}/${id}`, {
-      read: true,
-      readAt: new Date().toISOString(),
-    }).pipe(
-      catchError((error) => {
-        console.warn('⚠️ Erro ao marcar mensagem como lida:', error);
-        return of({} as Message);
-      }),
-    );
-  }
-
+  // ============================================================
+  // MARCAR CONVERSA COMO LIDA
+  // ============================================================
   markConversationAsRead(
     productId: number | string,
     userId: number | string,
     sellerId: number | string,
   ): Observable<void> {
-    const productIdStr = String(productId);
-    const sellerIdStr = String(sellerId);
-
-    return this.http
-      .get<Message[]>(`${this.apiUrl}?productId=${productIdStr}&sellerId=${sellerIdStr}&read=false`)
-      .pipe(
-        map((messages) => {
-          messages.forEach((msg) => {
-            if (!msg.read) {
-              const msgId = typeof msg.id === 'string' ? parseInt(msg.id, 10) : (msg.id as number);
-              if (!isNaN(msgId)) {
-                this.markAsRead(msgId).subscribe();
-              }
-            }
-          });
-          return;
-        }),
-        catchError((error) => {
-          console.warn('⚠️ Erro ao marcar conversa como lida:', error);
-          return of(undefined);
-        }),
-      );
-  }
-
-  getUnreadCount(userId: number | string): Observable<number> {
-    const id = String(userId);
-    return this.http.get<Message[]>(`${this.apiUrl}?userId=${id}&read=false`).pipe(
-      map((messages) => messages.length),
+    return this.getProductChat(productId, userId, sellerId).pipe(
+      tap((messages) => {
+        messages.forEach((msg) => {
+          if (!msg.read) {
+            this.markAsRead(msg.id).subscribe();
+          }
+        });
+      }),
+      map(() => void 0),
       catchError((error) => {
-        console.warn('⚠️ Erro ao buscar mensagens não lidas:', error);
-        return of(0);
+        console.warn('⚠️ Erro ao marcar conversa como lida:', error);
+        return of(void 0);
       }),
     );
   }
 
-  private groupMessagesByProduct(messages: Message[]): Map<string, Message[]> {
+  // ============================================================
+  // NÃO LIDAS
+  // ============================================================
+  getUnreadCount(userId: number | string): Observable<number> {
+    return this.http
+      .get<{ count: number }>(`${this.apiUrl}/unread-count`, { headers: this.authHeaders() })
+      .pipe(
+        map((res) => res.count || 0),
+        catchError(() => of(0)),
+      );
+  }
+
+  // ============================================================
+  // Helpers
+  // ============================================================
+  private sortMessagesByDate(messages: Message[]): Message[] {
+    if (!messages?.length) return [];
+    return [...messages].sort((a, b) => {
+      const dateA = this.parseDate(a.createdAt);
+      const dateB = this.parseDate(b.createdAt);
+      if (dateA === null && dateB === null) return 0;
+      if (dateA === null) return -1;
+      if (dateB === null) return 1;
+      return dateA - dateB;
+    });
+  }
+
+  private parseDate(date: Date | string | undefined | null): number | null {
+    if (!date) return null;
+    if (date instanceof Date) {
+      const t = date.getTime();
+      return isNaN(t) ? null : t;
+    }
+    if (typeof date === 'string') {
+      let safe = date;
+      if (!safe.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(safe)) safe += 'Z';
+      const t = new Date(safe).getTime();
+      return isNaN(t) ? null : t;
+    }
+    return null;
+  }
+
+  // 🔥 Chave única: productId + userId + sellerId
+  private groupMessages(messages: Message[]): Map<string, Message[]> {
     const grouped = new Map<string, Message[]>();
     messages.forEach((msg) => {
-      const key = String(msg.productId);
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
-      }
+      const key = `${msg.productId}_${msg.userId}_${msg.sellerId}`;
+      if (!grouped.has(key)) grouped.set(key, []);
       grouped.get(key)!.push(msg);
     });
     return grouped;
   }
 
-  /**
-   * 🔥 Constrói as conversas ordenando as mensagens por data dentro de cada grupo
-   */
-  private buildConversations(grouped: Map<string, Message[]>): ChatConversation[] {
-    const conversations: ChatConversation[] = [];
-    grouped.forEach((messages, productId) => {
-      // 🔥 GARANTIR ordenação dentro do grupo
-      const sortedMessages = this.sortMessagesByDate(messages);
+  private processMessages(messages: Message[], currentUserId: string | number): ChatConversation[] {
+    const sorted = this.sortMessagesByDate(messages);
+    const grouped = this.groupMessages(sorted);
+    return this.buildConversations(grouped, String(currentUserId));
+  }
 
+  private buildConversations(
+    grouped: Map<string, Message[]>,
+    currentUserId: string,
+  ): ChatConversation[] {
+    const conversations: ChatConversation[] = [];
+
+    grouped.forEach((messages) => {
+      const sortedMessages = this.sortMessagesByDate(messages);
       const lastMessage = sortedMessages[sortedMessages.length - 1];
       const firstMessage = sortedMessages[0];
-
       const messageWithImage = sortedMessages.find(
-        (m) => m.productImage && m.productImage.trim() !== ''
+        (m) => m.productImage && m.productImage.trim() !== '',
       );
 
-      const productImage = messageWithImage?.productImage
-        || firstMessage.productImage
-        || 'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto';
+      const productImage =
+        messageWithImage?.productImage ||
+        firstMessage.productImage ||
+        'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto';
+
+      // 🔥 Lógica de quem é o vendedor nesta conversa específica
+      const isSellerOfThisChat = currentUserId === String(firstMessage.sellerId);
+
+      // Se eu sou o vendedor, exibo o nome do cliente. Senão, exibo o nome da loja.
+      const displayName = isSellerOfThisChat
+        ? firstMessage.userName || 'Cliente'
+        : firstMessage.sellerName || 'Vendedor';
 
       conversations.push({
-        productId: productId,
+        productId: firstMessage.productId,
         productName: firstMessage.productName || 'Produto',
-        productImage: productImage,
+        productImage,
         sellerId: String(firstMessage.sellerId || ''),
         sellerName: firstMessage.sellerName || 'Vendedor',
+        buyerId: String(firstMessage.userId || ''),
+        buyerName: firstMessage.userName || 'Cliente',
+        displayName,
         lastMessage: lastMessage.content,
         lastMessageDate: lastMessage.createdAt,
-        unreadCount: sortedMessages.filter((m) => !m.read && m.sellerId === firstMessage.sellerId).length,
+        unreadCount: sortedMessages.filter(
+          (m) => !m.read && (isSellerOfThisChat ? m.isFromSeller === false : m.isFromSeller === true),
+        ).length,
         messages: sortedMessages,
-      });
+      } as ChatConversation);
     });
 
-    // 🔥 ORDENAR as conversas por última mensagem (mais recente primeiro)
     return conversations.sort((a, b) => {
       const dateA = this.parseDate(a.lastMessageDate) || 0;
       const dateB = this.parseDate(b.lastMessageDate) || 0;
-      return dateB - dateA; // Decrescente: mais recente primeiro
+      return dateB - dateA;
     });
   }
 
-  private refreshConversations(userId: number | string): void {
-    this.getConversations(userId).subscribe();
+  private authHeaders(): HttpHeaders {
+    const token = this.authService.getToken();
+    return new HttpHeaders({
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    });
   }
 }

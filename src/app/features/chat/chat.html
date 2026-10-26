@@ -35,7 +35,11 @@
 
           <div *ngFor="let conv of conversations"
                class="conversation-item p-3 border-bottom"
-               [class.active]="selectedConversation?.productId === conv.productId && selectedConversation?.sellerId === conv.sellerId"
+               [class.active]="
+                 selectedConversation?.productId === conv.productId &&
+                 selectedConversation?.sellerId === conv.sellerId &&
+                 selectedConversation?.buyerId === conv.buyerId
+               "
                (click)="selectConversation(conv)">
             <div class="d-flex align-items-center gap-3">
               <!-- 🔥 Imagem real do produto com fallback tratado -->
@@ -57,7 +61,11 @@
                     {{ conv.unreadCount }}
                   </span>
                 </div>
-                <small class="text-muted">com {{ conv.sellerName }}</small>
+                <!-- 🔥 CORRIGIDO: Exibe o nome do comprador (se for vendedor) ou do vendedor (se for comprador) -->
+                <small class="text-muted">
+                  <i class="bi bi-person me-1"></i>
+                  com {{ conv.displayName || (isSeller ? conv.buyerName : conv.sellerName) }}
+                </small>
               </div>
             </div>
           </div>
@@ -79,7 +87,11 @@
                  (error)="onImageError($event, '40x40')">
             <div>
               <h6 class="fw-bold mb-0">{{ selectedConversation.productName }}</h6>
-              <small class="text-muted">com {{ selectedConversation.sellerName }}</small>
+              <!-- 🔥 CORRIGIDO: Mostra o nome do comprador quando o vendedor está logado -->
+              <small class="text-muted">
+                <i class="bi bi-person me-1"></i>
+                {{ isSeller ? (selectedConversation.buyerName || 'Cliente') : (selectedConversation.sellerName || 'Vendedor') }}
+              </small>
             </div>
 
             <!-- 🔥 Botão dinâmico: Ver produto ou Ver loja -->
