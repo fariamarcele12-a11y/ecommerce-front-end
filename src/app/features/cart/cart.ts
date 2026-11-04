@@ -13,7 +13,7 @@ import { CartService } from '../../core/services/cart.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './cart.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.Default, // 🔥 CORRIGIDO
   styleUrls: ['./cart.scss'],
 })
 export class Cart implements OnInit, OnDestroy {
@@ -91,19 +91,16 @@ export class Cart implements OnInit, OnDestroy {
     this.total = summary.total;
   }
 
-  // 🔥 Método auxiliar para obter ID como string
   getProductId(item: CartItem): string {
     return String(item.product.id);
   }
 
-  // 🔥 CORRIGIDO: productId como string
   updateQuantity(productId: string, quantity: number): void {
     if (quantity >= 0) {
       this.cartService.updateQuantity(productId, quantity);
     }
   }
 
-  // 🔥 CORRIGIDO: productId como string
   removeItem(productId: string): void {
     const product = this.cartItems.find((item) => String(item.product.id) === productId);
     const productName = product?.product.name || 'Produto';

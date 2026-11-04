@@ -52,8 +52,12 @@ export class StoreService {
   // ============================================================
   hasStore(userId: number | string): Observable<boolean> {
     const id = String(userId);
+    
+    // 🔥 Se não estiver logado, não tem loja e não faz request
+    const user = this.authService.getCurrentUser();
+    if (!user) return of(false);
 
-    // Atalho local: se já sabe que tem loja, evita request
+    // Atalho local
     if (this.isBrowser) {
       try {
         const storedUser = localStorage.getItem('currentUser');
@@ -68,9 +72,6 @@ export class StoreService {
       }
     }
 
-    // Backend: GET /api/stores/user/{userId}
-    //   → 200 = tem loja
-    //   → 404 = não tem loja
     return this.http
       .get<Store>(`${this.apiUrl}/user/${id}`, { headers: this.authHeaders() })
       .pipe(
@@ -88,6 +89,11 @@ export class StoreService {
   // ============================================================
   getStoreByUser(userId: number | string): Observable<Store | null> {
     const id = String(userId);
+
+    // 🔥 Se não estiver logado, retorna null e não faz request
+    const user = this.authService.getCurrentUser();
+    if (!user) return of(null);
+
     return this.http
       .get<Store>(`${this.apiUrl}/user/${id}`, { headers: this.authHeaders() })
       .pipe(
@@ -96,14 +102,13 @@ export class StoreService {
             localStorage.setItem('currentStore', JSON.stringify(store));
             this.currentStoreSubject.next(store);
 
-            // Sincroniza o user com hasStore/storeId
             const userData = localStorage.getItem('currentUser');
             if (userData) {
               try {
-                const user = JSON.parse(userData);
-                if (user && (!user.hasStore || !user.storeId)) {
+                const u = JSON.parse(userData);
+                if (u && (!u.hasStore || !u.storeId)) {
                   const updatedUser = {
-                    ...user,
+                    ...u,
                     hasStore: true,
                     storeId: String(store.id),
                   };
@@ -118,7 +123,6 @@ export class StoreService {
         }),
         catchError((error) => {
           if (error.status === 404) {
-            // Não tem loja — não é erro
             if (this.isBrowser) localStorage.removeItem('currentStore');
             this.currentStoreSubject.next(null);
             return of(null);
@@ -144,7 +148,7 @@ export class StoreService {
   }
 
   // ============================================================
-  // LISTAR LOJAS (público, com filtros e paginação)
+  // LISTAR LOJAS
   // ============================================================
   listStores(filters: {
     category?: string;
@@ -186,7 +190,7 @@ export class StoreService {
   }
 
   // ============================================================
-  // GET STORE PRODUCTS — chama direto o endpoint /api/products?storeId=...
+  // GET STORE PRODUCTS
   // ============================================================
   getStoreProducts(storeId: string | number): Observable<Product[]> {
     const id = String(storeId);
@@ -195,7 +199,6 @@ export class StoreService {
       .get<{ products: Product[] } | Product[]>(`${this.productsApiUrl}?storeId=${id}&limit=100`)
       .pipe(
         map((response) => {
-          // Backend retorna { products, total, page, ... } — extrai o array
           const list = Array.isArray(response) ? response : (response.products ?? []);
           return list as Product[];
         }),
@@ -265,7 +268,6 @@ export class StoreService {
       featured: (productData as any).featured,
     };
 
-    // Remove chaves undefined para não sobrescrever no backend
     Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
 
     return this.http
@@ -356,14 +358,8 @@ export class StoreService {
           logo: storeData.logo || null,
           banner: storeData.banner || null,
           address: storeData.address || user.address || {
-            street: '',
-            number: '',
-            complement: '',
-            neighborhood: '',
-            city: '',
-            state: '',
-            cep: '',
-            country: 'Brasil',
+            street: '', number: '', complement: '', neighborhood: '',
+            city: '', state: '', cep: '', country: 'Brasil',
           },
           phone: storeData.phone || user.phone || '',
           email: storeData.email || user.email || '',
@@ -377,7 +373,6 @@ export class StoreService {
             switchMap((store) => {
               const storeIdString = String(store.id);
 
-              // Sincroniza o usuário no backend
               return this.http
                 .patch<User>(
                   `${this.usersApiUrl}/${user.id}`,
@@ -406,7 +401,6 @@ export class StoreService {
                   catchError((error) => {
                     console.error('❌ Erro ao atualizar usuário:', error);
 
-                    // Loja criada — apenas o user não foi atualizado
                     const fallbackUser: User = {
                       ...user,
                       hasStore: true,
@@ -453,7 +447,6 @@ export class StoreService {
       address: storeData.address,
     };
 
-    // Remove chaves undefined
     Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
 
     return this.http
@@ -473,7 +466,7 @@ export class StoreService {
   }
 
   // ============================================================
-  // UPLOAD LOGO / BANNER (Cloudinary)
+  // UPLOAD LOGO / BANNER
   // ============================================================
   uploadStoreLogo(storeId: string | number, base64: string): Observable<{ logoUrl: string }> {
     return this.http
@@ -526,7 +519,7 @@ export class StoreService {
   }
 
   // ============================================================
-  // LOAD FROM STORAGE / CLEAR
+  // STORAGE
   // ============================================================
   private loadStoreFromStorage(): void {
     if (!this.isBrowser) return;

@@ -79,9 +79,6 @@ export class ChatService {
       );
   }
 
-  // ============================================================
-  // ENVIAR MENSAGEM
-  // ============================================================
   sendMessage(message: Partial<Message>): Observable<Message> {
     const productId =
       message.productId && message.productId !== 'empty' && message.productId !== ''
@@ -100,6 +97,7 @@ export class ChatService {
       isFromSeller: message.isFromSeller || false,
     };
 
+    // 🔥 Apenas envia a mensagem. O backend cria a notificação.
     return this.http
       .post<Message>(this.apiUrl, payload, { headers: this.authHeaders() })
       .pipe(

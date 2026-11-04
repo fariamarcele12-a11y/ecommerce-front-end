@@ -1,21 +1,20 @@
+// src/app/core/models/coupon.model.ts
+
 export interface Coupon {
-  id: number;
+  id: string; // Guid no backend
   code: string;
-  description: string;
+  description?: string;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
-  minPurchase?: number;
-  maxDiscount?: number;
-  startDate: Date;
-  endDate: Date;
-  usageLimit?: number;
-  usedCount: number;
+  minOrderValue?: number;
+  maxDiscountAmount?: number;
+  maxUses?: number;
+  currentUses: number;
+  validFrom?: string;
+  validUntil?: string;
   active: boolean;
-  applicableCategories?: string[];
-  applicableProducts?: number[];
-  excludedProducts?: number[];
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CouponValidation {
@@ -27,8 +26,31 @@ export interface CouponValidation {
 
 export interface CouponFilter {
   code?: string;
+  activeOnly?: boolean;
+}
+
+// DTO para criação
+export interface CreateCouponDTO {
+  code: string;
+  description?: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minOrderValue?: number;
+  maxDiscountAmount?: number;
+  maxUses?: number;
+  validFrom?: string;
+  validUntil?: string;
+}
+
+// DTO para atualização
+export interface UpdateCouponDTO {
+  description?: string;
+  discountType?: 'percentage' | 'fixed';
+  discountValue?: number;
+  minOrderValue?: number;
+  maxDiscountAmount?: number;
+  maxUses?: number;
+  validFrom?: string;
+  validUntil?: string;
   active?: boolean;
-  minPurchase?: number;
-  category?: string;
-  productId?: number;
 }

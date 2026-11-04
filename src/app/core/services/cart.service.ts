@@ -1,19 +1,13 @@
 // src/app/core/services/cart.service.ts
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError, catchError, of } from 'rxjs';
+import { BehaviorSubject, Observable, throwError, catchError, of, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
-import {
-  CartItem,
-  CartSummary,
-  CheckoutItem,
-  ApiCartResponse,
-} from '../models/cart.model';
+import { CartItem, CartSummary, CheckoutItem, ApiCartResponse } from '../models/cart.model';
 import { AuthService } from './auth.service';
+import { CouponService } from './coupon.service';
 import { environment } from '../../../environments/enviroment';
-
-type Coupon = Record<string, number>;
 
 @Injectable({
   providedIn: 'root',
@@ -30,7 +24,6 @@ export class CartService {
 
   private isBrowser: boolean;
 
-  // Chaves do localStorage para cupom (itens agora ficam no backend)
   private readonly COUPON_KEY_PREFIX = 'appliedCoupon_';
   private readonly GUEST_COUPON_KEY = 'appliedCoupon_guest';
 
@@ -39,16 +32,15 @@ export class CartService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
+  private readonly couponService = inject(CouponService);
 
   constructor() {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
-    // Escutar mudanças de usuário
     this.authService.currentUser$.subscribe((user) => {
       const newUserId = user?.id ? String(user.id) : null;
 
       if (this.currentUserId !== newUserId) {
-        console.log('🛒 CartService: usuário mudou', this.currentUserId, '->', newUserId);
         this.currentUserId = newUserId;
 
         if (user) {
@@ -62,17 +54,18 @@ export class CartService {
   }
 
   // ============================================================
-  // CARREGAMENTO DO BACKEND
+  // CARREGAMENTO (PÚBLICO, para o cart.ts chamar)
   // ============================================================
-  private loadCartFromServer(): void {
+  public loadCartFromServer(): void {
     if (!this.isBrowser) return;
 
-    this.http.get<ApiCartResponse>(this.apiUrl, { headers: this.authHeaders() })
+    this.http
+      .get<ApiCartResponse>(this.apiUrl, { headers: this.authHeaders() })
       .pipe(
         catchError((error) => {
           console.warn('⚠️ Erro ao carregar carrinho:', error);
           return of({ id: '', userId: '', items: [] } as ApiCartResponse);
-        })
+        }),
       )
       .subscribe((cart) => {
         this.updateFromServer(cart);
@@ -93,14 +86,26 @@ export class CartService {
   }
 
   // ============================================================
-  // OBSERVABLES PÚBLICOS
+  // OBSERVABLES
   // ============================================================
-  getCartItems(): Observable<CartItem[]> { return this.cartItems.asObservable(); }
-  getTotalItems(): Observable<number> { return this.totalItems.asObservable(); }
-  getTotalPrice(): Observable<number> { return this.totalPrice.asObservable(); }
-  getDiscount(): Observable<number> { return this.discount.asObservable(); }
-  getShipping(): Observable<number> { return this.shipping.asObservable(); }
-  getCouponCode(): Observable<string> { return this.couponCode.asObservable(); }
+  getCartItems(): Observable<CartItem[]> {
+    return this.cartItems.asObservable();
+  }
+  getTotalItems(): Observable<number> {
+    return this.totalItems.asObservable();
+  }
+  getTotalPrice(): Observable<number> {
+    return this.totalPrice.asObservable();
+  }
+  getDiscount(): Observable<number> {
+    return this.discount.asObservable();
+  }
+  getShipping(): Observable<number> {
+    return this.shipping.asObservable();
+  }
+  getCouponCode(): Observable<string> {
+    return this.couponCode.asObservable();
+  }
 
   getCheckoutItems(): CheckoutItem[] {
     return this.cartItems.value.map((item) => {
@@ -122,37 +127,39 @@ export class CartService {
   }
 
   // ============================================================
-  // AÇÕES DO CARRINHO (sincronizadas com backend)
+  // AÇÕES DO CARRINHO
   // ============================================================
-  addToCart(product: Product, quantity = 1): void {
+  addToCart(product: Product, quantity = 1): Observable<CartItem[]> {
     if (!this.currentUserId) {
-      if (this.isBrowser) {
-        alert('Faça login para adicionar produtos ao carrinho.');
-      }
-      return;
+      return throwError(
+        () => new Error('Você precisa estar logado para adicionar produtos ao carrinho.'),
+      );
     }
 
     const payload = { productId: product.id, quantity };
 
-    this.http.post<ApiCartResponse>(`${this.apiUrl}/items`, payload, { headers: this.authHeaders() })
+    return this.http
+      .post<ApiCartResponse>(`${this.apiUrl}/items`, payload, { headers: this.authHeaders() })
       .pipe(
+        map((cart) => {
+          this.updateFromServer(cart);
+          return this.cartItems.value;
+        }),
         catchError((error) => {
-          if (this.isBrowser) {
-            alert(error.error?.message || 'Erro ao adicionar item.');
-          }
-          return throwError(() => error);
-        })
-      )
-      .subscribe((cart) => this.updateFromServer(cart));
+          const msg = error.error?.message || 'Erro ao adicionar item.';
+          return throwError(() => new Error(msg));
+        }),
+      );
   }
 
   removeFromCart(productId: string): void {
-    this.http.delete<ApiCartResponse>(`${this.apiUrl}/items/${productId}`, { headers: this.authHeaders() })
+    this.http
+      .delete<ApiCartResponse>(`${this.apiUrl}/items/${productId}`, { headers: this.authHeaders() })
       .pipe(
         catchError((error) => {
           console.error('Erro ao remover', error);
           return throwError(() => error);
-        })
+        }),
       )
       .subscribe((cart) => this.updateFromServer(cart));
   }
@@ -163,25 +170,29 @@ export class CartService {
       return;
     }
 
-    this.http.patch<ApiCartResponse>(`${this.apiUrl}/items/${productId}`, { quantity }, { headers: this.authHeaders() })
+    this.http
+      .patch<ApiCartResponse>(
+        `${this.apiUrl}/items/${productId}`,
+        { quantity },
+        { headers: this.authHeaders() },
+      )
       .pipe(
         catchError((error) => {
-          if (this.isBrowser) {
-            alert(error.error?.message || 'Erro ao atualizar quantidade.');
-          }
+          console.error('Erro ao atualizar quantidade', error);
           return throwError(() => error);
-        })
+        }),
       )
       .subscribe((cart) => this.updateFromServer(cart));
   }
 
   clearCart(): void {
-    this.http.delete(`${this.apiUrl}`, { headers: this.authHeaders() })
+    this.http
+      .delete(`${this.apiUrl}`, { headers: this.authHeaders() })
       .pipe(
         catchError((error) => {
           console.warn('Erro ao limpar carrinho', error);
           return of(null);
-        })
+        }),
       )
       .subscribe(() => {
         this.updateCart([]);
@@ -192,44 +203,51 @@ export class CartService {
   }
 
   // ============================================================
-  // CUPONS E CÁLCULOS (mantidos no frontend)
+  // CUPONS
   // ============================================================
-  applyCoupon(code: string): Observable<{ valid: boolean; message: string; discountAmount?: number }> {
+  applyCoupon(
+    code: string,
+  ): Observable<{ valid: boolean; message: string; discountAmount?: number }> {
     const currentTotal = this.totalPrice.value;
     if (currentTotal === 0) {
-      return of({ valid: false, message: 'Carrinho vazio. Adicione produtos para aplicar o cupom.' });
+      return of({
+        valid: false,
+        message: 'Carrinho vazio. Adicione produtos para aplicar o cupom.',
+      });
     }
 
-    const upperCode = code.toUpperCase().trim();
-    const validCoupons: Coupon = {
-      PROMO10: 10,
-      PROMO20: 20,
-      PROMO30: 30,
-      BLACKFRIDAY: 50,
-      FREEGIFT: 0,
-      WELCOME10: 10,
-      VIP20: 20,
-    };
+    return this.couponService.applyCoupon(code, currentTotal).pipe(
+      map((validation) => {
+        if (validation.valid && validation.discountAmount !== undefined) {
+          this.discount.next(validation.discountAmount);
+          this.couponCode.next(code.toUpperCase().trim());
 
-    if (upperCode in validCoupons) {
-      const discountValue = validCoupons[upperCode];
-      const maxDiscount = currentTotal * 0.5;
-      const discountAmount = Math.min((currentTotal * discountValue) / 100, maxDiscount);
+          if (this.isBrowser) {
+            localStorage.setItem(
+              this.getCouponKey(),
+              JSON.stringify({
+                code: code.toUpperCase().trim(),
+                discount: validation.discountAmount,
+              }),
+            );
+          }
 
-      this.discount.next(discountAmount);
-      this.couponCode.next(upperCode);
+          return {
+            valid: true,
+            message: validation.message || 'Cupom aplicado com sucesso!',
+            discountAmount: validation.discountAmount,
+          };
+        }
 
-      if (this.isBrowser) {
-        localStorage.setItem(
-          this.getCouponKey(),
-          JSON.stringify({ code: upperCode, discount: discountAmount })
-        );
-      }
-
-      return of({ valid: true, message: 'Cupom aplicado com sucesso!', discountAmount });
-    }
-
-    return of({ valid: false, message: 'Cupom inválido. Verifique o código digitado.' });
+        return {
+          valid: false,
+          message: validation.message || 'Cupom inválido.',
+        };
+      }),
+      catchError((error) => {
+        return of({ valid: false, message: error?.message || 'Erro ao validar cupom.' });
+      }),
+    );
   }
 
   removeDiscount(): void {
@@ -271,7 +289,7 @@ export class CartService {
 
     const originalTotal = this.cartItems.value.reduce(
       (sum, item) => sum + (item.product.oldPrice || item.product.price) * item.quantity,
-      0
+      0,
     );
     const savings = originalTotal - subtotal;
 
@@ -285,8 +303,12 @@ export class CartService {
     };
   }
 
-  isEmpty(): boolean { return this.cartItems.value.length === 0; }
-  getUniqueItemCount(): number { return this.cartItems.value.length; }
+  isEmpty(): boolean {
+    return this.cartItems.value.length === 0;
+  }
+  getUniqueItemCount(): number {
+    return this.cartItems.value.length;
+  }
 
   isProductInCart(productId: string): boolean {
     return this.cartItems.value.some((item) => String(item.product.id) === String(productId));
@@ -298,7 +320,7 @@ export class CartService {
   }
 
   // ============================================================
-  // HELPERS INTERNOS
+  // HELPERS
   // ============================================================
   private getSellerIdFromProduct(product: Product): string {
     const p: any = product || {};

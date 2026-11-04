@@ -224,7 +224,7 @@
           class="btn btn-lg flex-grow-1 rounded-pill py-3"
           [class.btn-primary]="!isOnSale()"
           [class.btn-success]="isOnSale()"
-          (click)="addToCart()"
+          (click)="addToCart(product!)"
         >
           <i class="bi bi-cart-plus me-2"></i>
           Adicionar ao Carrinho

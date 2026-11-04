@@ -30,6 +30,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   product: Product | null = null;
   relatedProducts: Product[] = [];
   loading = true;
+  isAddingToCart = false; // 🔥 NOVO: controla o loading do botão
   quantity = 1;
   selectedImage = 0;
   isFavorite = false;
@@ -42,12 +43,10 @@ export class ProductDetail implements OnInit, OnDestroy {
   categorySlug: string = '';
   sellerId: string = '';
 
-  // 🔥 Armazenar a loja do vendedor para obter logo/banner
   store: StoreModel | null = null;
   storeLogo: string = '';
   storeBanner: string = '';
 
-  // 🔥 AVALIAÇÕES
   reviews: Review[] = [];
   reviewSummary: ReviewSummary = {
     total: 0,
@@ -87,9 +86,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.routeSub) {
-      this.routeSub.unsubscribe();
-    }
+    this.routeSub?.unsubscribe();
   }
 
   loadProduct(id: string): void {
@@ -124,9 +121,8 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   // ============================================
-  // 🔥 MÉTODOS DE AVALIAÇÃO
+  // AVALIAÇÕES
   // ============================================
-
   loadReviews(productId: string): void {
     this.reviewService.getReviewsByProduct(productId).subscribe({
       next: (reviews) => {
@@ -205,27 +201,18 @@ export class ProductDetail implements OnInit, OnDestroy {
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
-  /**
-   * 🔥 Fallback quando o avatar do avaliador falha ao carregar
-   * Gera um avatar com as iniciais do usuário via ui-avatars.com
-   */
   onReviewerAvatarError(event: Event, userName: string): void {
     const img = event.target as HTMLImageElement;
     if (!img) return;
-
     const safeName = encodeURIComponent(userName || 'Usuário');
     const fallback = `https://ui-avatars.com/api/?name=${safeName}&background=667eea&color=fff&size=80&bold=true`;
-
-    // Evitar loop infinito se a própria imagem de fallback também falhar
     if (img.src === fallback) return;
-
     img.src = fallback;
   }
 
   // ============================================
-  // FIM DOS MÉTODOS DE AVALIAÇÃO
+  // LOJAS / VENDEDORES
   // ============================================
-
   loadCategorySlug(categoryName: string): void {
     this.categoryService.getCategories().subscribe({
       next: (categories) => {
@@ -364,6 +351,77 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
+  // ============================================
+  // AÇÕES
+  // ============================================
+
+  /**
+   * 🔥 COMPRAR AGORA (adiciona ao carrinho e vai direto pro checkout)
+   * Aguarda a resposta do backend antes de navegar
+   */
+  buyNow(): void {
+    if (!this.product) return;
+
+    if (!this.authService.isLoggedIn()) {
+      this.alertService.warning('Faça login', 'Você precisa estar logado para comprar.');
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    const maxQuantity = Math.min(this.quantity, this.product.stock);
+
+    this.alertService
+      .confirm(
+        'Comprar agora?',
+        `Deseja comprar ${this.product.name} (${maxQuantity}x) imediatamente?`,
+        'Sim, comprar',
+        'Cancelar',
+      )
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.isAddingToCart = true;
+
+          this.cartService.addToCart(this.product!, maxQuantity).subscribe({
+            next: () => {
+              this.isAddingToCart = false;
+              this.router.navigate(['/checkout']);
+            },
+            error: (err) => {
+              this.isAddingToCart = false;
+              this.alertService.error('Erro', err.message || 'Não foi possível comprar.');
+            },
+          });
+        }
+      });
+  }
+
+  /**
+   * 🔥 ADICIONAR AO CARRINHO (aguarda resposta e navega)
+   */
+  addToCart(product: Product): void {
+    if (!this.authService.isLoggedIn()) {
+      this.alertService.warning('Faça login', 'Você precisa estar logado para comprar.');
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    this.isAddingToCart = true;
+
+    this.cartService.addToCart(product, this.quantity).subscribe({
+      next: () => {
+        this.isAddingToCart = false;
+        this.alertService.success('Adicionado!', 'Produto adicionado ao carrinho.');
+
+        setTimeout(() => this.router.navigate(['/carrinho']), 300);
+      },
+      error: (err) => {
+        this.isAddingToCart = false;
+        this.alertService.error('Erro', err.message);
+      },
+    });
+  }
+
+  // ... (resto dos métodos: helpers de exibição, imagens, etc.)
   getConditionClass(): string {
     return this.product?.condition === 'new' ? 'bg-success' : 'bg-warning';
   }
@@ -373,9 +431,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   getStars(rating: number): number[] {
-    return Array(5)
-      .fill(0)
-      .map((_, i) => (i < Math.floor(rating) ? 1 : 0));
+    return Array(5).fill(0).map((_, i) => (i < Math.floor(rating) ? 1 : 0));
   }
 
   getStockClass(): string {
@@ -394,9 +450,7 @@ export class ProductDetail implements OnInit, OnDestroy {
 
   getDiscountPercentage(): number {
     if (this.product?.oldPrice && this.product.oldPrice > this.product.price) {
-      return Math.round(
-        ((this.product.oldPrice - this.product.price) / this.product.oldPrice) * 100,
-      );
+      return Math.round(((this.product.oldPrice - this.product.price) / this.product.oldPrice) * 100);
     }
     return 0;
   }
@@ -409,25 +463,11 @@ export class ProductDetail implements OnInit, OnDestroy {
     return this.product?.freeShipping || (this.product?.price ?? 0) > 100;
   }
 
-  getSellerName(): string {
-    return this.sellerName || 'Vendedor';
-  }
-
-  getSellerRating(): number {
-    return this.product?.seller?.rating || 0;
-  }
-
-  getSellerSales(): number {
-    return this.product?.seller?.sales || 0;
-  }
-
-  getSellerMemberSince(): string {
-    return this.sellerMemberSince || '2024';
-  }
-
-  getCategorySlug(): string {
-    return this.categorySlug || this.product?.category || '';
-  }
+  getSellerName(): string { return this.sellerName || 'Vendedor'; }
+  getSellerRating(): number { return this.product?.seller?.rating || 0; }
+  getSellerSales(): number { return this.product?.seller?.sales || 0; }
+  getSellerMemberSince(): string { return this.sellerMemberSince || '2024'; }
+  getCategorySlug(): string { return this.categorySlug || this.product?.category || ''; }
 
   getStoreId(): string {
     if (this.product?.storeId) {
@@ -441,64 +481,23 @@ export class ProductDetail implements OnInit, OnDestroy {
     if (storeId) {
       this.router.navigate(['/loja', storeId]);
     } else {
-      this.alertService.warning(
-        'Loja não encontrada',
-        'Não foi possível encontrar a loja do vendedor.',
-      );
+      this.alertService.warning('Loja não encontrada', 'Não foi possível encontrar a loja do vendedor.');
     }
   }
 
-  getStoreLogo(): string {
-    return this.storeLogo || '';
-  }
-
-  hasLogo(): boolean {
-    return !!this.storeLogo;
-  }
+  getStoreLogo(): string { return this.storeLogo || ''; }
+  hasLogo(): boolean { return !!this.storeLogo; }
 
   getInitials(name: string): string {
     if (!name) return '?';
     const words = name.trim().split(' ');
-    if (words.length === 1) {
-      return words[0].charAt(0).toUpperCase();
-    }
+    if (words.length === 1) return words[0].charAt(0).toUpperCase();
     return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
   }
 
   onLogoError(): void {
     console.warn('⚠️ Erro ao carregar logo da loja');
     this.storeLogo = '';
-  }
-
-  addToCart(): void {
-    if (this.product) {
-      const maxQuantity = Math.min(this.quantity, this.product.stock);
-      this.cartService.addToCart(this.product, maxQuantity);
-      this.alertService.success(
-        'Produto adicionado!',
-        `${this.product.name} (${maxQuantity}x) foi adicionado ao carrinho.`,
-        3000,
-      );
-    }
-  }
-
-  buyNow(): void {
-    if (this.product) {
-      const maxQuantity = Math.min(this.quantity, this.product.stock);
-      this.alertService
-        .confirm(
-          'Comprar agora?',
-          `Deseja comprar ${this.product.name} (${maxQuantity}x) imediatamente?`,
-          'Sim, comprar',
-          'Cancelar',
-        )
-        .then((result) => {
-          if (result.isConfirmed) {
-            this.cartService.addToCart(this.product!, maxQuantity);
-            this.router.navigate(['/checkout']);
-          }
-        });
-    }
   }
 
   toggleFavorite(): void {
@@ -514,54 +513,37 @@ export class ProductDetail implements OnInit, OnDestroy {
         },
         error: () => {
           this.isFavorite = !this.isFavorite;
-          this.alertService.error(
-            'Erro',
-            'Não foi possível atualizar os favoritos. Tente novamente.',
-          );
+          this.alertService.error('Erro', 'Não foi possível atualizar os favoritos.');
         },
       });
     }
   }
 
-  changeImage(index: number): void {
-    this.selectedImage = index;
-  }
+  changeImage(index: number): void { this.selectedImage = index; }
 
   increaseQuantity(): void {
     if (this.product && this.quantity < this.product.stock) {
       this.quantity++;
     } else if (this.product) {
-      this.alertService.warning(
-        'Estoque limitado',
-        `Só temos ${this.product.stock} unidades disponíveis.`,
-      );
+      this.alertService.warning('Estoque limitado', `Só temos ${this.product.stock} unidades disponíveis.`);
     }
   }
 
   decreaseQuantity(): void {
-    if (this.quantity > 1) {
-      this.quantity--;
-    }
+    if (this.quantity > 1) this.quantity--;
   }
 
   formatPrice(price: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(price);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
   }
 
   getTotalPrice(): number {
-    if (this.product) {
-      return this.product.price * this.quantity;
-    }
+    if (this.product) return this.product.price * this.quantity;
     return 0;
   }
 
   getDiscountPrice(): number {
-    if (this.product?.oldPrice) {
-      return this.product.price;
-    }
+    if (this.product?.oldPrice) return this.product.price;
     return 0;
   }
 
@@ -573,9 +555,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   getThumbnails(): string[] {
-    if (this.product?.images) {
-      return this.product.images;
-    }
+    if (this.product?.images) return this.product.images;
     return ['https://via.placeholder.com/100x100/667eea/ffffff?text=Sem+Imagem'];
   }
 }

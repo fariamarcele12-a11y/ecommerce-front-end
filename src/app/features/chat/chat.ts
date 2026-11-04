@@ -97,7 +97,7 @@ export class Chat implements OnInit, OnDestroy {
   // 🔥 Busca todas as conversas (comprador + vendedor)
   loadConversations(): void {
     this.loading = true;
-    
+
     this.chatSub = this.chatService.getAllConversations(this.userId, this.isSeller).subscribe({
       next: (conversations: ChatConversation[]) => {
         this.conversations = conversations;
@@ -143,7 +143,24 @@ export class Chat implements OnInit, OnDestroy {
 
   loadProductChat(productId: string, sellerId: string): void {
     this.loading = true;
-    this.chatService.getProductChat(productId, this.userId, sellerId).subscribe({
+
+    // 🔥 Define quem é o comprador e quem é o vendedor da URL
+    let finalUserId = this.userId; // por padrão, assume que o logado é o comprador
+    let finalSellerId = sellerId;
+
+    const paramUserId = this.route.snapshot.queryParams['userId'];
+
+    // Se eu sou o vendedor (meu ID é o sellerId da URL), então o comprador é quem veio no userId da URL
+    if (this.userId === sellerId && paramUserId) {
+      finalUserId = paramUserId;
+      finalSellerId = this.userId;
+    } else if (paramUserId && this.userId === paramUserId) {
+      // Se eu sou o comprador, o vendedor é o que veio na URL
+      finalUserId = this.userId;
+      finalSellerId = sellerId;
+    }
+
+    this.chatService.getProductChat(productId, finalUserId, finalSellerId).subscribe({
       next: (messages: Message[]) => {
         this.messages = messages;
         this.loading = false;
@@ -159,16 +176,16 @@ export class Chat implements OnInit, OnDestroy {
           imageFromMessages ||
           'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto';
 
-        // Descobre o buyerId a partir das mensagens
+        // Acha o buyerId (comprador) correto nas mensagens
         const firstClientMsg = messages.find(m => !m.isFromSeller);
-        const buyerId = firstClientMsg ? String(firstClientMsg.userId) : '';
+        const buyerId = firstClientMsg ? String(firstClientMsg.userId) : (finalUserId !== this.userId ? finalUserId : '');
         const buyerName = firstClientMsg ? firstClientMsg.userName : '';
 
         this.selectedConversation = {
           productId: productId,
           productName: productName,
           productImage: productImage,
-          sellerId: sellerId,
+          sellerId: finalSellerId,
           sellerName: sellerName,
           buyerId: buyerId,
           buyerName: buyerName,
@@ -197,7 +214,7 @@ export class Chat implements OnInit, OnDestroy {
           productId: productId,
           productName: this.productNameParam || 'Produto',
           productImage: this.productImageParam || 'https://via.placeholder.com/100x100/667eea/ffffff?text=Produto',
-          sellerId: sellerId,
+          sellerId: finalSellerId,
           sellerName: this.sellerNameParam || 'Vendedor',
           lastMessage: '',
           lastMessageDate: new Date(),
@@ -209,7 +226,6 @@ export class Chat implements OnInit, OnDestroy {
     });
   }
 
-  // 🔥 CORRIGIDO: carrega a conversa da loja usando GUID vazio
   loadStoreChat(sellerId: string): void {
     this.loading = true;
     const sellerName = this.sellerNameParam || 'Vendedor';
