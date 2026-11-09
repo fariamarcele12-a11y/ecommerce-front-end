@@ -1,54 +1,28 @@
 // src/app/core/services/password-reset.service.ts
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, throwError, catchError, tap, map, switchMap } from 'rxjs';
+import { Observable, of, catchError, map } from 'rxjs';
 import {
   PasswordResetRequest,
   PasswordResetConfirm,
   PasswordResetResponse,
   PasswordResetToken
 } from '../models/password-reset.model';
+import { environment } from '../../../environments/enviroment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PasswordResetService {
-  private apiUrl = 'http://localhost:3000';
-  private resetTokensUrl = `${this.apiUrl}/passwordResetTokens`;
+  private apiUrl = `${environment.apiUrl}/password-reset`;
 
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
+  // ============================================================
+  // SOLICITAR RESET
+  // ============================================================
   requestReset(email: string): Observable<PasswordResetResponse> {
-
-    return this.http.get<any[]>(`${this.apiUrl}/users?email=${email}`).pipe(
-      switchMap((users) => {
-        if (users.length === 0) {
-          // 🔥 Não revelar se o usuário existe ou não (segurança)
-          return of({
-            success: true,
-            message: 'Se o email estiver cadastrado, você receberá as instruções para redefinir sua senha.'
-          } as PasswordResetResponse);
-        }
-
-        const user = users[0];
-
-        const tokenData = {
-          userId: user.id,
-          token: this.generateToken(),
-          expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hora
-          used: false,
-          createdAt: new Date().toISOString()
-        };
-
-        return this.http.post(this.resetTokensUrl, tokenData).pipe(
-          map(() => {
-            return {
-              success: true,
-              message: 'Se o email estiver cadastrado, você receberá as instruções para redefinir sua senha.'
-            } as PasswordResetResponse;
-          })
-        );
-      }),
+    return this.http.post<PasswordResetResponse>(`${this.apiUrl}/request`, { email }).pipe(
       catchError((error) => {
         console.error('❌ Erro ao solicitar reset:', error);
         return of({
@@ -59,30 +33,13 @@ export class PasswordResetService {
     );
   }
 
-  validateToken(token: string): Observable<{ valid: boolean; message: string; userId?: string | number }> {
-    return this.http.get<PasswordResetToken[]>(`${this.resetTokensUrl}?token=${token}`).pipe(
-      map((tokens) => {
-        if (tokens.length === 0) {
-          return { valid: false, message: 'Token inválido ou expirado.' };
-        }
-
-        const tokenData = tokens[0];
-
-        if (tokenData.used) {
-          return { valid: false, message: 'Este token já foi utilizado.' };
-        }
-
-        const expiresAt = new Date(tokenData.expiresAt);
-        if (expiresAt < new Date()) {
-          return { valid: false, message: 'Token expirado. Solicite um novo reset.' };
-        }
-
-        return {
-          valid: true,
-          message: 'Token válido.',
-          userId: tokenData.userId
-        };
-      }),
+  // ============================================================
+  // VALIDAR TOKEN
+  // ============================================================
+  validateToken(token: string): Observable<{ valid: boolean; message: string; userId?: string }> {
+    return this.http.get<{ valid: boolean; message: string; userId?: string }>(
+      `${this.apiUrl}/validate/${token}`
+    ).pipe(
       catchError((error) => {
         console.error('❌ Erro ao validar token:', error);
         return of({ valid: false, message: 'Erro ao validar token.' });
@@ -90,69 +47,19 @@ export class PasswordResetService {
     );
   }
 
+  // ============================================================
+  // CONFIRMAR RESET
+  // ============================================================
   confirmReset(data: PasswordResetConfirm): Observable<PasswordResetResponse> {
-
-    return this.http.get<PasswordResetToken[]>(`${this.resetTokensUrl}?token=${data.token}`).pipe(
-      switchMap((tokens) => {
-        if (tokens.length === 0) {
-          return of({
-            success: false,
-            message: 'Token inválido.'
-          } as PasswordResetResponse);
-        }
-
-        const tokenData = tokens[0];
-
-        if (tokenData.used) {
-          return of({
-            success: false,
-            message: 'Este token já foi utilizado.'
-          } as PasswordResetResponse);
-        }
-
-        const expiresAt = new Date(tokenData.expiresAt);
-        if (expiresAt < new Date()) {
-          return of({
-            success: false,
-            message: 'Token expirado. Solicite um novo reset.'
-          } as PasswordResetResponse);
-        }
-
-        return this.http.patch(`${this.apiUrl}/users/${tokenData.userId}`, {
-          password: data.newPassword,
-          updatedAt: new Date().toISOString()
-        }).pipe(
-          switchMap(() => {
-            // 🔥 Marcar token como usado
-            return this.http.patch(`${this.resetTokensUrl}/${tokenData.id}`, {
-              used: true
-            }).pipe(
-              map(() => {
-                return {
-                  success: true,
-                  message: 'Senha redefinida com sucesso! Você já pode fazer login com sua nova senha.'
-                } as PasswordResetResponse;
-              })
-            );
-          })
-        );
-      }),
+    return this.http.post<PasswordResetResponse>(`${this.apiUrl}/confirm`, {
+      token: data.token,
+      newPassword: data.newPassword
+    }).pipe(
       catchError((error) => {
         console.error('❌ Erro ao confirmar reset:', error);
-        return of({
-          success: false,
-          message: error.message || 'Erro ao redefinir senha. Tente novamente.'
-        } as PasswordResetResponse);
+        const msg = error?.error?.message || 'Erro ao redefinir senha. Tente novamente.';
+        return of({ success: false, message: msg } as PasswordResetResponse);
       })
     );
-  }
-
-  private generateToken(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let token = '';
-    for (let i = 0; i < 32; i++) {
-      token += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return token;
   }
 }

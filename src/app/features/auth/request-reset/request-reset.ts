@@ -11,8 +11,8 @@ import { AlertService } from '../../../core/services/alert.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './request-reset.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
-  styleUrls: ['../auth.scss'], // 🔥 Usando estilo compartilhado
+  changeDetection: ChangeDetectionStrategy.Default, // 🔥 CORRIGIDO
+  styleUrls: ['../auth.scss'],
 })
 export class RequestReset {
   email = '';
@@ -28,10 +28,7 @@ export class RequestReset {
 
   onSubmit(): void {
     if (!this.email || !this.isValidEmail(this.email)) {
-      this.alertService.warning(
-        'E-mail inválido',
-        'Digite um e-mail válido para redefinir sua senha.',
-      );
+      this.alertService.warning('E-mail inválido', 'Digite um e-mail válido para redefinir sua senha.');
       return;
     }
 
