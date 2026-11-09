@@ -52,7 +52,7 @@ export class StoreService {
   // ============================================================
   hasStore(userId: number | string): Observable<boolean> {
     const id = String(userId);
-    
+
     // 🔥 Se não estiver logado, não tem loja e não faz request
     const user = this.authService.getCurrentUser();
     if (!user) return of(false);
@@ -231,6 +231,7 @@ export class StoreService {
       mainImage: productData.mainImage ?? null,
       images: (productData as any).images ?? null,
       featured: (productData as any).featured ?? false,
+      freeShipping: productData.freeShipping ?? false, // 🔥 GARANTE O ENVIO
       storeId: id,
     };
 
@@ -266,6 +267,7 @@ export class StoreService {
       images: (productData as any).images,
       active: (productData as any).active,
       featured: (productData as any).featured,
+      freeShipping: productData.freeShipping, // 🔥 GARANTE O ENVIO
     };
 
     Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);

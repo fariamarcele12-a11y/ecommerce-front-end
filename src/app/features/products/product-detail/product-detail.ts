@@ -23,14 +23,14 @@ import { Store as StoreModel } from '../../../core/models/store.model';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, ProductCard, Comments],
   templateUrl: './product-detail.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.Default, // 🔥 CORRIGIDO (Angular 20)
   styleUrls: ['./product-detail.scss'],
 })
 export class ProductDetail implements OnInit, OnDestroy {
   product: Product | null = null;
   relatedProducts: Product[] = [];
   loading = true;
-  isAddingToCart = false; // 🔥 NOVO: controla o loading do botão
+  isAddingToCart = false;
   quantity = 1;
   selectedImage = 0;
   isFavorite = false;
@@ -210,9 +210,6 @@ export class ProductDetail implements OnInit, OnDestroy {
     img.src = fallback;
   }
 
-  // ============================================
-  // LOJAS / VENDEDORES
-  // ============================================
   loadCategorySlug(categoryName: string): void {
     this.categoryService.getCategories().subscribe({
       next: (categories) => {
@@ -351,14 +348,6 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
-  // ============================================
-  // AÇÕES
-  // ============================================
-
-  /**
-   * 🔥 COMPRAR AGORA (adiciona ao carrinho e vai direto pro checkout)
-   * Aguarda a resposta do backend antes de navegar
-   */
   buyNow(): void {
     if (!this.product) return;
 
@@ -395,10 +384,10 @@ export class ProductDetail implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * 🔥 ADICIONAR AO CARRINHO (aguarda resposta e navega)
-   */
-  addToCart(product: Product): void {
+  addToCart(product?: Product): void {
+    const productToAdd = product || this.product;
+    if (!productToAdd) return;
+
     if (!this.authService.isLoggedIn()) {
       this.alertService.warning('Faça login', 'Você precisa estar logado para comprar.');
       this.router.navigate(['/login']);
@@ -407,7 +396,7 @@ export class ProductDetail implements OnInit, OnDestroy {
 
     this.isAddingToCart = true;
 
-    this.cartService.addToCart(product, this.quantity).subscribe({
+    this.cartService.addToCart(productToAdd, this.quantity).subscribe({
       next: () => {
         this.isAddingToCart = false;
         this.alertService.success('Adicionado!', 'Produto adicionado ao carrinho.');
@@ -421,7 +410,6 @@ export class ProductDetail implements OnInit, OnDestroy {
     });
   }
 
-  // ... (resto dos métodos: helpers de exibição, imagens, etc.)
   getConditionClass(): string {
     return this.product?.condition === 'new' ? 'bg-success' : 'bg-warning';
   }
@@ -460,7 +448,7 @@ export class ProductDetail implements OnInit, OnDestroy {
   }
 
   hasFreeShipping(): boolean {
-    return this.product?.freeShipping || (this.product?.price ?? 0) > 100;
+    return this.product?.freeShipping === true;
   }
 
   getSellerName(): string { return this.sellerName || 'Vendedor'; }

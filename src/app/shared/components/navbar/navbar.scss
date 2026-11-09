@@ -28,6 +28,7 @@
   backdrop-filter: blur(10px);
   background-color: rgba(255, 255, 255, 0.95) !important;
   box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+  z-index: 1030 !important; // 🔥 GARANTE QUE O NAVBAR FICA ACIMA DE TUDO
 }
 
 // ============================================
@@ -168,7 +169,7 @@
 }
 
 // ============================================
-// 6. DROPDOWN
+// 6. DROPDOWN (CORREÇÃO DO Z-INDEX)
 // ============================================
 .dropdown-menu {
   animation: fadeInDown 0.2s ease;
@@ -178,6 +179,10 @@
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   min-width: 240px;
+
+  // 🔥 CORREÇÃO: Força o dropdown a ficar acima de qualquer outro card
+  z-index: 1050 !important;
+  position: absolute !important;
 
   .dropdown-item {
     border-radius: 8px;
@@ -226,7 +231,7 @@
 }
 
 // ============================================
-// 7. 🔥 NOTIFICAÇÕES
+// 7. 🔥 NOTIFICAÇÕES (Z-INDEX ALTO)
 // ============================================
 .notifications-dropdown {
   position: relative;
@@ -241,7 +246,7 @@
   background: white;
   border-radius: 16px;
   overflow: hidden;
-  z-index: 1050;
+  z-index: 1060 !important; // 🔥 Acima do dropdown-menu também
   animation: slideDown 0.2s ease;
 }
 
@@ -601,8 +606,6 @@
 // ============================================
 // 14. RESPONSIVIDADE
 // ============================================
-
-// Tablets e telas médias
 @media (max-width: 991px) {
   .navbar-brand {
     .fs-4 {
@@ -645,7 +648,6 @@
   }
 }
 
-// Mobile
 @media (max-width: 768px) {
   .navbar {
     .container-fluid {
@@ -721,7 +723,6 @@
     }
   }
 
-  // 🔥 Notificações em mobile
   .notifications-menu {
     width: 340px;
     right: -100px;
@@ -732,7 +733,6 @@
   }
 }
 
-// Mobile pequeno
 @media (max-width: 576px) {
   .navbar-brand {
     .fs-4 {
@@ -752,7 +752,6 @@
     }
   }
 
-  // 🔥 Notificações ocupam a tela inteira
   .notifications-menu {
     width: calc(100vw - 24px);
     right: -12px;
@@ -763,8 +762,6 @@
 // ============================================
 // 15. UTILITÁRIOS
 // ============================================
-
-// Posição relativa para badges
 .position-relative {
   .badge {
     font-size: 0.6rem;
@@ -773,13 +770,12 @@
   }
 }
 
-// Sombra no navbar ao scroll
 .navbar.scrolled {
   box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
 }
 
 // ============================================
-// 16. ANIMAÇÕES DE ENTRADA
+// 16. ANIMAÇÕES
 // ============================================
 @keyframes slideInDown {
   from {
@@ -836,7 +832,6 @@
   animation: badgePop 0.3s ease-out;
 }
 
-// Efeito de hover nos ícones de ação
 .nav-link {
   .bi-heart,
   .bi-cart3,

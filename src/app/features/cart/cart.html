@@ -123,7 +123,7 @@
                 </div>
               </div>
 
-              <!-- 🔥 Quantidade - CORRIGIDO -->
+              <!-- Quantidade -->
               <div class="col-6 col-md-2">
                 <div class="d-flex align-items-center justify-content-center">
                   <div class="quantity-control">
@@ -154,7 +154,6 @@
                 <div class="fw-bold text-primary">
                   {{ formatPrice(item.product.price * item.quantity) }}
                 </div>
-                <!-- 🔥 Remover - CORRIGIDO -->
                 <button
                   class="btn btn-link text-danger p-0 mt-1"
                   (click)="removeItem(getProductId(item))"
@@ -217,11 +216,11 @@
               {{ couponMessage }}
             </div>
 
-            <!-- Cupom Aplicado -->
+            <!-- 🔥 Cupom Aplicado (com o código visível) -->
             <div *ngIf="couponApplied" class="mt-2">
               <span class="badge bg-success">
                 <i class="bi bi-check-circle me-1"></i>
-                Cupom aplicado!
+                Cupom <strong>{{ appliedCouponCode }}</strong> aplicado!
               </span>
               <button
                 class="btn btn-link text-danger btn-sm p-0 ms-2"

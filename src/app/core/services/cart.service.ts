@@ -4,7 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError, catchError, of, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/ProductModel/product.model';
-import { CartItem, CartSummary, CheckoutItem, ApiCartResponse } from '../models/cart.model';
+import { CartItem, CartSummary, CheckoutItem, ApiCartResponse, CouponResult } from '../models/cart.model';
 import { AuthService } from './auth.service';
 import { CouponService } from './coupon.service';
 import { environment } from '../../../environments/enviroment';
@@ -21,6 +21,7 @@ export class CartService {
   private discount = new BehaviorSubject<number>(0);
   private shipping = new BehaviorSubject<number>(0);
   private couponCode = new BehaviorSubject<string>('');
+  private isFreeShippingCoupon = new BehaviorSubject<boolean>(false);
 
   private isBrowser: boolean;
 
@@ -53,9 +54,6 @@ export class CartService {
     });
   }
 
-  // ============================================================
-  // CARREGAMENTO (PÚBLICO, para o cart.ts chamar)
-  // ============================================================
   public loadCartFromServer(): void {
     if (!this.isBrowser) return;
 
@@ -85,27 +83,13 @@ export class CartService {
     this.updateCart(items);
   }
 
-  // ============================================================
-  // OBSERVABLES
-  // ============================================================
-  getCartItems(): Observable<CartItem[]> {
-    return this.cartItems.asObservable();
-  }
-  getTotalItems(): Observable<number> {
-    return this.totalItems.asObservable();
-  }
-  getTotalPrice(): Observable<number> {
-    return this.totalPrice.asObservable();
-  }
-  getDiscount(): Observable<number> {
-    return this.discount.asObservable();
-  }
-  getShipping(): Observable<number> {
-    return this.shipping.asObservable();
-  }
-  getCouponCode(): Observable<string> {
-    return this.couponCode.asObservable();
-  }
+  getCartItems(): Observable<CartItem[]> { return this.cartItems.asObservable(); }
+  getTotalItems(): Observable<number> { return this.totalItems.asObservable(); }
+  getTotalPrice(): Observable<number> { return this.totalPrice.asObservable(); }
+  getDiscount(): Observable<number> { return this.discount.asObservable(); }
+  getShipping(): Observable<number> { return this.shipping.asObservable(); }
+  getCouponCode(): Observable<string> { return this.couponCode.asObservable(); }
+  getIsFreeShipping(): Observable<boolean> { return this.isFreeShippingCoupon.asObservable(); }
 
   getCheckoutItems(): CheckoutItem[] {
     return this.cartItems.value.map((item) => {
@@ -126,9 +110,6 @@ export class CartService {
     });
   }
 
-  // ============================================================
-  // AÇÕES DO CARRINHO
-  // ============================================================
   addToCart(product: Product, quantity = 1): Observable<CartItem[]> {
     if (!this.currentUserId) {
       return throwError(
@@ -198,16 +179,12 @@ export class CartService {
         this.updateCart([]);
         this.discount.next(0);
         this.couponCode.next('');
+        this.isFreeShippingCoupon.next(false);
         this.removeCouponFromStorage();
       });
   }
 
-  // ============================================================
-  // CUPONS
-  // ============================================================
-  applyCoupon(
-    code: string,
-  ): Observable<{ valid: boolean; message: string; discountAmount?: number }> {
+  applyCoupon(code: string): Observable<CouponResult> {
     const currentTotal = this.totalPrice.value;
     if (currentTotal === 0) {
       return of({
@@ -217,17 +194,27 @@ export class CartService {
     }
 
     return this.couponService.applyCoupon(code, currentTotal).pipe(
-      map((validation) => {
-        if (validation.valid && validation.discountAmount !== undefined) {
-          this.discount.next(validation.discountAmount);
+      map((validation: any) => {
+        if (validation.valid) {
           this.couponCode.next(code.toUpperCase().trim());
+
+          if (validation.isFreeShipping) {
+            this.discount.next(0);
+            this.shipping.next(0);
+            this.isFreeShippingCoupon.next(true);
+          } else {
+            this.discount.next(validation.discountAmount || 0);
+            this.isFreeShippingCoupon.next(false);
+            this.calculateShipping();
+          }
 
           if (this.isBrowser) {
             localStorage.setItem(
               this.getCouponKey(),
               JSON.stringify({
                 code: code.toUpperCase().trim(),
-                discount: validation.discountAmount,
+                discount: this.discount.value,
+                isFreeShipping: validation.isFreeShipping,
               }),
             );
           }
@@ -236,6 +223,7 @@ export class CartService {
             valid: true,
             message: validation.message || 'Cupom aplicado com sucesso!',
             discountAmount: validation.discountAmount,
+            isFreeShipping: validation.isFreeShipping,
           };
         }
 
@@ -253,29 +241,57 @@ export class CartService {
   removeDiscount(): void {
     this.discount.next(0);
     this.couponCode.next('');
+    this.isFreeShippingCoupon.next(false);
     this.removeCouponFromStorage();
+    this.calculateShipping();
   }
 
   hasDiscount(): boolean {
-    return this.discount.value > 0;
+    return this.discount.value > 0 || this.isFreeShippingCoupon.value;
   }
 
-  getAppliedCoupon(): { code: string; discount: number } | null {
+  getAppliedCoupon(): { code: string; discount: number; isFreeShipping: boolean } | null {
     const code = this.couponCode.value;
-    const discount = this.discount.value;
-    if (code && discount > 0) return { code, discount };
+    if (code) {
+      return {
+        code,
+        discount: this.discount.value,
+        isFreeShipping: this.isFreeShippingCoupon.value
+      };
+    }
     return null;
   }
 
+  // 🔥 REGRA DE FRETE CORRIGIDA
   calculateShipping(): void {
-    const total = this.totalPrice.value;
-    let shippingCost = 0;
-
-    if (total > 0) {
-      if (total >= 100) shippingCost = 0;
-      else if (total >= 50) shippingCost = 15.9;
-      else shippingCost = 25.9;
+    // 1. Se tem cupom de frete grátis, zera.
+    if (this.isFreeShippingCoupon.value) {
+      this.shipping.next(0);
+      return;
     }
+
+    const items = this.cartItems.value;
+
+    if (items.length === 0) {
+      this.shipping.next(0);
+      return;
+    }
+
+    // 2. Verifica se TODOS os itens do carrinho têm frete grátis
+    const allItemsHaveFreeShipping = items.every(item => item.product.freeShipping === true);
+
+    if (allItemsHaveFreeShipping) {
+      this.shipping.next(0);
+      return;
+    }
+
+    // 3. Se algum item NÃO tiver frete grátis, cobra a taxa base.
+    // (Você pode ajustar esse valor para o cálculo real dos Correios/Transportadora)
+    let shippingCost = 15.90;
+
+    // (Opcional) Se você quiser manter a regra de "Frete grátis para compras acima de X"
+    // mas apenas se o produto não for explicitamente "sem frete grátis", descomente abaixo:
+    // if (this.totalPrice.value >= 100) shippingCost = 0;
 
     this.shipping.next(shippingCost);
   }
@@ -303,12 +319,8 @@ export class CartService {
     };
   }
 
-  isEmpty(): boolean {
-    return this.cartItems.value.length === 0;
-  }
-  getUniqueItemCount(): number {
-    return this.cartItems.value.length;
-  }
+  isEmpty(): boolean { return this.cartItems.value.length === 0; }
+  getUniqueItemCount(): number { return this.cartItems.value.length; }
 
   isProductInCart(productId: string): boolean {
     return this.cartItems.value.some((item) => String(item.product.id) === String(productId));
@@ -319,9 +331,6 @@ export class CartService {
     return item ? item.quantity : 0;
   }
 
-  // ============================================================
-  // HELPERS
-  // ============================================================
   private getSellerIdFromProduct(product: Product): string {
     const p: any = product || {};
     return String(p.seller?.id || p.sellerId || p.storeId || p.ownerId || p.userId || '1');
@@ -356,8 +365,17 @@ export class CartService {
     if (couponData) {
       try {
         const coupon = JSON.parse(couponData);
-        this.discount.next(coupon.discount);
         this.couponCode.next(coupon.code);
+
+        if (coupon.isFreeShipping) {
+          this.discount.next(0);
+          this.shipping.next(0);
+          this.isFreeShippingCoupon.next(true);
+        } else {
+          this.discount.next(coupon.discount);
+          this.isFreeShippingCoupon.next(false);
+          this.calculateShipping();
+        }
       } catch (e) {
         console.error('Erro ao carregar cupom', e);
       }

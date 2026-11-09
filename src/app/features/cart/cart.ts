@@ -13,7 +13,7 @@ import { CartService } from '../../core/services/cart.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './cart.html',
-  changeDetection: ChangeDetectionStrategy.Default, // 🔥 CORRIGIDO
+  changeDetection: ChangeDetectionStrategy.Default,
   styleUrls: ['./cart.scss'],
 })
 export class Cart implements OnInit, OnDestroy {
@@ -25,6 +25,7 @@ export class Cart implements OnInit, OnDestroy {
   total = 0;
   couponCode = '';
   couponApplied = false;
+  appliedCouponCode = '';
   couponMessage = '';
   isLoading = false;
   isApplyingCoupon = false;
@@ -79,6 +80,20 @@ export class Cart implements OnInit, OnDestroy {
       this.cartService.getShipping().subscribe((shipping: number) => {
         this.shipping = shipping;
         this.updateTotals();
+      }),
+    );
+
+    // 🔥 Sincroniza o estado do cupom aplicado
+    this.subscriptions.add(
+      this.cartService.getCouponCode().subscribe((code: string) => {
+        this.appliedCouponCode = code;
+        this.couponApplied = !!code;
+
+        if (code) {
+          this.couponMessage = `✅ Cupom aplicado!`;
+        } else {
+          this.couponMessage = '';
+        }
       }),
     );
   }
@@ -137,7 +152,9 @@ export class Cart implements OnInit, OnDestroy {
         if (result.isConfirmed) {
           this.cartService.clearCart();
           this.couponApplied = false;
+          this.appliedCouponCode = '';
           this.couponCode = '';
+          this.couponMessage = '';
           this.alertService.success(
             'Carrinho esvaziado!',
             'Todos os itens foram removidos do seu carrinho.',
@@ -158,21 +175,24 @@ export class Cart implements OnInit, OnDestroy {
     this.couponMessage = '';
 
     this.cartService.applyCoupon(this.couponCode).subscribe({
-      next: (result: { valid: boolean; message: string; discountAmount?: number }) => {
+      next: (result) => {
         this.isApplyingCoupon = false;
 
         if (result.valid) {
           this.couponApplied = true;
+          this.appliedCouponCode = this.couponCode.toUpperCase().trim();
           this.couponMessage = `✅ ${result.message}`;
-          this.alertService.success(
-            'Cupom aplicado! 🎉',
-            `Desconto de ${this.formatPrice(result.discountAmount || 0)} aplicado.`,
-            3000,
-          );
+
+          const msg = result.isFreeShipping
+            ? 'Frete grátis aplicado!'
+            : `Desconto de ${this.formatPrice(result.discountAmount || 0)} aplicado.`;
+
+          this.alertService.success('Cupom aplicado! 🎉', msg, 3000);
           this.couponCode = '';
           this.updateTotals();
         } else {
           this.couponApplied = false;
+          this.appliedCouponCode = '';
           this.couponMessage = `❌ ${result.message}`;
           this.alertService.warning('Cupom inválido', result.message);
         }
@@ -180,6 +200,7 @@ export class Cart implements OnInit, OnDestroy {
       error: (error: any) => {
         this.isApplyingCoupon = false;
         this.couponApplied = false;
+        this.appliedCouponCode = '';
         this.couponMessage = '❌ Erro ao aplicar cupom. Tente novamente.';
         this.alertService.error('Erro', 'Não foi possível aplicar o cupom.');
         console.error('❌ Erro ao aplicar cupom:', error);
@@ -190,6 +211,7 @@ export class Cart implements OnInit, OnDestroy {
   removeCoupon(): void {
     this.cartService.removeDiscount();
     this.couponApplied = false;
+    this.appliedCouponCode = '';
     this.couponCode = '';
     this.couponMessage = 'Cupom removido com sucesso.';
     this.updateTotals();

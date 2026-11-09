@@ -39,3 +39,10 @@ export interface ApiCartResponse {
   userId: string;
   items: ApiCartItem[];
 }
+
+export interface CouponResult {
+  valid: boolean;
+  message: string;
+  discountAmount?: number;
+  isFreeShipping?: boolean;
+}

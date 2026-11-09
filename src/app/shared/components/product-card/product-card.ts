@@ -9,7 +9,7 @@ import { Product } from '../../../core/models/ProductModel/product.model';
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './product-card.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.Default,
   styleUrl: './product-card.scss',
 })
 export class ProductCard {
@@ -71,7 +71,7 @@ export class ProductCard {
   }
 
   hasFreeShipping(): boolean {
-    return this.product.freeShipping || this.product.price > 100;
+    return this.product.freeShipping === true;
   }
 
   getImageUrl(): string {
