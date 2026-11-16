@@ -1,12 +1,12 @@
 // src/app/core/services/password-reset.service.ts
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of, catchError, map } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import {
-  PasswordResetRequest,
   PasswordResetConfirm,
   PasswordResetResponse,
-  PasswordResetToken
+  ValidateTokenResponse,
 } from '../models/password-reset.model';
 import { environment } from '../../../environments/enviroment';
 
@@ -15,51 +15,55 @@ import { environment } from '../../../environments/enviroment';
 })
 export class PasswordResetService {
   private apiUrl = `${environment.apiUrl}/password-reset`;
-
   private readonly http = inject(HttpClient);
 
-  // ============================================================
-  // SOLICITAR RESET
-  // ============================================================
   requestReset(email: string): Observable<PasswordResetResponse> {
-    return this.http.post<PasswordResetResponse>(`${this.apiUrl}/request`, { email }).pipe(
-      catchError((error) => {
-        console.error('❌ Erro ao solicitar reset:', error);
-        return of({
-          success: false,
-          message: 'Erro ao processar sua solicitação. Tente novamente mais tarde.'
-        } as PasswordResetResponse);
-      })
-    );
+    return this.http
+      .post<PasswordResetResponse>(`${this.apiUrl}/request`, { email })
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('❌ Erro ao solicitar reset:', error);
+          return throwError(() => error);
+        })
+      );
   }
 
-  // ============================================================
-  // VALIDAR TOKEN
-  // ============================================================
-  validateToken(token: string): Observable<{ valid: boolean; message: string; userId?: string }> {
-    return this.http.get<{ valid: boolean; message: string; userId?: string }>(
-      `${this.apiUrl}/validate/${token}`
-    ).pipe(
-      catchError((error) => {
-        console.error('❌ Erro ao validar token:', error);
-        return of({ valid: false, message: 'Erro ao validar token.' });
-      })
-    );
+  validateToken(token: string): Observable<ValidateTokenResponse> {
+    return this.http
+      .get<ValidateTokenResponse>(`${this.apiUrl}/validate/${token}`)
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('❌ Erro ao validar token:', error);
+          const backendMessage = error.error?.message;
+          return throwError(() => ({
+            ...error,
+            error: {
+              ...error.error,
+              message: backendMessage ?? 'Erro ao validar token.'
+            }
+          }));
+        })
+      );
   }
 
-  // ============================================================
-  // CONFIRMAR RESET
-  // ============================================================
   confirmReset(data: PasswordResetConfirm): Observable<PasswordResetResponse> {
-    return this.http.post<PasswordResetResponse>(`${this.apiUrl}/confirm`, {
-      token: data.token,
-      newPassword: data.newPassword
-    }).pipe(
-      catchError((error) => {
-        console.error('❌ Erro ao confirmar reset:', error);
-        const msg = error?.error?.message || 'Erro ao redefinir senha. Tente novamente.';
-        return of({ success: false, message: msg } as PasswordResetResponse);
+    return this.http
+      .post<PasswordResetResponse>(`${this.apiUrl}/confirm`, {
+        token: data.token,
+        newPassword: data.newPassword,
       })
-    );
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          console.error('❌ Erro ao confirmar reset:', error);
+          const backendMessage = error.error?.message;
+          return throwError(() => ({
+            ...error,
+            error: {
+              ...error.error,
+              message: backendMessage ?? 'Erro ao redefinir senha. Tente novamente.'
+            }
+          }));
+        })
+      );
   }
 }

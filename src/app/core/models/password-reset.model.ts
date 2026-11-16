@@ -1,4 +1,5 @@
 // src/app/core/models/password-reset.model.ts
+
 export interface PasswordResetRequest {
   email: string;
 }
@@ -6,13 +7,18 @@ export interface PasswordResetRequest {
 export interface PasswordResetConfirm {
   token: string;
   newPassword: string;
-  confirmPassword: string;
+  confirmPassword?: string;
 }
 
 export interface PasswordResetResponse {
   success: boolean;
   message: string;
-  token?: string;
+}
+
+export interface ValidateTokenResponse {
+  valid: boolean;
+  message: string;
+  userId?: string;
 }
 
 export interface PasswordResetToken {

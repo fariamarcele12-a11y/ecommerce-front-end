@@ -11,8 +11,8 @@ import { AlertService } from '../../../core/services/alert.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './confirm-reset.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
-  styleUrls: ['../auth.scss'], // 🔥 Usando estilo compartilhado
+  changeDetection: ChangeDetectionStrategy.Default,
+  styleUrls: ['../auth.scss'],
 })
 export class ConfirmReset implements OnInit {
   token = '';
@@ -40,7 +40,10 @@ export class ConfirmReset implements OnInit {
       } else {
         this.validating = false;
         this.tokenValid = false;
-        this.alertService.error('Token inválido', 'Nenhum token de redefinição foi fornecido.');
+        this.alertService.error(
+          'Token inválido',
+          'Nenhum token de redefinição foi fornecido.'
+        );
       }
     });
   }
@@ -62,24 +65,34 @@ export class ConfirmReset implements OnInit {
         this.validating = false;
         this.tokenValid = false;
         console.error('❌ Erro ao validar token:', error);
-        this.alertService.error('Erro', 'Não foi possível validar o token.');
+        const message = error?.error?.message ?? 'Não foi possível validar o token.';
+        this.alertService.error('Erro', message);
       },
     });
   }
 
   onSubmit(): void {
     if (!this.tokenValid) {
-      this.alertService.error('Token inválido', 'O token de redefinição não é válido.');
+      this.alertService.error(
+        'Token inválido',
+        'O token de redefinição não é válido.'
+      );
       return;
     }
 
     if (!this.newPassword || this.newPassword.length < 6) {
-      this.alertService.warning('Senha inválida', 'A senha deve ter pelo menos 6 caracteres.');
+      this.alertService.warning(
+        'Senha inválida',
+        'A senha deve ter pelo menos 6 caracteres.'
+      );
       return;
     }
 
     if (this.newPassword !== this.confirmPassword) {
-      this.alertService.warning('Senhas não conferem', 'As senhas digitadas não são iguais.');
+      this.alertService.warning(
+        'Senhas não conferem',
+        'As senhas digitadas não são iguais.'
+      );
       return;
     }
 
@@ -107,7 +120,10 @@ export class ConfirmReset implements OnInit {
         error: (error) => {
           this.loading = false;
           console.error('❌ Erro ao redefinir senha:', error);
-          this.alertService.error('Erro', 'Não foi possível redefinir sua senha.');
+          const message =
+            error?.error?.message ??
+            'Não foi possível redefinir sua senha. Tente novamente.';
+          this.alertService.error('Erro', message);
         },
       });
   }

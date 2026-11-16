@@ -2,7 +2,7 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { PasswordResetService } from '../../../core/services/password-reset.service';
 import { AlertService } from '../../../core/services/alert.service';
 
@@ -11,7 +11,7 @@ import { AlertService } from '../../../core/services/alert.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './request-reset.html',
-  changeDetection: ChangeDetectionStrategy.Default, // 🔥 CORRIGIDO
+  changeDetection: ChangeDetectionStrategy.Default,
   styleUrls: ['../auth.scss'],
 })
 export class RequestReset {
@@ -23,12 +23,14 @@ export class RequestReset {
   constructor(
     private passwordResetService: PasswordResetService,
     private alertService: AlertService,
-    private router: Router,
   ) {}
 
   onSubmit(): void {
     if (!this.email || !this.isValidEmail(this.email)) {
-      this.alertService.warning('E-mail inválido', 'Digite um e-mail válido para redefinir sua senha.');
+      this.alertService.warning(
+        'E-mail inválido',
+        'Digite um e-mail válido para redefinir sua senha.'
+      );
       return;
     }
 
@@ -40,18 +42,19 @@ export class RequestReset {
         this.loading = false;
         if (response.success) {
           this.success = true;
-          this.alertService.success(
-            'Solicitação enviada!',
-            'Se o e-mail estiver cadastrado, você receberá as instruções para redefinir sua senha.',
-          );
+          this.alertService.success('Solicitação enviada!', response.message);
         } else {
           this.alertService.error('Erro', response.message);
         }
       },
       error: (error) => {
         this.loading = false;
-        console.error('❌ Erro:', error);
-        this.alertService.error('Erro', 'Não foi possível processar sua solicitação.');
+        this.submitted = false;
+        console.error('❌ Erro ao solicitar reset:', error);
+        const message =
+          error?.error?.message ??
+          'Não foi possível processar sua solicitação. Tente novamente.';
+        this.alertService.error('Erro', message);
       },
     });
   }

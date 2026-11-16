@@ -72,10 +72,11 @@ export const routes: Routes = [
       import('./features/auth/request-reset/request-reset').then((m) => m.RequestReset),
   },
   {
-    path: 'redefinir-senha',
+    path: 'confirmar-reset',
     loadComponent: () =>
       import('./features/auth/confirm-reset/confirm-reset').then((m) => m.ConfirmReset),
   },
+
   {
     path: 'criar-loja',
     loadComponent: () =>
